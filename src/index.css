@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+  background: #f5f7f5;
+}
+
+body {
+  font-family: 'Inter', 'Noto Sans Kannada', system-ui, sans-serif;
+  color: #133023;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.kn {
+  font-family: 'Noto Sans Kannada', 'Inter', system-ui, sans-serif;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-xl px-4 py-3 transition active:scale-[0.98] disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-coorg-600 text-white shadow-sm hover:bg-coorg-700;
+  }
+  .btn-outline {
+    @apply btn border-2 border-coorg-600 text-coorg-700 bg-white hover:bg-coorg-50;
+  }
+  .btn-ghost {
+    @apply btn text-coorg-700 hover:bg-coorg-50;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-4;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+  .field {
+    @apply w-full rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-coorg-500 focus:border-transparent bg-white;
+  }
+  .label {
+    @apply block text-sm font-semibold text-gray-700 mb-1.5;
+  }
+}
+
+/* Scroll snap for crop filter row */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
