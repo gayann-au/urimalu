@@ -456,7 +456,6 @@ function AnalyticsTab() {
 function rateSummary(r) {
   const parts = [];
   if (r.rc_ep_price != null)    parts.push(`RC ${formatINR(r.rc_ep_price)}/kg`);
-  if (r.rc_open_price != null)  parts.push(`Open ${formatINR(r.rc_open_price)}/bag`);
   if (r.ac_price != null)       parts.push(`AC ${formatINR(r.ac_price)}/bag`);
   if (r.ap_price != null)       parts.push(`AP ${formatINR(r.ap_price)}/q`);
   if (r.rp_price != null)       parts.push(`RP ${formatINR(r.rp_price)}/q`);

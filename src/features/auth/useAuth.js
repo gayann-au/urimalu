@@ -77,8 +77,6 @@ export function useLogin() {
   return useMutation({
     mutationFn: async ({ email, password }) => {
       const e = email.toLowerCase().trim();
-      // eslint-disable-next-line no-console
-      console.log("[login] signInWithPassword", e);
       const { data, error } = await supabase.auth.signInWithPassword({ email: e, password });
       // eslint-disable-next-line no-console
       console.log("[login] response", { user: !!data?.user, error });

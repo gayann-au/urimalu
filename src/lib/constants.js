@@ -109,7 +109,7 @@ export const COFFEE_SECTIONS = [
 // All crop chips on the feed.
 export const CROP_CHIPS = [
   { id: "all",      label: "All",      match: (r) => rateHasAnyPrice(r) },
-  { id: "rc",       label: "RC",       match: (r) => r.rc_ep_price != null || r.rc_open_price != null },
+  { id: "rc",       label: "RC",       match: (r) => r.rc_ep_price != null },
   { id: "ac",       label: "AC",       match: (r) => r.ac_price != null },
   { id: "ap",       label: "AP",       match: (r) => r.ap_price != null },
   { id: "rp",       label: "RP",       match: (r) => r.rp_price != null },
@@ -150,7 +150,7 @@ function parseTs(v) {
 export function rateHasAnyPrice(r) {
   if (!r) return false;
   return (
-    r.rc_ep_price != null || r.rc_open_price != null ||
+    r.rc_ep_price != null ||
     r.ac_price != null || r.ap_price != null || r.rp_price != null || r.ot_price != null ||
     r.pepper_price != null || r.cardamom_price != null
   );

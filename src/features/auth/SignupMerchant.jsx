@@ -154,6 +154,7 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
   const qc = useQueryClient();
   const [topError, setTopError] = useState(null);
   const [resubmitting, setResubmitting] = useState(false);
+  const [showPw, setShowPw] = useState(false);
 
   const profileDefaults = prefill ? {
     businessName: prefill.business_name || "",
@@ -367,8 +368,17 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
             <>
               <Input label={t("auth.email")} type="email" autoComplete="email"
                 {...register("email")} error={errors.email ? t(errors.email.message) : null}/>
-              <Input label={t("auth.password")} type="password" autoComplete="new-password"
-                {...register("password")} error={errors.password ? t(errors.password.message) : null}/>
+              <div className="relative">
+                <Input label={t("auth.password")} type={showPw ? "text" : "password"} autoComplete="new-password"
+                  {...register("password")} error={errors.password ? t(errors.password.message) : null}/>
+                <button
+                  type="button"
+                  onClick={() => setShowPw(s => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 font-medium hover:text-gray-800"
+                >
+                  {showPw ? "Hide" : "Show"}
+                </button>
+              </div>
             </>
           )}
 

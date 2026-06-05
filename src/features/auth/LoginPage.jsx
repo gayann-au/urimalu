@@ -18,6 +18,7 @@ export default function LoginPage() {
   const { t } = useTranslation();
   const login = useLogin();
   const [topError, setTopError] = useState(null);
+  const [showPw, setShowPw] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(schema) });
 
   async function onSubmit(values) {
@@ -40,8 +41,17 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input label={t("auth.email")} type="email" autoComplete="email"
             {...register("email")} error={errors.email ? t(errors.email.message) : null}/>
-          <Input label={t("auth.password")} type="password" autoComplete="current-password"
-            {...register("password")} error={errors.password ? t(errors.password.message) : null}/>
+          <div className="relative">
+            <Input label={t("auth.password")} type={showPw ? "text" : "password"} autoComplete="current-password"
+              {...register("password")} error={errors.password ? t(errors.password.message) : null}/>
+            <button
+              type="button"
+              onClick={() => setShowPw(s => !s)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 font-medium hover:text-gray-800"
+            >
+              {showPw ? "Hide" : "Show"}
+            </button>
+          </div>
           {topError && (
             <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold">
               {t(topError)}
