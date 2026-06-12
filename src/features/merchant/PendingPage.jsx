@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { useAuth, useLogout } from "../auth/useAuth";
 import SignupMerchant from "../auth/SignupMerchant";
 import { pendingMsLeft, formatDuration } from "../../lib/constants";
 import { qk } from "../../lib/queryClient";
+import { supabase } from "../../lib/supabase";
 
 export default function PendingPage() {
   const { t } = useTranslation();
@@ -18,6 +19,9 @@ export default function PendingPage() {
   const qc = useQueryClient();
   const [, setTick] = useState(0);
   const [resubmitMode, setResubmitMode] = useState(false);
+  const [autoApproving, setAutoApproving] = useState(false);
+  const [autoApproveError, setAutoApproveError] = useState(false);
+  const autoApproveFired = useRef(false);
 
   useEffect(() => {
     const minute = setInterval(() => setTick(t => t + 1), 60_000);
@@ -33,6 +37,35 @@ export default function PendingPage() {
       nav("/merchant/dashboard", { replace: true, state: { welcome: true } });
     }
   }, [profile, nav]);
+
+  const runAutoApprove = async () => {
+    setAutoApproving(true);
+    setAutoApproveError(false);
+    try {
+      const { data, error } = await supabase.rpc("auto_approve_self");
+      if (error || !data?.approved) {
+        setAutoApproveError(true);
+      } else {
+        refetchProfile();
+        qc.invalidateQueries({ queryKey: qk.users });
+      }
+    } catch {
+      setAutoApproveError(true);
+    } finally {
+      setAutoApproving(false);
+    }
+  };
+
+  // No dep array: the countdown only crosses zero via the minute tick, which
+  // re-renders without changing `profile`. The ref keeps the automatic call
+  // to a single attempt; retries go through the banner button.
+  useEffect(() => {
+    if (autoApproveFired.current) return;
+    if (!profile || profile.status !== "PENDING") return;
+    if (pendingMsLeft(profile) > 0) return;
+    autoApproveFired.current = true;
+    runAutoApprove();
+  });
 
   if (!profile) return null;
 
@@ -84,6 +117,15 @@ export default function PendingPage() {
           <div className="mt-4 rounded-2xl bg-amber-50 border-2 border-amber-200 px-5 py-4 w-full max-w-sm">
             <div className="text-xs uppercase tracking-wide font-bold text-amber-700">{t("pending.autoApprove")}</div>
             <div className="text-3xl font-extrabold text-amber-900 mt-1 tabular-nums">{formatDuration(ms)}</div>
+          </div>
+        )}
+
+        {status !== "REJECTED" && autoApproveError && (
+          <div className="mt-4 rounded-2xl bg-red-50 border-2 border-red-300 px-4 py-4 w-full max-w-sm text-left">
+            <p className="text-sm text-red-900">{t("pending.autoApproveError", "Automatic approval failed. Please try again.")}</p>
+            <Button variant="danger" className="mt-3 w-full" loading={autoApproving} onClick={runAutoApprove}>
+              {t("pending.autoApproveRetry", "Retry approval")}
+            </Button>
           </div>
         )}
 
