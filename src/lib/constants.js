@@ -29,110 +29,32 @@ export const BUSINESS_TYPES = [
 
 export const CROPS_TRADED = ["coffee", "pepper", "cardamom", "arecanut"];
 
-// Coffee sections. Each section has a label, color, optional hint, and an array of fields.
-export const COFFEE_SECTIONS = [
-  {
-    key: "rc_new",
-    label: "Robusta Cherry (New)",
-    color: "amber",
-    fields: [
-      { key: "rc_ep_price",        label: "EP Rate (₹/kg)",         type: "number", placeholder: "362" },
-      { key: "rc_spot_lift_price", label: "Spot Lift Price (₹/kg)", type: "number", placeholder: "363", optional: true, hint: "Only if different from EP rate" },
-      { key: "rc_delivery_price",  label: "Delivery Price (₹/kg)",  type: "number", placeholder: "363", optional: true, hint: "Only if different from EP rate" },
-      { key: "rc_moisture_pct",    label: "Moisture %",             type: "number", placeholder: "13.5", optional: true },
-      { key: "rc_spot_lifting",    label: "Spot Lifting Available", type: "boolean" },
-    ]
-  },
-  {
-    key: "rc_old",
-    label: "Robusta Cherry (Old Stock)",
-    color: "orange",
-    hint: "Last season's unsold stock",
-    fields: [
-      { key: "rc_old_ep_price",     label: "EP Rate (₹/kg)",         type: "number", placeholder: "355" },
-      { key: "rc_old_spot_lifting", label: "Spot Lifting Available", type: "boolean" },
-    ]
-  },
-  {
-    key: "ot",
-    label: "OT Rate",
-    color: "yellow",
-    hint: "Outturn-based pricing. Post the OT rate per kg. Farmer's outturn % determines final bag price.",
-    fields: [
-      { key: "ot_price", label: "OT Rate (₹/kg)", type: "number", placeholder: "400" },
-    ]
-  },
-  {
-    key: "ac",
-    label: "Arabica Cherry",
-    color: "green",
-    fields: [
-      { key: "ac_price",          label: "Price per bag (₹/50kg)", type: "number", placeholder: "12000" },
-      { key: "ac_call_for_price", label: "Call for price",         type: "boolean", hint: "Turn on if you prefer farmers to call instead of posting a number" },
-    ]
-  },
-  {
-    key: "ap",
-    label: "Arabica Parchment",
-    color: "emerald",
-    fields: [
-      { key: "ap_price", label: "Price per quintal (₹/100kg)", type: "number", placeholder: "23400" },
-    ]
-  },
-  {
-    key: "rp",
-    label: "Robusta Parchment",
-    color: "lime",
-    fields: [
-      { key: "rp_price", label: "Price per quintal (₹/100kg)", type: "number", placeholder: "18200" },
-    ]
-  },
-  {
-    key: "pepper",
-    label: "Pepper",
-    color: "red",
-    fields: [
-      { key: "pepper_price",          label: "Price (₹/kg)",   type: "number", placeholder: "695" },
-      { key: "pepper_call_for_price", label: "Call for price", type: "boolean", hint: "Turn on if you prefer farmers to call instead of posting a number" },
-    ]
-  },
-  {
-    key: "cardamom",
-    label: "Cardamom",
-    color: "purple",
-    fields: [
-      { key: "cardamom_price", label: "Price (₹/kg)", type: "number", placeholder: "2150" },
-    ]
-  },
+// Unit options for the listing form. kg is the weight in kg for one unit.
+// null kg means the merchant enters a custom weight.
+export const UNIT_OPTIONS = [
+  { label: "per kg",    kg: 1    },
+  { label: "50kg bag",  kg: 50   },
+  { label: "75kg bag",  kg: 75   },
+  { label: "100kg bag", kg: 100  },
+  { label: "quintal",   kg: 100  },
+  { label: "custom",    kg: null },
 ];
 
-// All crop chips on the feed.
-export const CROP_CHIPS = [
-  { id: "all",      label: "All",      match: (r) => rateHasAnyPrice(r) },
-  { id: "rc",       label: "RC",       match: (r) => r.rc_ep_price != null },
-  { id: "ac",       label: "AC",       match: (r) => r.ac_price != null },
-  { id: "ap",       label: "AP",       match: (r) => r.ap_price != null },
-  { id: "rp",       label: "RP",       match: (r) => r.rp_price != null },
-  { id: "ot",       label: "OT",       match: (r) => r.ot_price != null },
-  { id: "pepper",   label: "Pepper",   match: (r) => r.pepper_price != null },
-  { id: "cardamom", label: "Cardamom", match: (r) => r.cardamom_price != null },
+// Common crop names shown as autocomplete hints and quick-filter chips.
+// Any free-text name is also accepted.
+export const DEFAULT_CROP_SUGGESTIONS = [
+  "Robusta Cherry",
+  "Arabica Cherry",
+  "Robusta Parchment",
+  "Arabica Parchment",
+  "Pepper",
+  "Cardamom",
 ];
 
 export const AUTO_APPROVE_HOURS = 24;
 export const AUTO_APPROVE_MS = AUTO_APPROVE_HOURS * 60 * 60 * 1000;
 
 // ---------- Helpers ----------
-export function getEffectiveStatus(merchant) {
-  if (!merchant) return null;
-  if (merchant.status === "APPROVED") return "APPROVED";
-  if (merchant.status === "REJECTED") return "REJECTED";
-  if (merchant.status === "PENDING") {
-    const created = parseTs(merchant.resubmitted_at ?? merchant.created_at);
-    if (created != null && Date.now() - created >= AUTO_APPROVE_MS) return "APPROVED";
-    return "PENDING";
-  }
-  return merchant.status;
-}
 
 export function pendingMsLeft(merchant) {
   if (!merchant || merchant.status !== "PENDING") return 0;
@@ -147,28 +69,44 @@ function parseTs(v) {
   return isNaN(t) ? null : t;
 }
 
-export function rateHasAnyPrice(r) {
-  if (!r) return false;
-  return (
-    r.rc_ep_price != null ||
-    r.ac_price != null || r.ap_price != null || r.rp_price != null || r.ot_price != null ||
-    r.pepper_price != null || r.cardamom_price != null
-  );
-}
-
-export function latestRateByMerchant(rates) {
-  const map = new Map();
-  for (const r of rates) {
-    if (r.active === false) continue;
-    const ex = map.get(r.merchant_id);
-    if (!ex || Date.parse(r.posted_at) > Date.parse(ex.posted_at)) map.set(r.merchant_id, r);
-  }
-  return [...map.values()];
-}
-
 export function formatINR(v) {
   if (v == null || v === "" || isNaN(Number(v))) return "-";
   return "₹" + Number(v).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+}
+
+// Returns price / unitKg, or null if either value is missing or unitKg is zero.
+// Used for instant per-kg display before a listing row is saved.
+export function computePricePerKg(price, unitKg) {
+  const p = Number(price);
+  const u = Number(unitKg);
+  if (!price || isNaN(p) || p <= 0) return null;
+  if (!unitKg || isNaN(u) || u === 0) return null;
+  return p / u;
+}
+
+// Returns true if the listing has a usable price or a call-for-price flag.
+export function listingHasPrice(listing) {
+  if (!listing) return false;
+  if (listing.call_for_price) return true;
+  return listing.price != null && Number(listing.price) > 0;
+}
+
+// Groups a flat array of listing rows by merchant_id.
+// Only includes listings where is_active is true.
+// Within each merchant, listings are sorted by crop_name alphabetically.
+export function groupListingsByMerchant(listings) {
+  const map = new Map();
+  for (const l of listings) {
+    if (!l.is_active) continue;
+    if (!map.has(l.merchant_id)) map.set(l.merchant_id, []);
+    map.get(l.merchant_id).push(l);
+  }
+  const result = [];
+  for (const [merchant_id, rows] of map) {
+    rows.sort((a, b) => a.crop_name.localeCompare(b.crop_name));
+    result.push({ merchant_id, listings: rows });
+  }
+  return result;
 }
 
 export function formatTime12(t24) {
@@ -197,16 +135,17 @@ export function staleness(postedAt) {
   const diff = Date.now() - t;
   const HR = 60 * 60 * 1000;
   const DAY = 24 * HR;
-  if (diff < HR)     return { level: "fresh", key: "stale.justNow",   meta: {} };
-  if (diff < DAY)    return { level: "fresh", key: "stale.hoursAgo",  meta: { n: Math.max(1, Math.floor(diff / HR)) } };
-  if (diff < 2 * DAY) return { level: "warn", key: "stale.yesterday", meta: {} };
-  return                  { level: "stale", key: "stale.daysAgo",  meta: { n: Math.floor(diff / DAY) } };
+  if (diff < HR)       return { level: "fresh", key: "stale.justNow",   meta: {} };
+  if (diff < DAY)      return { level: "fresh", key: "stale.hoursAgo",  meta: { n: Math.max(1, Math.floor(diff / HR)) } };
+  if (diff < 2 * DAY)  return { level: "warn",  key: "stale.yesterday", meta: {} };
+  return                      { level: "stale", key: "stale.daysAgo",   meta: { n: Math.floor(diff / DAY) } };
 }
 
 export function dayKey(ts) {
   const d = new Date(ts);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
+
 export function lastNDays(n = 7) {
   const out = [];
   const now = new Date();

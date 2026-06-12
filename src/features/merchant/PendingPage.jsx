@@ -7,7 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { CheckIcon } from "../../components/icons/Sprite";
 import { useAuth, useLogout } from "../auth/useAuth";
 import SignupMerchant from "../auth/SignupMerchant";
-import { getEffectiveStatus, pendingMsLeft, formatDuration } from "../../lib/constants";
+import { pendingMsLeft, formatDuration } from "../../lib/constants";
 import { qk } from "../../lib/queryClient";
 
 export default function PendingPage() {
@@ -29,7 +29,7 @@ export default function PendingPage() {
   }, [refetchProfile, qc]);
 
   useEffect(() => {
-    if (profile && getEffectiveStatus(profile) === "APPROVED") {
+    if (profile && profile.status === "APPROVED") {
       nav("/merchant/dashboard", { replace: true, state: { welcome: true } });
     }
   }, [profile, nav]);
@@ -50,15 +50,15 @@ export default function PendingPage() {
     );
   }
 
-  const status = getEffectiveStatus(profile);
+  const status = profile.status;
   const wasRejectedAndResubmittable = (status === "PENDING" || status === "REJECTED") && profile.rejection_reason;
 
   const ms = pendingMsLeft(profile);
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 items-center">
       <Header/>
-      <main className="px-5 py-8 flex-1 flex flex-col items-center text-center">
+      <main className="w-full max-w-md px-5 py-8 flex-1 flex flex-col items-center text-center">
         {wasRejectedAndResubmittable && (
           <div className="w-full max-w-sm mb-6 rounded-2xl bg-amber-50 border-2 border-amber-300 px-4 py-4 text-left">
             <div className="text-xs uppercase tracking-wider font-bold text-amber-800 mb-1">{t("pending.rejectionTitle")}</div>

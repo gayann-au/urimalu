@@ -19,6 +19,8 @@ export const qk = {
   users:          ["users", "all"],
   rates:          ["rates", "all"],
   ratesByMerchant: (id) => ["rates", "merchant", id],
+  listings:       ["listings", "all"],
+  listingsByMerchant: (id) => ["listings", "merchant", id],
   reviews:        ["reviews", "all"],
   reviewsByMerchant: (id) => ["reviews", "merchant", id],
   leads:          ["leads", "all"],

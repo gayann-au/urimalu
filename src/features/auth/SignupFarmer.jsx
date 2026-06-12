@@ -46,9 +46,9 @@ export default function SignupFarmer() {
   }
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 items-center">
       <Header showBack/>
-      <main className="px-5 py-5 flex-1">
+      <main className="w-full max-w-md px-5 py-5 flex-1">
         {stage === "form" && (
           <>
             <div className="text-center mb-5">

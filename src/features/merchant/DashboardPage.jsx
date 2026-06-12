@@ -1,221 +1,309 @@
-import { useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Header } from "../../components/layout/Header";
-import { Badge } from "../../components/ui/Badge";
-import { Stars } from "../../components/icons/Stars";
 import { Button } from "../../components/ui/Button";
+import { Toggle } from "../../components/ui/Toggle";
 import { RateForm } from "./RateForm";
 import { useAuth } from "../auth/useAuth";
-import { useRates, useReviews } from "../feed/useFeed";
-import { usePostRate, useDeleteRate } from "./useMerchant";
+import {
+  useMyListings,
+  useSaveListing,
+  useToggleListingActive,
+  useDeleteListing,
+  useConfirmTodaysPrices,
+} from "./useMerchant";
 import { toast } from "../../components/ui/Toast";
-import { latestRateByMerchant, getEffectiveStatus, formatINR, dayKey, lastNDays } from "../../lib/constants";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "../../lib/supabase";
-import { qk } from "../../lib/queryClient";
-
-function useLeadsForMerchant(merchantId) {
-  return useQuery({
-    queryKey: qk.leadsByMerchant(merchantId),
-    enabled: !!merchantId,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("leads").select("*").eq("merchant_id", merchantId);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-}
+import { formatINR } from "../../lib/constants";
 
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
-  const knCls = i18n.language === "kn" ? "kn" : "";
-  const locale = i18n.language === "kn" ? "kn-IN" : "en-IN";
+  const nav = useNavigate();
   const { profile } = useAuth();
-  const location = useLocation();
-  const ratesQ = useRates();
-  const reviewsQ = useReviews();
-  const leadsQ = useLeadsForMerchant(profile?.id);
-  const postRate = usePostRate(profile?.id);
-  const delRate = useDeleteRate();
-  const justWelcome = !!location.state?.welcome;
 
-  const myRates   = useMemo(() => (ratesQ.data || []).filter(r => r.merchant_id === profile?.id), [ratesQ.data, profile?.id]);
-  const myReviews = useMemo(() => (reviewsQ.data || []).filter(r => r.merchant_id === profile?.id), [reviewsQ.data, profile?.id]);
-  const myLeads   = leadsQ.data || [];
-  const latest    = useMemo(() => latestRateByMerchant(myRates)[0] || null, [myRates]);
+  const listingsQ     = useMyListings(profile?.id);
+  const saveListing   = useSaveListing();
+  const toggleActive  = useToggleListingActive();
+  const deleteOne     = useDeleteListing();
+  const confirmPrices = useConfirmTodaysPrices();
 
-  const showWelcome = justWelcome || myRates.length === 0;
-  const [formOpen, setFormOpen] = useState(false);
-
-  const last7 = lastNDays(7);
-  const analytics = useMemo(() => {
-    const totals = { VIEW: 0, SHOW_NUMBER: 0, WHATSAPP: 0, CALL: 0 };
-    const perDay = Object.fromEntries(last7.map(k => [k, { day: k.slice(5), views: 0, show: 0, wa: 0, call: 0 }]));
-    for (const l of myLeads) {
-      const k = dayKey(l.created_at);
-      if (perDay[k]) {
-        if (l.type === "VIEW") perDay[k].views++;
-        else if (l.type === "SHOW_NUMBER") perDay[k].show++;
-        else if (l.type === "WHATSAPP") perDay[k].wa++;
-        else if (l.type === "CALL") perDay[k].call++;
-      }
-      if (last7.includes(k)) totals[l.type] = (totals[l.type] || 0) + 1;
-    }
-    return { totals, perDay: last7.map(k => perDay[k]) };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myLeads]);
-
-  const avg = myReviews.length
-    ? Math.round((myReviews.reduce((a, r) => a + r.rating, 0) / myReviews.length) * 10) / 10
-    : 0;
+  // formMode: null when closed, "new" when adding, the listing object when editing.
+  // Single state guarantees only one form open at a time, and closing fully unmounts
+  // the form so the next "Add crop" gets a clean slate.
+  const [formMode, setFormMode] = useState(null);
 
   if (!profile) return null;
 
-  const eff = getEffectiveStatus(profile);
-  const statusTone = eff === "APPROVED" ? "approved" : eff === "REJECTED" ? "rejected" : "pending";
-  const statusLabel = eff === "APPROVED" ? t("common.verified")
-    : eff === "REJECTED" ? t("admin.filter.rejected", "Rejected")
-    : t("admin.filter.pending", "Pending");
+  const listings        = listingsQ.data || [];
+  const activeListings  = listings.filter((l) => l.is_active);
+  const editingListing  = formMode && formMode !== "new" ? formMode : null;
+  const formOpen        = formMode !== null;
+  const lastConfirmed   = lastConfirmedLabel(activeListings, t, i18n.language);
 
-  async function onSubmit(row) {
+  function openAdd()         { setFormMode("new"); }
+  function openEdit(listing) { setFormMode(listing); }
+  function closeForm()       { setFormMode(null); }
+
+  async function handleSave(payload) {
+    // Duplicate crop_name guard. Only applies when ADDING (no payload.id).
+    // Match case-insensitively and trimmed against listings already loaded
+    // by useMyListings — no extra query.
+    if (!payload.id) {
+      const normalized = (payload.crop_name || "").trim().toLowerCase();
+      const duplicate = listings.find(
+        (l) => (l.crop_name || "").trim().toLowerCase() === normalized
+      );
+      if (duplicate) {
+        toast({
+          tone: "err",
+          text: t("dashboard.duplicateCropMsg", { cropName: duplicate.crop_name }),
+        });
+        return;
+      }
+    }
+
     try {
-      await postRate.mutateAsync(row);
-      toast({ tone: "ok", text: t("form.rateUpdated") });
-      setFormOpen(false);
+      // merchant_id is only needed on insert. On update, payload.id is present
+      // and RLS prevents touching another merchant's row anyway.
+      const body = payload.id
+        ? payload
+        : { ...payload, merchant_id: profile.id };
+      await saveListing.mutateAsync(body);
+      toast({ tone: "ok", text: t("dashboard.savedToast") });
+      closeForm();
     } catch (e) {
-      toast({ tone: "err", text: e.message || "Failed to post rate" });
+      toast({ tone: "err", text: e.message || t("dashboard.failedToSave") });
     }
   }
 
-  async function deleteRate(id) {
-    if (!confirm(t("dashboard.deleteRate") + "?")) return;
-    try { await delRate.mutateAsync(id); toast({ tone: "ok", text: t("dashboard.deleted", "Deleted") }); }
-    catch (e) { toast({ tone: "err", text: e.message }); }
+  async function handleToggle(listing, newValue) {
+    try {
+      await toggleActive.mutateAsync({
+        id: listing.id,
+        is_active: newValue,
+        merchant_id: profile.id,
+      });
+    } catch (e) {
+      toast({ tone: "err", text: e.message || t("dashboard.failedToUpdate") });
+    }
   }
 
-  const recentRates = myRates.slice().sort((a, b) => Date.parse(b.posted_at) - Date.parse(a.posted_at)).slice(0, 10);
+  async function handleDelete(listing) {
+    if (!confirm(t("dashboard.confirmDeleteCrop", { cropName: listing.crop_name }))) return;
+    try {
+      await deleteOne.mutateAsync({ id: listing.id, merchant_id: profile.id });
+      toast({ tone: "ok", text: t("dashboard.deletedToast") });
+      if (editingListing?.id === listing.id) closeForm();
+    } catch (e) {
+      toast({ tone: "err", text: e.message || t("dashboard.failedToDelete") });
+    }
+  }
+
+  async function handleConfirm() {
+    try {
+      await confirmPrices.mutateAsync(profile.id);
+      toast({ tone: "ok", text: t("dashboard.confirmedToast") });
+    } catch (e) {
+      toast({ tone: "err", text: e.message || t("dashboard.failedToConfirm") });
+    }
+  }
 
   return (
-    <div className="flex flex-col flex-1 pb-8">
+    <div className="flex flex-col flex-1 pb-8 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
       <Header/>
 
-      {/* Top: identity, status, last posted */}
+      {/* Top: identity and crop count */}
       <section className="px-4 py-5 border-b border-gray-100">
-        <h1 className={`text-2xl font-bold text-gray-900 leading-tight ${knCls}`}>{profile.business_name}</h1>
-        <div className="mt-2 flex items-center gap-2 flex-wrap">
-          <Badge tone={statusTone}><span className={knCls}>{statusLabel}</span></Badge>
-          <span className={`text-sm text-gray-500 ${knCls}`}>
-            {latest
-              ? `${t("dashboard.lastPosted", "Last rate posted")}: ${new Date(latest.posted_at).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}`
-              : t("dashboard.noRatesYet")}
-          </span>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+          {profile.business_name}
+        </h1>
+        <p className="text-sm text-gray-500 mt-1">{t("dashboard.yourDailyPrices")}</p>
+        <p className="text-xs text-gray-400 mt-1 tabular-nums">
+          {listings.length === 1
+            ? t("dashboard.cropCountOne")
+            : t("dashboard.cropCountN", { count: listings.length })}
+        </p>
+        <button
+          type="button"
+          onClick={() => nav("/merchant/history")}
+          className="mt-2 text-sm text-coorg-700 font-semibold underline"
+        >
+          {t("dashboard.priceHistory")}
+        </button>
       </section>
 
-      {/* Stats */}
+      {/* Confirm today's prices. Most prominent action on the screen.
+          Only shown when the merchant has at least one active listing. */}
+      {activeListings.length > 0 && (
+        <section className="px-4 pt-5">
+          <Button
+            size="lg"
+            className="w-full"
+            onClick={handleConfirm}
+            loading={confirmPrices.isPending}
+          >
+            {t("dashboard.confirmTodaysPrices")}
+          </Button>
+          <p className="text-xs text-gray-500 text-center mt-2">
+            {lastConfirmed}
+          </p>
+        </section>
+      )}
+
+      {/* Crop list */}
       <section className="px-4 pt-5">
-        <h2 className={`text-sm font-bold uppercase tracking-wide text-gray-500 mb-3 ${knCls}`}>{t("dashboard.analytics")}</h2>
-        <div className="grid grid-cols-3 gap-3">
-          <Stat label={t("dashboard.views")} value={analytics.totals.VIEW}/>
-          <Stat label={t("dashboard.calls")} value={analytics.totals.CALL}/>
-          <Stat label={t("dashboard.wa")}    value={analytics.totals.WHATSAPP}/>
-        </div>
+        {listingsQ.isLoading ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 animate-pulse h-24"/>
+        ) : listings.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+            <p className="text-sm font-semibold text-gray-700">
+              {t("dashboard.emptyCropsHeading")}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {t("dashboard.emptyCropsBody")}
+            </p>
+          </div>
+        ) : (
+          <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {listings.map((l) => (
+              <ListingRow
+                key={l.id}
+                listing={l}
+                onToggle={(v) => handleToggle(l, v)}
+                onEdit={() => openEdit(l)}
+                onDelete={() => handleDelete(l)}
+                t={t}
+              />
+            ))}
+          </ul>
+        )}
       </section>
 
-      {/* Update rate CTA + form */}
-      <section className="px-4 pt-6">
-        {!formOpen ? (
-          <>
-            <Button size="lg" className="w-full" onClick={() => setFormOpen(true)}>
-              <span className={knCls}>{t("dashboard.updateRate", "Update Today's Rate")}</span>
-            </Button>
-            {showWelcome && <p className={`text-sm text-gray-500 mt-2 text-center ${knCls}`}>{t("welcome.postFirst")}</p>}
-          </>
-        ) : (
+      {/* Add crop CTA. Hidden while a form is open. */}
+      {!formOpen && (
+        <section className="px-4 pt-4">
+          <Button size="lg" variant="outline" className="w-full" onClick={openAdd}>
+            {t("dashboard.addCrop")}
+          </Button>
+        </section>
+      )}
+
+      {/* Inline form panel. Mounted only when open, so closing fully resets it. */}
+      {formOpen && (
+        <section className="px-4 pt-4">
           <div className="bg-white rounded-2xl border border-gray-200 p-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className={`text-base font-bold text-gray-900 ${knCls}`}>{t("form.postRate")}</h2>
-              <button type="button" onClick={() => setFormOpen(false)} className={`text-sm text-gray-500 underline ${knCls}`}>
+              <h2 className="text-base font-bold text-gray-900">
+                {editingListing
+                  ? t("dashboard.editCropHeading", { cropName: editingListing.crop_name })
+                  : t("dashboard.addCrop")}
+              </h2>
+              <button
+                type="button"
+                onClick={closeForm}
+                className="text-sm text-gray-500 underline"
+              >
                 {t("common.cancel")}
               </button>
             </div>
-            <RateForm merchant={profile} latest={latest} onSubmit={onSubmit} submitting={postRate.isPending}/>
+            <RateForm
+              listing={editingListing}
+              onSave={handleSave}
+              onCancel={closeForm}
+            />
           </div>
-        )}
-      </section>
+        </section>
+      )}
+    </div>
+  );
+}
 
-      {/* Recent rates */}
-      <section className="px-4 pt-8">
-        <h2 className={`text-sm font-bold uppercase tracking-wide text-gray-500 mb-3 ${knCls}`}>{t("dashboard.ratesHistory")}</h2>
-        {recentRates.length === 0 ? (
-          <div className={`bg-white rounded-2xl border border-gray-200 p-6 text-center text-gray-500 ${knCls}`}>{t("dashboard.noRatesYet")}</div>
-        ) : (
-          <ul className="space-y-2">
-            {recentRates.map(r => (
-              <li key={r.id} className="bg-white rounded-2xl border border-gray-200 p-4 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className={`text-sm font-semibold text-gray-900 ${knCls}`}>{summarize(r, t)}</div>
-                  <div className="text-xs text-gray-400 mt-1">{new Date(r.posted_at).toLocaleString(locale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</div>
-                </div>
-                <button onClick={() => deleteRate(r.id)} className={`shrink-0 min-h-[48px] px-2 text-sm font-semibold text-red-600 ${knCls}`}>
-                  {t("dashboard.deleteRate")}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+// Find the most recent confirmed_at among the given listings, and return a
+// plain readable label. The date is rendered with the active language's
+// locale (kn-IN or en-IN).
+function lastConfirmedLabel(listings, t, lang) {
+  let maxTs = null;
+  for (const l of listings) {
+    if (!l.confirmed_at) continue;
+    const ts = Date.parse(l.confirmed_at);
+    if (isNaN(ts)) continue;
+    if (maxTs == null || ts > maxTs) maxTs = ts;
+  }
+  if (maxTs == null) return t("feed.notConfirmedYet");
 
-      {/* Reviews */}
-      <section className="px-4 pt-8">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className={`text-sm font-bold uppercase tracking-wide text-gray-500 ${knCls}`}>{t("dashboard.myReviews")} ({myReviews.length})</h2>
-          {myReviews.length > 0 && (
-            <div className="flex items-center gap-1.5">
-              <Stars value={avg} size={15}/>
-              <span className="text-sm font-bold text-gray-700 tabular-nums">{avg.toFixed(1)}</span>
+  const today = new Date();
+  const last = new Date(maxTs);
+  const sameDay =
+    last.getFullYear() === today.getFullYear() &&
+    last.getMonth()    === today.getMonth() &&
+    last.getDate()     === today.getDate();
+
+  if (sameDay) return t("dashboard.confirmedToday");
+  const locale = lang === "kn" ? "kn-IN" : "en-IN";
+  const date = last.toLocaleDateString(locale, {
+    day: "numeric", month: "short", year: "numeric",
+  });
+  return t("dashboard.lastConfirmedOn", { date });
+}
+
+function ListingRow({ listing, onToggle, onEdit, onDelete, t }) {
+  const active = !!listing.is_active;
+  const rowDim = active ? "" : "opacity-60";
+
+  // Price line: either the "Call for price" tag, or "₹X unit_label".
+  // price_per_kg comes from the DB (generated column). Do NOT recompute here.
+  const priceLine = listing.call_for_price
+    ? t("card.callForPrice")
+    : listing.price != null
+      ? t("card.priceUnit", { price: formatINR(listing.price), unit: listing.unit_label })
+      : "-";
+
+  const perKgLine =
+    !listing.call_for_price && listing.price_per_kg != null
+      ? t("card.pricePerKg", { price: formatINR(listing.price_per_kg) })
+      : null;
+
+  return (
+    <li className={`bg-white rounded-2xl border border-gray-200 p-4 ${rowDim}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="font-bold text-gray-900 truncate">
+            {listing.crop_name}
+          </div>
+          {listing.variety_notes && (
+            <div className="text-xs text-gray-500 truncate mt-0.5">
+              {listing.variety_notes}
+            </div>
+          )}
+          <div className="text-sm font-semibold text-coorg-700 mt-1 tabular-nums">
+            {priceLine}
+          </div>
+          {perKgLine && (
+            <div className="text-xs text-gray-500 tabular-nums">
+              {perKgLine}
+            </div>
+          )}
+          {!active && (
+            <div className="text-xs text-gray-500 italic mt-1">
+              {t("card.notBuyingToday")}
             </div>
           )}
         </div>
-        {myReviews.length === 0 ? (
-          <div className={`bg-white rounded-2xl border border-gray-200 p-6 text-center text-gray-500 ${knCls}`}>{t("review.noneYet")}</div>
-        ) : (
-          <ul className="space-y-2">
-            {myReviews.map(r => (
-              <li key={r.id} className="bg-white rounded-2xl border border-gray-200 p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="font-semibold text-gray-900 text-sm">{r.author_name}</div>
-                  <Stars value={r.rating} size={14}/>
-                </div>
-                {r.comment && <p className="mt-1 text-sm text-gray-700">{r.comment}</p>}
-                <div className="text-xs text-gray-400 mt-2">{new Date(r.created_at).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}</div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
-  );
-}
 
-function Stat({ label, value }) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 text-center">
-      <div className="text-3xl font-extrabold text-coorg-700 tabular-nums">{value}</div>
-      <div className="text-xs text-gray-500 font-semibold mt-1 leading-tight">{label}</div>
-    </div>
-  );
-}
+        {/* Active toggle on the right */}
+        <div className="shrink-0">
+          <Toggle value={active} onChange={onToggle}/>
+        </div>
+      </div>
 
-function summarize(r, t) {
-  const parts = [];
-  if (r.rc_ep_price != null)    parts.push(`${t("section.rc")} ${formatINR(r.rc_ep_price)}${t("card.perKg")}`);
-  if (r.ac_price != null)       parts.push(`${t("section.ac")} ${formatINR(r.ac_price)}${t("card.perBag")}`);
-  if (r.ap_price != null)       parts.push(`${t("section.ap")} ${formatINR(r.ap_price)}${t("card.perQuintal")}`);
-  if (r.rp_price != null)       parts.push(`${t("section.rp")} ${formatINR(r.rp_price)}${t("card.perQuintal")}`);
-  if (r.ot_price != null)       parts.push(`${t("section.ot")} ${formatINR(r.ot_price)}${t("card.perKg")}`);
-  if (r.pepper_price != null)   parts.push(`${t("section.pepper")} ${formatINR(r.pepper_price)}${t("card.perKg")}`);
-  if (r.cardamom_price != null) parts.push(`${t("section.cardamom")} ${formatINR(r.cardamom_price)}${t("card.perKg")}`);
-  return parts.length ? parts.join(", ") : "-";
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Button size="sm" variant="outline" onClick={onEdit}>
+          {t("common.edit")}
+        </Button>
+        <Button size="sm" variant="subtle" onClick={onDelete}>
+          {t("common.delete")}
+        </Button>
+      </div>
+    </li>
+  );
 }

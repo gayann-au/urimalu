@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
-import { getEffectiveStatus } from "../../lib/constants";
 
 async function fetchProfile(userId) {
   if (!userId) return null;
@@ -48,7 +47,7 @@ export function useAuth() {
 
   const profile = profileQuery.data || null;
   const role = profile?.role || null;
-  const effectiveStatus = profile?.role === "MERCHANT" ? getEffectiveStatus(profile) : null;
+  const effectiveStatus = profile?.role === "MERCHANT" ? profile.status : null;
   const isLoading = sessionQuery.isLoading || (!!userId && profileQuery.isLoading);
 
   return {
@@ -91,7 +90,7 @@ export function useLogin() {
     onSuccess: (profile) => {
       if (profile.role === "ADMIN")    nav("/admin", { replace: true });
       else if (profile.role === "MERCHANT") {
-        const status = getEffectiveStatus(profile);
+        const status = profile.status;
         nav(status === "APPROVED" ? "/merchant/dashboard" : "/merchant/pending", { replace: true });
       } else nav("/", { replace: true });
     },

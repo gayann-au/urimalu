@@ -2,7 +2,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useUiStore } from "../../hooks/useUiStore";
 import { useAuth, useLogout } from "../../features/auth/useAuth";
-import { getEffectiveStatus } from "../../lib/constants";
 import { BackIcon } from "../icons/Sprite";
 
 export function Header({ showBack = false, title }) {
@@ -18,14 +17,14 @@ export function Header({ showBack = false, title }) {
     if (profile.role === "ADMIN") {
       actionLink = <Link to="/admin" className="rounded-full bg-white/15 hover:bg-white/25 px-3 py-1.5 text-xs font-bold">{t("nav.admin")}</Link>;
     } else if (profile.role === "MERCHANT") {
-      const tgt = getEffectiveStatus(profile) === "APPROVED" ? "/merchant/dashboard" : "/merchant/pending";
+      const tgt = profile.status === "APPROVED" ? "/merchant/dashboard" : "/merchant/pending";
       actionLink = <Link to={tgt} className="rounded-full bg-white/15 hover:bg-white/25 px-3 py-1.5 text-xs font-bold">{t("nav.dashboard")}</Link>;
     }
   }
 
   return (
-    <header className="sticky top-0 z-30 bg-coorg-600 text-white shadow-md">
-      <div className="flex items-center justify-between px-4 py-3 gap-2">
+    <header className="sticky top-0 z-30 bg-coorg-600 text-white shadow-md w-full">
+      <div className="flex items-center justify-between py-3 gap-2 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {showBack ? (
             <button onClick={() => nav(-1)} aria-label={t("common.back")}

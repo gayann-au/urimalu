@@ -1,234 +1,353 @@
 import { useMemo, useState, useDeferredValue } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Header } from "../../components/layout/Header";
 import { RateCard } from "./RateCard";
-import { useUsers, useRates, useReviews } from "./useFeed";
 import { useAuth } from "../auth/useAuth";
-import { useRealtimeRates } from "../../hooks/useRealtimeRates";
-import { useUiStore } from "../../hooks/useUiStore";
-import { useQueryClient } from "@tanstack/react-query";
-import { qk } from "../../lib/queryClient";
-import { getEffectiveStatus, latestRateByMerchant, CROP_CHIPS, DELIVERY_POINTS } from "../../lib/constants";
+import { useListings, uniqueCropsInFeed, groupFeedByMerchant } from "./useFeed";
 
 export default function FeedPage() {
-  const { t, i18n } = useTranslation();
-  const knCls = i18n.language === "kn" ? "kn" : "";
+  const { t } = useTranslation();
+  const listingsQ = useListings();
+  const items = listingsQ.data || [];
   const { profile } = useAuth();
-  useRealtimeRates();
+  const loggedIn = !!profile;
+  const [tab, setTab] = useState("merchants");
 
-  const usersQ = useUsers();
-  const ratesQ = useRates();
-  const reviewsQ = useReviews();
-  const qc = useQueryClient();
+  return (
+    <div className="flex flex-col flex-1 pb-12 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
+      <Header/>
 
-  const newRatesCount = useUiStore(s => s.newRatesCount);
-  const clearNewRates = useUiStore(s => s.clearNewRates);
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-100 sticky top-[64px] z-20">
+        <div className="flex">
+          <TabButton active={tab === "merchants"} onClick={() => setTab("merchants")}>
+            {t("feed.byMerchant")}
+          </TabButton>
+          <TabButton active={tab === "crops"} onClick={() => setTab("crops")}>
+            {t("feed.byCrop")}
+          </TabButton>
+        </div>
+      </div>
 
+      {tab === "merchants" ? (
+        <MerchantsTab items={items} isLoading={listingsQ.isLoading} loggedIn={loggedIn}/>
+      ) : (
+        <CropsTab items={items} isLoading={listingsQ.isLoading} loggedIn={loggedIn}/>
+      )}
+    </div>
+  );
+}
+
+function TabButton({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 min-h-[48px] px-3 text-sm font-bold border-b-2 transition ${
+        active
+          ? "border-coorg-600 text-coorg-700"
+          : "border-transparent text-gray-500"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ----- By Merchant tab -----
+
+function MerchantsTab({ items, isLoading, loggedIn }) {
+  const { t } = useTranslation();
+  const nav = useNavigate();
   const [search, setSearch] = useState("");
-  const [cropChip, setCropChip] = useState("all");
-  const [spotLiftOnly, setSpotLiftOnly] = useState(false);
-  const [spotPayOnly, setSpotPayOnly]   = useState(false);
-  const [dpFilter, setDpFilter] = useState("any");
-  const [sortBy, setSortBy] = useState("recent");
-  const [showFilters, setShowFilters] = useState(false);
-
   const deferredSearch = useDeferredValue(search);
 
-  const merchantsById = useMemo(() => {
-    const m = new Map();
-    for (const u of usersQ.data || []) {
-      if (u.role === "MERCHANT" && getEffectiveStatus(u) === "APPROVED" && !u.is_disabled) m.set(u.id, u);
-    }
-    return m;
-  }, [usersQ.data]);
+  const groups = useMemo(() => groupFeedByMerchant(items), [items]);
 
-  const reviewsByMerchant = useMemo(() => {
-    const m = new Map();
-    for (const r of reviewsQ.data || []) {
-      if (!m.has(r.merchant_id)) m.set(r.merchant_id, []);
-      m.get(r.merchant_id).push(r);
-    }
-    return m;
-  }, [reviewsQ.data]);
-
-  const latestPerMerchant = useMemo(() => latestRateByMerchant(ratesQ.data || []), [ratesQ.data]);
-
-  const rows = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
-    const chip = CROP_CHIPS.find(c => c.id === cropChip) || CROP_CHIPS[0];
-    const list = [];
-    for (const r of latestPerMerchant) {
-      const merchant = merchantsById.get(r.merchant_id);
-      if (!merchant) continue;
-      if (!chip.match(r)) continue;
-      if (q) {
-        const hay = `${merchant.business_name || ""} ${merchant.town || ""}`.toLowerCase();
-        if (!hay.includes(q)) continue;
-      }
-      if (spotLiftOnly && !r.rc_spot_lifting) continue;
-      if (spotPayOnly && !r.spot_payment) continue;
-      if (dpFilter !== "any" && !(r.delivery_points || []).includes(dpFilter)) continue;
-      list.push({ merchant, rate: r, reviews: reviewsByMerchant.get(merchant.id) || [] });
-    }
-    list.sort((a, b) => {
-      if (sortBy === "rc")     return (Number(b.rate.rc_ep_price) || 0)   - (Number(a.rate.rc_ep_price) || 0);
-      if (sortBy === "ac")     return (Number(b.rate.ac_price) || 0)      - (Number(a.rate.ac_price) || 0);
-      if (sortBy === "pepper") return (Number(b.rate.pepper_price) || 0)  - (Number(a.rate.pepper_price) || 0);
-      return Date.parse(b.rate.posted_at) - Date.parse(a.rate.posted_at);
+    if (!q) return groups;
+    return groups.filter((g) => {
+      const name = (g.merchant.business_name || "").toLowerCase();
+      const town = (g.merchant.town || "").toLowerCase();
+      return name.includes(q) || town.includes(q);
     });
-    return list;
-  }, [latestPerMerchant, merchantsById, reviewsByMerchant, deferredSearch, cropChip, spotLiftOnly, spotPayOnly, dpFilter, sortBy]);
+  }, [groups, deferredSearch]);
 
-  const activeCount = (spotLiftOnly ? 1 : 0) + (spotPayOnly ? 1 : 0) + (dpFilter !== "any" ? 1 : 0);
-  const isFiltered = !!search.trim() || activeCount > 0 || cropChip !== "all";
+  return (
+    <>
+      <div className="bg-white border-b border-gray-100 px-4 py-3">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("feed.searchMerchant")}
+          className="w-full min-h-[48px] rounded-xl border-2 border-gray-200 focus:border-coorg-500 outline-none px-4 text-base"
+        />
+      </div>
 
-  function onClear() {
-    setSearch(""); setSpotLiftOnly(false); setSpotPayOnly(false); setDpFilter("any"); setCropChip("all");
+      <main className="flex-1 px-4 py-4">
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="bg-white rounded-2xl border border-gray-200 p-5 animate-pulse h-32"
+              />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center text-gray-500 py-16">
+            <p>
+              {deferredSearch.trim()
+                ? t("feed.noMerchantsMatch")
+                : t("feed.noMerchantsYet")}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {loggedIn
+              ? filtered.map((g) => (
+                  <MerchantCard
+                    key={g.merchant.id}
+                    group={g}
+                    onView={() => nav(`/merchant/${g.merchant.id}`)}
+                  />
+                ))
+              : filtered.map((g) => (
+                  <MerchantCardGated
+                    key={g.merchant.id}
+                    group={g}
+                    onLogin={() => nav("/login")}
+                  />
+                ))}
+          </div>
+        )}
+      </main>
+    </>
+  );
+}
+
+function MerchantCard({ group, onView }) {
+  const { t, i18n } = useTranslation();
+  const { merchant, crop_count, last_confirmed_at } = group;
+  const freshLabel = freshnessLabel(last_confirmed_at, t, i18n.language);
+  return (
+    <article className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-gray-300 transition">
+      <h3 className="text-lg font-bold text-gray-900 leading-tight truncate">
+        {merchant.business_name}
+      </h3>
+      <p className="text-sm text-gray-500 mt-0.5 truncate">
+        {merchant.town}
+        {merchant.town && merchant.district ? ", " : ""}
+        {merchant.district}
+      </p>
+      <p className="text-sm text-gray-700 mt-2 tabular-nums">
+        {crop_count === 1
+          ? t("feed.buyingOneCrop")
+          : t("feed.buyingNCrops", { count: crop_count })}
+      </p>
+      <p className="text-xs text-gray-400 mt-1">{freshLabel}</p>
+      <button
+        type="button"
+        onClick={onView}
+        className="mt-4 w-full min-h-[48px] rounded-xl bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition"
+      >
+        {t("feed.viewCropPrices")}
+      </button>
+    </article>
+  );
+}
+
+// Logged-out variant: business_name + blurred placeholder teaser + login CTA.
+// The placeholder lines are static dummy strings, NOT real merchant data.
+// Only business_name is rendered from the group.
+function MerchantCardGated({ group, onLogin }) {
+  const { t } = useTranslation();
+  const name = group.merchant.business_name;
+  return (
+    <article className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-gray-300 transition">
+      <h3 className="text-lg font-bold text-gray-900 leading-tight truncate">
+        {name}
+      </h3>
+      {/* Static placeholders, blurred. No real town/district/count/date here. */}
+      <p
+        aria-hidden="true"
+        className="text-sm text-gray-500 mt-0.5 truncate select-none blur-sm"
+      >
+        xxxxxxxx, xxxxxxx
+      </p>
+      <p
+        aria-hidden="true"
+        className="text-sm text-gray-700 mt-2 tabular-nums select-none blur-sm"
+      >
+        Buying x crops today
+      </p>
+      <p
+        aria-hidden="true"
+        className="text-xs text-gray-400 mt-1 select-none blur-sm"
+      >
+        Updated xx xxx
+      </p>
+      <button
+        type="button"
+        onClick={onLogin}
+        className="mt-4 w-full min-h-[48px] rounded-xl bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition"
+      >
+        {t("feed.loginToSeePrices")}
+      </button>
+    </article>
+  );
+}
+
+// ----- By Crop tab -----
+
+function CropsTab({ items, isLoading, loggedIn }) {
+  const { t } = useTranslation();
+  const nav = useNavigate();
+  const [search, setSearch] = useState("");
+  const [cropChip, setCropChip] = useState(null);
+  const deferredSearch = useDeferredValue(search);
+
+  const crops = useMemo(() => uniqueCropsInFeed(items), [items]);
+  const isFiltered = !!cropChip || deferredSearch.trim().length > 0;
+
+  // Only build the list when a crop is selected or a search is active.
+  // When nothing is selected we show the hint instead of dumping every listing.
+  const list = useMemo(() => {
+    if (!isFiltered) return [];
+    const q = deferredSearch.trim().toLowerCase();
+    let out = items;
+    if (cropChip) out = out.filter((i) => i.crop_name === cropChip);
+    if (q) out = out.filter((i) => (i.crop_name || "").toLowerCase().includes(q));
+    out = [...out].sort((a, b) => priceKey(b) - priceKey(a));
+    return out;
+  }, [items, cropChip, deferredSearch, isFiltered]);
+
+  function toggleChip(name) {
+    setCropChip((c) => (c === name ? null : name));
+  }
+  function clearAll() {
+    setCropChip(null);
+    setSearch("");
   }
 
-  function refresh() {
-    qc.invalidateQueries({ queryKey: qk.rates });
-    qc.invalidateQueries({ queryKey: qk.users });
-    qc.invalidateQueries({ queryKey: qk.reviews });
-    clearNewRates();
-  }
-
-  const canSeeFull = !!profile;
-  const loading = usersQ.isLoading || ratesQ.isLoading;
-
-  function cropLabel(id) {
-    return id === "all" ? t("admin.filter.all", "All") : t(`section.${id}`);
+  // Logged-out: no chips, no list, no search results. Just a login prompt.
+  if (!loggedIn) {
+    return (
+      <main className="flex-1 px-4 py-12">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center">
+          <p className="text-sm text-gray-700">
+            {t("feed.loggedOutCropHint")}
+          </p>
+          <button
+            type="button"
+            onClick={() => nav("/login")}
+            className="mt-4 w-full min-h-[48px] rounded-xl bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition"
+          >
+            {t("nav.login")}
+          </button>
+        </div>
+      </main>
+    );
   }
 
   return (
-    <div className="flex flex-col flex-1 pb-12">
-      <Header/>
-
-      {!profile && (
-        <div className="bg-coorg-50 border-b border-coorg-100 px-4 py-2.5 flex items-center justify-between gap-2">
-          <span className={`text-sm font-semibold text-coorg-900 ${knCls}`}>{t("feed.loginToSeeRates")}</span>
-          <Link to="/login" className={`text-sm font-bold text-coorg-700 underline shrink-0 ${knCls}`}>{t("nav.login")}</Link>
-        </div>
-      )}
-
-      {/* Filter + search bar */}
-      <div className="bg-white border-b border-gray-100 sticky top-[64px] z-20">
-        <div className="flex gap-2 px-4 pt-3 overflow-x-auto no-scrollbar">
-          {CROP_CHIPS.map(c => {
-            const active = cropChip === c.id;
-            return (
-              <button key={c.id} onClick={() => setCropChip(c.id)}
-                className={`whitespace-nowrap rounded-full px-4 min-h-[48px] text-sm font-semibold border-2 transition ${knCls} ${
-                  active ? "bg-coorg-600 text-white border-coorg-600" : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
-                }`}>
-                {cropLabel(c.id)}
-              </button>
-            );
-          })}
-        </div>
-
+    <>
+      <div className="bg-white border-b border-gray-100">
         <div className="px-4 pt-3">
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("feed.search")}
+            placeholder={t("feed.searchCrop")}
             className="w-full min-h-[48px] rounded-xl border-2 border-gray-200 focus:border-coorg-500 outline-none px-4 text-base"
           />
         </div>
-
-        <div className="flex items-center gap-2 px-4 py-3">
-          <button onClick={() => setShowFilters(s => !s)}
-            className={`inline-flex items-center gap-2 rounded-xl border-2 px-4 min-h-[48px] text-sm font-semibold transition ${
-              activeCount > 0 ? "border-coorg-500 text-coorg-700 bg-coorg-50" : "border-gray-200 text-gray-700 bg-white hover:border-gray-300"
-            }`}>
-            <span className={knCls}>{t("feed.moreFilters", "Filters")}</span>
-            {activeCount > 0 && <span className="rounded-full bg-coorg-600 text-white text-xs px-2 py-0.5 tabular-nums">{activeCount}</span>}
-          </button>
-
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
-            className={`ml-auto rounded-xl border-2 border-gray-200 bg-white px-3 min-h-[48px] text-sm font-semibold text-gray-700 ${knCls}`}>
-            <option value="recent">{t("feed.sortRecent")}</option>
-            <option value="rc">{t("feed.sortHighestRC")}</option>
-            <option value="ac">{t("feed.sortHighestAC")}</option>
-            <option value="pepper">{t("feed.sortHighestPepper")}</option>
-          </select>
-        </div>
-
-        {showFilters && (
-          <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => setSpotLiftOnly(v => !v)}
-                className={`rounded-full px-4 min-h-[48px] text-sm font-semibold border-2 transition ${knCls} ${
-                  spotLiftOnly ? "bg-coorg-600 text-white border-coorg-600" : "bg-white text-gray-700 border-gray-200"
-                }`}>
-                {t("feed.spotLiftOnly")}
-              </button>
-              <button onClick={() => setSpotPayOnly(v => !v)}
-                className={`rounded-full px-4 min-h-[48px] text-sm font-semibold border-2 transition ${knCls} ${
-                  spotPayOnly ? "bg-coorg-600 text-white border-coorg-600" : "bg-white text-gray-700 border-gray-200"
-                }`}>
-                {t("feed.spotPayOnly")}
-              </button>
-            </div>
-            <div>
-              <label className={`block text-sm font-semibold text-gray-700 mb-1.5 ${knCls}`}>{t("feed.deliveryPoint")}</label>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => setDpFilter("any")}
-                  className={`rounded-full px-4 min-h-[48px] text-sm font-semibold border-2 ${
-                    dpFilter === "any" ? "bg-coorg-600 text-white border-coorg-600" : "bg-white text-gray-700 border-gray-200"
-                  }`}>
-                  {t("feed.any")}
+        {crops.length > 0 && (
+          <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
+            {crops.map((c) => {
+              const active = cropChip === c;
+              return (
+                <button
+                  key={c}
+                  onClick={() => toggleChip(c)}
+                  className={`whitespace-nowrap rounded-full px-4 min-h-[40px] text-sm font-semibold border-2 transition ${
+                    active
+                      ? "bg-coorg-600 text-white border-coorg-600"
+                      : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  {c}
                 </button>
-                {DELIVERY_POINTS.map(dp => (
-                  <button key={dp} onClick={() => setDpFilter(dp)}
-                    className={`rounded-full px-4 min-h-[48px] text-sm font-semibold border-2 ${
-                      dpFilter === dp ? "bg-coorg-600 text-white border-coorg-600" : "bg-white text-gray-700 border-gray-200"
-                    }`}>
-                    {dp}
-                  </button>
-                ))}
-              </div>
-            </div>
+              );
+            })}
             {isFiltered && (
-              <button onClick={onClear}
-                className={`w-full min-h-[48px] rounded-xl border-2 border-gray-200 text-gray-700 font-semibold hover:border-gray-300 ${knCls}`}>
-                {t("common.clearFilters")}
+              <button
+                onClick={clearAll}
+                className="whitespace-nowrap rounded-full px-3 min-h-[40px] text-sm font-semibold text-gray-500 underline"
+              >
+                {t("feed.clearFilter")}
               </button>
             )}
           </div>
         )}
       </div>
 
-      <main className="flex-1 px-4 py-4 space-y-4">
-        {loading ? (
-          [0,1,2].map(i => <div key={i} className="bg-white rounded-2xl border border-gray-200 p-5 animate-pulse h-56"/>)
-        ) : rows.length === 0 ? (
+      <main className="flex-1 px-4 py-4">
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="bg-white rounded-2xl border border-gray-200 p-5 animate-pulse h-40"
+              />
+            ))}
+          </div>
+        ) : !isFiltered ? (
+          <div className="text-center text-gray-500 py-12">
+            <p className="text-sm">
+              {t("feed.pickCropHint")}
+            </p>
+          </div>
+        ) : list.length === 0 ? (
           <div className="text-center text-gray-500 py-16">
-            <p className={knCls}>{isFiltered ? t("feed.noSearchResults") : t("feed.noResults")}</p>
+            <p>{t("feed.noListingsMatch")}</p>
           </div>
         ) : (
-          rows.map(({ merchant, rate, reviews }) => (
-            <RateCard key={rate.id} merchant={merchant} rate={rate} reviews={reviews} canSeeFull={canSeeFull}/>
-          ))
-        )}
-
-        {!profile && (
-          <div className="pt-6 pb-2 text-center">
-            <Link to="/signup/merchant" className={`text-sm text-gray-500 hover:text-coorg-700 underline ${knCls}`}>
-              {t("feed.areYouMerchant")}
-            </Link>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {list.map((item) => <RateCard key={item.id} item={item}/>)}
           </div>
         )}
       </main>
-
-      {newRatesCount > 0 && (
-        <button onClick={refresh}
-          className={`fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-coorg-700 text-white px-5 min-h-[48px] rounded-full shadow-lg text-sm font-bold ${knCls}`}>
-          {t("feed.newRates", { n: newRatesCount })}
-        </button>
-      )}
-    </div>
+    </>
   );
+}
+
+// Sort key for the by-crop view: bigger price_per_kg is better.
+// call_for_price and missing price_per_kg sink to the bottom.
+function priceKey(item) {
+  if (item.call_for_price) return -Infinity;
+  if (item.price_per_kg == null) return -Infinity;
+  const n = Number(item.price_per_kg);
+  return isNaN(n) ? -Infinity : n;
+}
+
+// "Updated today" if the timestamp is today, otherwise "Updated <date>".
+// Date is rendered with the active language's locale (kn-IN or en-IN).
+function freshnessLabel(confirmedAt, t, lang) {
+  if (!confirmedAt) return t("feed.notConfirmedYet");
+  const ts = Date.parse(confirmedAt);
+  if (isNaN(ts)) return "";
+  const today = new Date();
+  const d = new Date(ts);
+  const sameDay =
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate();
+  if (sameDay) return t("feed.updatedToday");
+  const locale = lang === "kn" ? "kn-IN" : "en-IN";
+  const date = d.toLocaleDateString(locale, { day: "numeric", month: "short" });
+  return t("feed.updatedOn", { date });
 }

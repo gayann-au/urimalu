@@ -23,7 +23,8 @@
     "posted": "Posted",
     "comingSoon": "Coming soon",
     "show": "Show",
-    "hide": "Hide"
+    "hide": "Hide",
+    "edit": "Edit"
   },
   "nav": {
     "feed": "Feed",
@@ -181,7 +182,24 @@
     "newRates": "{{n}} new rates posted. Tap to refresh",
     "loginToSeeRates": "Login to see full rates and contact merchants",
     "loginToContact": "Login to contact",
-    "areYouMerchant": "Are you a merchant? Register here"
+    "areYouMerchant": "Are you a merchant? Register here",
+    "byMerchant": "By Merchant",
+    "byCrop": "By Crop",
+    "searchMerchant": "Search by merchant or town",
+    "searchCrop": "Search by crop",
+    "noMerchantsMatch": "No merchants match your search.",
+    "noMerchantsYet": "No merchants yet.",
+    "buyingOneCrop": "Buying 1 crop today",
+    "buyingNCrops": "Buying {{count}} crops today",
+    "viewCropPrices": "View crop prices",
+    "loginToSeePrices": "Login to see prices",
+    "pickCropHint": "Pick a crop above to compare prices across merchants.",
+    "noListingsMatch": "No listings match your search.",
+    "clearFilter": "Clear",
+    "loggedOutCropHint": "Log in to compare prices across merchants.",
+    "notConfirmedYet": "Not confirmed yet",
+    "updatedToday": "Updated today",
+    "updatedOn": "Updated {{date}}"
   },
   "card": {
     "perKg": "/kg",
@@ -196,7 +214,11 @@
     "reconfirm": "Subject to reconfirmation",
     "delivery": "Delivery",
     "contact": "Contact",
-    "callForPrice": "Call for price"
+    "callForPrice": "Call for price",
+    "notBuyingToday": "Not buying today",
+    "pricePerUnit": "{{price}} per {{unit}}",
+    "pricePerKg": "{{price}} per kg",
+    "priceUnit": "{{price}} {{unit}}"
   },
   "stale": {
     "justNow": "Just now",
@@ -230,7 +252,27 @@
     "deleteRate": "Delete",
     "updateRate": "Update Today's Rate",
     "lastPosted": "Last posted",
-    "deleted": "Rate deleted"
+    "deleted": "Rate deleted",
+    "yourDailyPrices": "Your daily prices",
+    "cropCountOne": "1 crop",
+    "cropCountN": "{{count}} crops",
+    "priceHistory": "Price history",
+    "confirmTodaysPrices": "Confirm today's prices",
+    "confirmedToday": "Confirmed today",
+    "lastConfirmedOn": "Last confirmed: {{date}}",
+    "emptyCropsHeading": "You have not added any crops yet.",
+    "emptyCropsBody": "Tap Add crop to start your price sheet.",
+    "addCrop": "Add crop",
+    "editCropHeading": "Edit {{cropName}}",
+    "confirmDeleteCrop": "Delete {{cropName}}?",
+    "duplicateCropMsg": "You already have {{cropName}}. Edit the existing one instead.",
+    "savedToast": "Saved",
+    "deletedToast": "Deleted",
+    "confirmedToast": "Prices confirmed for today",
+    "failedToSave": "Failed to save",
+    "failedToUpdate": "Failed to update",
+    "failedToDelete": "Failed to delete",
+    "failedToConfirm": "Failed to confirm"
   },
   "admin": {
     "title": "Admin Panel",
@@ -290,6 +332,23 @@
     "noReviewsCta": "No reviews yet. Be the first to leave a review.",
     "starsLabel": "{{n}} stars",
     "notFound": "Merchant not found.",
-    "notVisible": "This merchant profile is not available."
+    "notVisible": "This merchant profile is not available.",
+    "tradingBadge": "Trading: {{years}}",
+    "cropsHeading": "Crops",
+    "sortByName": "Sort: Name A-Z",
+    "sortByPrice": "Sort: Price high to low",
+    "buyingTodayOnly": "Buying today only",
+    "noCropsMatch": "No crops match your filter",
+    "chartSeriesPerKg": "{{crop}} per kg",
+    "reviewsHeading": "Reviews ({{count}})",
+    "waMessage": "Namaste {{name}}, I saw your rate on CoorgRate.",
+    "defaultFarmerName": "Farmer"
+  },
+  "history": {
+    "noHistoryHeading": "No price history yet.",
+    "noHistoryBody": "Confirm prices on the dashboard to start recording history.",
+    "cropConfirmedOne": "1 crop confirmed",
+    "cropConfirmedN": "{{count}} crops confirmed",
+    "backToDashboard": "Back to dashboard"
   }
 }

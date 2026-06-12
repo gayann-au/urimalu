@@ -8,7 +8,8 @@
     "showNumber": "ಸಂಖ್ಯೆ ತೋರಿಸಿ", "call": "ಕರೆ", "whatsapp": "ವಾಟ್ಸಾಪ್",
     "verified": "ಪರಿಶೀಲಿಸಿದ", "reviews": "ವಿಮರ್ಶೆಗಳು",
     "posted": "ಪೋಸ್ಟ್", "comingSoon": "ಶೀಘ್ರದಲ್ಲೇ",
-    "show": "ತೋರಿಸಿ", "hide": "ಮರೆಮಾಡಿ"
+    "show": "ತೋರಿಸಿ", "hide": "ಮರೆಮಾಡಿ",
+    "edit": "ಸಂಪಾದಿಸಿ"
   },
   "nav": { "feed": "ಫೀಡ್", "login": "ಲಾಗಿನ್", "logout": "ಲಾಗ್‌ಔಟ್", "signup": "ನೋಂದಣಿ", "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", "admin": "ನಿರ್ವಾಹಕ", "profile": "ಪ್ರೊಫೈಲ್" },
   "auth": {
@@ -125,14 +126,35 @@
     "newRates": "{{n}} ಹೊಸ ದರಗಳು. ಟ್ಯಾಪ್ ಮಾಡಿ ರಿಫ್ರೆಶ್",
     "loginToSeeRates": "ಲಾಗಿನ್ ಮಾಡಿ ದರಗಳನ್ನು ನೋಡಿ",
     "loginToContact": "ಲಾಗಿನ್ ಮಾಡಿ",
-    "areYouMerchant": "ನೀವು ವ್ಯಾಪಾರಿಯೇ? ಇಲ್ಲಿ ನೋಂದಾಯಿಸಿ"
+    "areYouMerchant": "ನೀವು ವ್ಯಾಪಾರಿಯೇ? ಇಲ್ಲಿ ನೋಂದಾಯಿಸಿ",
+    "byMerchant": "ವ್ಯಾಪಾರಿಯಿಂದ",
+    "byCrop": "ಬೆಳೆಯಿಂದ",
+    "searchMerchant": "ವ್ಯಾಪಾರಿ ಅಥವಾ ಊರು ಹುಡುಕಿ",
+    "searchCrop": "ಬೆಳೆ ಹುಡುಕಿ",
+    "noMerchantsMatch": "ನಿಮ್ಮ ಹುಡುಕಾಟಕ್ಕೆ ವ್ಯಾಪಾರಿಗಳಿಲ್ಲ.",
+    "noMerchantsYet": "ಇನ್ನೂ ವ್ಯಾಪಾರಿಗಳಿಲ್ಲ.",
+    "buyingOneCrop": "ಇಂದು 1 ಬೆಳೆ ಖರೀದಿಸುತ್ತಿದ್ದಾರೆ",
+    "buyingNCrops": "ಇಂದು {{count}} ಬೆಳೆಗಳನ್ನು ಖರೀದಿಸುತ್ತಿದ್ದಾರೆ",
+    "viewCropPrices": "ಬೆಲೆಗಳನ್ನು ನೋಡಿ",
+    "loginToSeePrices": "ಲಾಗಿನ್ ಮಾಡಿ ಬೆಲೆ ನೋಡಿ",
+    "pickCropHint": "ಬೆಲೆಗಳನ್ನು ಹೋಲಿಸಲು ಮೇಲಿನ ಒಂದು ಬೆಳೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+    "noListingsMatch": "ನಿಮ್ಮ ಹುಡುಕಾಟಕ್ಕೆ ಯಾವುದೇ ದರಗಳಿಲ್ಲ.",
+    "clearFilter": "ತೆರವು",
+    "loggedOutCropHint": "ಬೆಲೆಗಳನ್ನು ಹೋಲಿಸಲು ಲಾಗಿನ್ ಮಾಡಿ.",
+    "notConfirmedYet": "ಇನ್ನೂ ಖಚಿತಪಡಿಸಿಲ್ಲ",
+    "updatedToday": "ಇಂದು ನವೀಕರಿಸಲಾಗಿದೆ",
+    "updatedOn": "ನವೀಕರಣ: {{date}}"
   },
   "card": {
     "perKg": "/ಕೆ.ಜಿ", "perBag": "/ಚೀಲ", "perQuintal": "/ಕ್ವಿಂಟಲ್",
     "moisture": "ಆರ್ದ್ರತೆ", "spotLift": "ತಕ್ಷಣ ಸಂಗ್ರಹ", "spotPay": "ತಕ್ಷಣ ಪಾವತಿ",
     "openPriceLabel": "ಓಪನ್ ಬೆಲೆ", "noOutturn": "ಔಟ್‌ಟರ್ನ್ ಪರೀಕ್ಷೆ ಇಲ್ಲ",
     "validTill": "ಮಾನ್ಯ", "reconfirm": "ಪುನರ್‌ಧೃಡೀಕರಣ", "delivery": "ವಿತರಣೆ", "contact": "ಸಂಪರ್ಕ",
-    "callForPrice": "ಬೆಲೆಗೆ ಕರೆ ಮಾಡಿ"
+    "callForPrice": "ಬೆಲೆಗೆ ಕರೆ ಮಾಡಿ",
+    "notBuyingToday": "ಇಂದು ಖರೀದಿಸುತ್ತಿಲ್ಲ",
+    "pricePerUnit": "{{price}} ಪ್ರತಿ {{unit}}",
+    "pricePerKg": "{{price}} ಪ್ರತಿ ಕೆ.ಜಿ",
+    "priceUnit": "{{price}} {{unit}}"
   },
   "stale": {
     "justNow": "ಇದೀಗ",
@@ -158,7 +180,27 @@
     "deleteRate": "ಅಳಿಸಿ",
     "updateRate": "ಇಂದಿನ ದರ ನವೀಕರಿಸಿ",
     "lastPosted": "ಕೊನೆಯ ಪೋಸ್ಟ್",
-    "deleted": "ದರ ಅಳಿಸಲಾಗಿದೆ"
+    "deleted": "ದರ ಅಳಿಸಲಾಗಿದೆ",
+    "yourDailyPrices": "ನಿಮ್ಮ ದೈನಂದಿನ ದರಗಳು",
+    "cropCountOne": "1 ಬೆಳೆ",
+    "cropCountN": "{{count}} ಬೆಳೆಗಳು",
+    "priceHistory": "ಬೆಲೆ ಇತಿಹಾಸ",
+    "confirmTodaysPrices": "ಇಂದಿನ ಬೆಲೆಗಳನ್ನು ಖಚಿತಪಡಿಸಿ",
+    "confirmedToday": "ಇಂದು ಖಚಿತಪಡಿಸಲಾಗಿದೆ",
+    "lastConfirmedOn": "ಕೊನೆಯ ಖಚಿತತೆ: {{date}}",
+    "emptyCropsHeading": "ನೀವು ಇನ್ನೂ ಯಾವುದೇ ಬೆಳೆ ಸೇರಿಸಿಲ್ಲ.",
+    "emptyCropsBody": "ಬೆಳೆ ಸೇರಿಸಲು 'ಬೆಳೆ ಸೇರಿಸಿ' ಒತ್ತಿ.",
+    "addCrop": "ಬೆಳೆ ಸೇರಿಸಿ",
+    "editCropHeading": "{{cropName}} ಸಂಪಾದಿಸಿ",
+    "confirmDeleteCrop": "{{cropName}} ಅಳಿಸುವುದೇ?",
+    "duplicateCropMsg": "{{cropName}} ಈಗಾಗಲೇ ಇದೆ. ಬದಲಾಗಿ ಅದನ್ನೇ ಸಂಪಾದಿಸಿ.",
+    "savedToast": "ಉಳಿಸಲಾಗಿದೆ",
+    "deletedToast": "ಅಳಿಸಲಾಗಿದೆ",
+    "confirmedToast": "ಇಂದಿನ ಬೆಲೆಗಳನ್ನು ಖಚಿತಪಡಿಸಲಾಗಿದೆ",
+    "failedToSave": "ಉಳಿಸಲಾಗಲಿಲ್ಲ",
+    "failedToUpdate": "ಅಪ್‌ಡೇಟ್ ಆಗಲಿಲ್ಲ",
+    "failedToDelete": "ಅಳಿಸಲಾಗಲಿಲ್ಲ",
+    "failedToConfirm": "ಖಚಿತಪಡಿಸಲಾಗಲಿಲ್ಲ"
   },
   "admin": {
     "title": "ನಿರ್ವಾಹಕ ಫಲಕ",
@@ -211,6 +253,23 @@
     "noReviewsCta": "ಇನ್ನೂ ವಿಮರ್ಶೆಗಳಿಲ್ಲ. ಮೊದಲ ವಿಮರ್ಶೆ ಬರೆಯಿರಿ.",
     "starsLabel": "{{n}} ನಕ್ಷತ್ರ",
     "notFound": "ವ್ಯಾಪಾರಿ ಸಿಗಲಿಲ್ಲ.",
-    "notVisible": "ಈ ವ್ಯಾಪಾರಿ ಪ್ರೊಫೈಲ್ ಲಭ್ಯವಿಲ್ಲ."
+    "notVisible": "ಈ ವ್ಯಾಪಾರಿ ಪ್ರೊಫೈಲ್ ಲಭ್ಯವಿಲ್ಲ.",
+    "tradingBadge": "ವ್ಯಾಪಾರ: {{years}}",
+    "cropsHeading": "ಬೆಳೆಗಳು",
+    "sortByName": "ಕ್ರಮ: ಹೆಸರು A-Z",
+    "sortByPrice": "ಕ್ರಮ: ಬೆಲೆ ಹೆಚ್ಚಿನಿಂದ ಕಡಿಮೆಗೆ",
+    "buyingTodayOnly": "ಇಂದು ಖರೀದಿಸುವುದು ಮಾತ್ರ",
+    "noCropsMatch": "ನಿಮ್ಮ ಫಿಲ್ಟರ್‌ಗೆ ಯಾವುದೇ ಬೆಳೆ ಸಿಗಲಿಲ್ಲ",
+    "chartSeriesPerKg": "{{crop}} ಪ್ರತಿ ಕೆ.ಜಿ",
+    "reviewsHeading": "ವಿಮರ್ಶೆಗಳು ({{count}})",
+    "waMessage": "ನಮಸ್ಕಾರ {{name}}, ನಿಮ್ಮ ದರ CoorgRate ನಲ್ಲಿ ನೋಡಿದೆ.",
+    "defaultFarmerName": "ರೈತ"
+  },
+  "history": {
+    "noHistoryHeading": "ಇನ್ನೂ ಬೆಲೆ ಇತಿಹಾಸ ಇಲ್ಲ.",
+    "noHistoryBody": "ಇತಿಹಾಸ ದಾಖಲಿಸಲು ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ನಲ್ಲಿ ಬೆಲೆಗಳನ್ನು ಖಚಿತಪಡಿಸಿ.",
+    "cropConfirmedOne": "1 ಬೆಳೆ ಖಚಿತಪಡಿಸಲಾಗಿದೆ",
+    "cropConfirmedN": "{{count}} ಬೆಳೆಗಳು ಖಚಿತಪಡಿಸಲಾಗಿವೆ",
+    "backToDashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗೆ ಹಿಂದೆ"
   }
 }
