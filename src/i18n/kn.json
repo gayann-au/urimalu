@@ -154,7 +154,23 @@
     "notBuyingToday": "ಇಂದು ಖರೀದಿಸುತ್ತಿಲ್ಲ",
     "pricePerUnit": "{{price}} ಪ್ರತಿ {{unit}}",
     "pricePerKg": "{{price}} ಪ್ರತಿ ಕೆ.ಜಿ",
-    "priceUnit": "{{price}} {{unit}}"
+    "priceUnit": "{{price}} {{unit}}",
+    "perKgSuffix": "ಪ್ರತಿ ಕೆ.ಜಿ",
+    "perUnit": "ಪ್ರತಿ {{unit}}",
+    "thatIsPerKg": "ಅಂದರೆ {{price}} ಪ್ರತಿ ಕೆ.ಜಿ",
+    "seeTotalForBag": "ಚೀಲಕ್ಕೆ ಒಟ್ಟು ನೋಡಿ",
+    "weightChip": "{{weight}} ಕೆ.ಜಿ",
+    "weightTotal": "{{weight}} ಕೆ.ಜಿ = {{total}}"
+  },
+  "freshness": {
+    "notConfirmed": "ಇನ್ನೂ ಖಚಿತಪಡಿಸಿಲ್ಲ",
+    "minuteAgo": "1 ನಿಮಿಷದ ಹಿಂದೆ ನವೀಕರಿಸಲಾಗಿದೆ",
+    "minutesAgo": "{{count}} ನಿಮಿಷಗಳ ಹಿಂದೆ ನವೀಕರಿಸಲಾಗಿದೆ",
+    "hourAgo": "1 ಗಂಟೆ ಹಿಂದೆ ನವೀಕರಿಸಲಾಗಿದೆ",
+    "hoursAgo": "{{count}} ಗಂಟೆಗಳ ಹಿಂದೆ ನವೀಕರಿಸಲಾಗಿದೆ",
+    "dayAgo": "1 ದಿನದ ಹಿಂದೆ ನವೀಕರಿಸಲಾಗಿದೆ",
+    "daysAgo": "{{count}} ದಿನಗಳ ಹಿಂದೆ ನವೀಕರಿಸಲಾಗಿದೆ",
+    "daysAgoConfirm": "{{count}} ದಿನಗಳ ಹಿಂದೆ ನವೀಕರಿಸಲಾಗಿದೆ, ದಯವಿಟ್ಟು ಖಚಿತಪಡಿಸಿ"
   },
   "stale": {
     "justNow": "ಇದೀಗ",

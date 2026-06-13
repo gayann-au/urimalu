@@ -13,7 +13,8 @@ import { useLeadTracking } from "../../hooks/useLeadTracking";
 import { useAddReview } from "../reviews/useReviews";
 import { ReviewForm } from "../reviews/ReviewForm";
 import { supabase } from "../../lib/supabase";
-import { formatINR, dayKey, lastNDays } from "../../lib/constants";
+import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
+import { formatINR, dayKey, lastNDays, listingPriceView } from "../../lib/constants";
 
 // All listings for this merchant, active AND inactive. Public read.
 // Uses a distinct cache key from the dashboard's useMyListings — the public
@@ -383,29 +384,17 @@ export default function ProfilePage() {
 function ListingRow({ listing, t }) {
   const active = !!listing.is_active;
   const dim = active ? "" : "opacity-60";
+  const price = listingPriceView(listing);
   return (
     <li className={`bg-white rounded-2xl border border-gray-200 p-4 ${dim}`}>
-      <div className="font-bold text-gray-900">{listing.crop_name}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="font-bold text-gray-900">{listing.crop_name}</div>
+        <FreshnessBadge confirmedAt={listing.confirmed_at} className="shrink-0" />
+      </div>
       {listing.variety_notes && (
         <div className="text-xs text-gray-500 mt-0.5">{listing.variety_notes}</div>
       )}
-      {listing.call_for_price ? (
-        <div className="mt-1 text-sm font-bold text-gray-700">{t("card.callForPrice")}</div>
-      ) : (
-        <>
-          <div className="mt-1 text-sm text-gray-700 tabular-nums">
-            {t("card.pricePerUnit", {
-              price: formatINR(listing.price),
-              unit: listing.unit_label,
-            })}
-          </div>
-          {listing.price_per_kg != null && (
-            <div className="text-lg font-extrabold text-coorg-700 tabular-nums">
-              {t("card.pricePerKg", { price: formatINR(listing.price_per_kg) })}
-            </div>
-          )}
-        </>
-      )}
+      <ListingPrice price={price} t={t} />
       {listing.notes && (
         <div className="text-xs text-gray-500 italic mt-1">{listing.notes}</div>
       )}
@@ -414,6 +403,45 @@ function ListingRow({ listing, t }) {
       )}
     </li>
   );
+}
+
+// Mirrors the by-crop card price logic so both screens read identically:
+// per-kg listings show one hero line, bag/quintal show the entered price with
+// a quiet per-kg line below, and "per" is never doubled.
+function ListingPrice({ price, t }) {
+  if (price.mode === "call") {
+    return <div className="mt-1 text-sm font-bold text-gray-700">{t("card.callForPrice")}</div>;
+  }
+  if (price.mode === "perkg") {
+    if (price.hero == null) return <div className="mt-1 text-sm font-bold text-gray-500">-</div>;
+    return (
+      <div className="mt-1 flex items-baseline gap-1.5">
+        <span className="text-lg font-extrabold text-coorg-700 tabular-nums">{formatINR(price.hero)}</span>
+        <span className="text-xs font-semibold text-gray-500">{t("card.perKgSuffix")}</span>
+      </div>
+    );
+  }
+  if (price.hero == null) return <div className="mt-1 text-sm font-bold text-gray-500">-</div>;
+  return (
+    <div className="mt-1">
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-lg font-extrabold text-coorg-700 tabular-nums">{formatINR(price.hero)}</span>
+        <span className="text-xs font-semibold text-gray-500">{listingUnitPhrase(t, price.unitLabel)}</span>
+      </div>
+      {price.perKg != null && (
+        <div className="text-xs text-gray-500 tabular-nums mt-0.5">
+          {t("card.thatIsPerKg", { price: formatINR(price.perKg) })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Same "per <unit>" guard as the by-crop card: never doubles the word "per".
+function listingUnitPhrase(t, unitLabel) {
+  const label = (unitLabel || "").trim();
+  if (/^per\b/i.test(label)) return label;
+  return t("card.perUnit", { unit: label });
 }
 
 // Sort key for price-DESC: bigger price_per_kg is better.

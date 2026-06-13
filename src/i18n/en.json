@@ -218,7 +218,23 @@
     "notBuyingToday": "Not buying today",
     "pricePerUnit": "{{price}} per {{unit}}",
     "pricePerKg": "{{price}} per kg",
-    "priceUnit": "{{price}} {{unit}}"
+    "priceUnit": "{{price}} {{unit}}",
+    "perKgSuffix": "per kg",
+    "perUnit": "per {{unit}}",
+    "thatIsPerKg": "That is {{price}} per kg",
+    "seeTotalForBag": "See total for a bag",
+    "weightChip": "{{weight}} kg",
+    "weightTotal": "{{weight}} kg = {{total}}"
+  },
+  "freshness": {
+    "notConfirmed": "Not confirmed yet",
+    "minuteAgo": "Updated 1 minute ago",
+    "minutesAgo": "Updated {{count}} minutes ago",
+    "hourAgo": "Updated 1 hour ago",
+    "hoursAgo": "Updated {{count}} hours ago",
+    "dayAgo": "Updated 1 day ago",
+    "daysAgo": "Updated {{count}} days ago",
+    "daysAgoConfirm": "Updated {{count}} days ago, please confirm"
   },
   "stale": {
     "justNow": "Just now",

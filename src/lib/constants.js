@@ -98,6 +98,28 @@ export function computePricePerKg(price, unitKg) {
   return p / u;
 }
 
+// Weight chips for the "see total for a bag" helper on the by-crop card.
+export const BAG_WEIGHTS = [25, 50, 75, 100];
+
+// Decide how a listing's price should be shown. Pure data, no UI or i18n.
+//   mode "call":  call for price, show the call-for-price text
+//   mode "perkg": single per-kg hero number (per-kg priced, or a custom unit)
+//   mode "unit":  the entered price is the hero (bag or quintal), perKg below
+// Never returns the literal unit "per kg" for the "unit" branch, so callers
+// can prefix "per" without ever producing "per per kg".
+export function listingPriceView(item) {
+  if (!item || item.call_for_price) return { mode: "call" };
+  const unitLabel = (item.unit_label || "").trim();
+  const isCustom = unitLabel.toLowerCase() === "custom";
+  const isPerKg = unitLabel.toLowerCase() === "per kg" || Number(item.unit_kg) === 1;
+  const perKg = item.price_per_kg != null ? item.price_per_kg : null;
+  if (isPerKg || isCustom) {
+    const hero = perKg != null ? perKg : item.price;
+    return { mode: "perkg", hero, perKg };
+  }
+  return { mode: "unit", hero: item.price, perKg, unitLabel };
+}
+
 // Returns true if the listing has a usable price or a call-for-price flag.
 export function listingHasPrice(listing) {
   if (!listing) return false;
