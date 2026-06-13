@@ -1,5 +1,5 @@
 {
-  "app": { "name": "ಕೂರ್ಗ್‌ರೇಟ್", "tagline": "ಕೊಡಗಿನ ವ್ಯಾಪಾರಿ ದರಗಳು" },
+  "app": { "name": "Urimalu", "tagline": "ವ್ಯಾಪಾರಿ ದರಗಳು" },
   "common": {
     "back": "ಹಿಂದೆ", "cancel": "ರದ್ದು", "submit": "ಸಲ್ಲಿಸಿ", "save": "ಉಳಿಸಿ", "delete": "ಅಳಿಸಿ",
     "loading": "ಲೋಡ್ ಆಗುತ್ತಿದೆ...", "yes": "ಹೌದು", "no": "ಇಲ್ಲ", "optional": "(ಐಚ್ಛಿಕ)",
@@ -279,7 +279,7 @@
     "noCropsMatch": "ನಿಮ್ಮ ಫಿಲ್ಟರ್‌ಗೆ ಯಾವುದೇ ಬೆಳೆ ಸಿಗಲಿಲ್ಲ",
     "chartSeriesPerKg": "{{crop}} ಪ್ರತಿ ಕೆ.ಜಿ",
     "reviewsHeading": "ವಿಮರ್ಶೆಗಳು ({{count}})",
-    "waMessage": "ನಮಸ್ಕಾರ {{name}}, ನಿಮ್ಮ ದರ CoorgRate ನಲ್ಲಿ ನೋಡಿದೆ.",
+    "waMessage": "ನಮಸ್ಕಾರ {{name}}, ನಿಮ್ಮ ದರ Urimalu ನಲ್ಲಿ ನೋಡಿದೆ.",
     "defaultFarmerName": "ರೈತ"
   },
   "history": {

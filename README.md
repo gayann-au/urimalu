@@ -1,6 +1,6 @@
-# CoorgRate
+# Urimalu
 
-A mobile-first marketplace for farmers in Kodagu (Coorg), Karnataka 
+A mobile-first marketplace for farmers
 to compare daily merchant rates for coffee, pepper, cardamom, and arecanut.
 
 ## Tech Stack

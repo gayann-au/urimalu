@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "CoorgRate",
-    "tagline": "Coorg merchant rates"
+    "name": "Urimalu",
+    "tagline": "Merchant rates"
   },
   "common": {
     "back": "Back",
@@ -45,7 +45,7 @@
     "loginEmailNotConfirmed": "Please confirm your email first",
     "loginRowMissing": "Account record missing. Please sign up again",
     "loginNetwork": "Network error. Check your connection",
-    "newHere": "New to CoorgRate?",
+    "newHere": "New to Urimalu?",
     "signupAsFarmer": "Sign up as Farmer",
     "signupAsMerchant": "Sign up as Merchant",
     "farmerSignup": "Farmer registration",
@@ -360,7 +360,7 @@
     "noCropsMatch": "No crops match your filter",
     "chartSeriesPerKg": "{{crop}} per kg",
     "reviewsHeading": "Reviews ({{count}})",
-    "waMessage": "Namaste {{name}}, I saw your rate on CoorgRate.",
+    "waMessage": "Namaste {{name}}, I saw your rate on Urimalu.",
     "defaultFarmerName": "Farmer"
   },
   "history": {
