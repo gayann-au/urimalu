@@ -106,22 +106,28 @@ export function useSignupFarmer() {
   return useMutation({
     mutationFn: async (data) => {
       const e = data.email.toLowerCase().trim();
-      const { data: auth, error } = await supabase.auth.signUp({ email: e, password: data.password });
+      // role travels in auth metadata so the handle_new_user trigger creates
+      // the users row (id, email, role, status) on its own.
+      const { data: auth, error } = await supabase.auth.signUp({
+        email: e,
+        password: data.password,
+        options: { data: { role: "FARMER" } },
+      });
       if (error) throw { code: mapAuthError(error), raw: error.message };
       const userId = auth?.user?.id;
       if (!userId) throw { code: "auth.loginError" };
-      const row = {
-        id: userId,
-        email: e,
-        role: "FARMER",
+      // Confirm-email is off, so a session normally exists here; keep the
+      // sign-in fallback so the self-update below runs authenticated.
+      if (!auth.session) await supabase.auth.signInWithPassword({ email: e, password: data.password });
+      // The trigger already wrote id/email/role/status. Fill the remaining
+      // profile fields via the self-update policy (role/status/is_disabled
+      // are left untouched, so the policy allows it).
+      const { error: updErr } = await supabase.from("users").update({
         full_name: data.fullName.trim(),
         phone: data.phone.trim(),
         district: data.district || null,
-        status: "ACTIVE",
-      };
-      const { error: insErr } = await supabase.from("users").insert(row);
-      if (insErr) throw { code: "auth.loginError", raw: insErr.message };
-      if (!auth.session) await supabase.auth.signInWithPassword({ email: e, password: data.password });
+      }).eq("id", userId);
+      if (updErr) throw { code: "auth.loginError", raw: updErr.message };
       const profile = await fetchProfile(userId);
       qc.setQueryData(qk.profile(userId), profile);
       return profile;
@@ -136,14 +142,23 @@ export function useSignupMerchant() {
   return useMutation({
     mutationFn: async (data) => {
       const e = data.email.toLowerCase().trim();
-      const { data: auth, error } = await supabase.auth.signUp({ email: e, password: data.password });
+      // role travels in auth metadata so the handle_new_user trigger creates
+      // the users row (id, email, role, status) on its own.
+      const { data: auth, error } = await supabase.auth.signUp({
+        email: e,
+        password: data.password,
+        options: { data: { role: "MERCHANT" } },
+      });
       if (error) throw { code: mapAuthError(error), raw: error.message };
       const userId = auth?.user?.id;
       if (!userId) throw { code: "auth.loginError" };
-      const row = {
-        id: userId,
-        email: e,
-        role: "MERCHANT",
+      // Confirm-email is off, so a session normally exists here; keep the
+      // sign-in fallback so the self-update below runs authenticated.
+      if (!auth.session) await supabase.auth.signInWithPassword({ email: e, password: data.password });
+      // The trigger already wrote id/email/role/status. Fill the remaining
+      // profile fields via the self-update policy (role/status/is_disabled
+      // are left untouched, so the policy allows it).
+      const { error: updErr } = await supabase.from("users").update({
         business_name: data.businessName.trim(),
         owner_name: data.ownerName.trim(),
         phone: data.phone.trim(),
@@ -154,11 +169,8 @@ export function useSignupMerchant() {
         business_type: data.businessType,
         crops_traded: data.cropsTraded,
         business_description: (data.businessDescription || "").slice(0, 200) || null,
-        status: "PENDING",
-      };
-      const { error: insErr } = await supabase.from("users").insert(row);
-      if (insErr) throw { code: "auth.loginError", raw: insErr.message };
-      if (!auth.session) await supabase.auth.signInWithPassword({ email: e, password: data.password });
+      }).eq("id", userId);
+      if (updErr) throw { code: "auth.loginError", raw: updErr.message };
       const profile = await fetchProfile(userId);
       qc.setQueryData(qk.profile(userId), profile);
       return profile;
