@@ -65,6 +65,7 @@ DROP POLICY IF EXISTS "Public read users" ON users;
 -- The public feed: anyone (logged in or out) may see merchants that are
 -- approved and not disabled. Which of their columns are visible is decided
 -- by the per-role column grants below, not here.
+DROP POLICY IF EXISTS "users_read_approved_merchants" ON users;
 CREATE POLICY "users_read_approved_merchants" ON users
   FOR SELECT
   TO anon, authenticated
@@ -76,12 +77,14 @@ CREATE POLICY "users_read_approved_merchants" ON users
 
 -- Own profile (any role, any status — pending/rejected merchants must still
 -- load their own row for the pending page and resubmit flow).
+DROP POLICY IF EXISTS "users_read_own_row" ON users;
 CREATE POLICY "users_read_own_row" ON users
   FOR SELECT
   TO authenticated
   USING (id = auth.uid());
 
 -- Admin screens list every merchant and farmer.
+DROP POLICY IF EXISTS "users_admin_read_all" ON users;
 CREATE POLICY "users_admin_read_all" ON users
   FOR SELECT
   TO authenticated
