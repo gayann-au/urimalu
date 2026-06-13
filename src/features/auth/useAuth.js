@@ -3,10 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
+import { USER_COLUMNS_AUTHED } from "../../lib/constants";
 
+// Own row, so the authenticated column grant applies — select("*") is
+// refused under the column grants from the users_select_lockdown migration.
 async function fetchProfile(userId) {
   if (!userId) return null;
-  const { data, error } = await supabase.from("users").select("*").eq("id", userId).maybeSingle();
+  const { data, error } = await supabase.from("users").select(USER_COLUMNS_AUTHED).eq("id", userId).maybeSingle();
   if (error) {
     // eslint-disable-next-line no-console
     console.error("[useAuth.fetchProfile]", error);

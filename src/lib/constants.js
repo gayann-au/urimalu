@@ -2,6 +2,20 @@ export const ROLES = { FARMER: "FARMER", MERCHANT: "MERCHANT", ADMIN: "ADMIN" };
 export const MERCHANT_STATUS = { ACTIVE: "ACTIVE", PENDING: "PENDING", APPROVED: "APPROVED", REJECTED: "REJECTED" };
 export const LEAD_TYPES = { VIEW: "VIEW", SHOW_NUMBER: "SHOW_NUMBER", WHATSAPP: "WHATSAPP", CALL: "CALL" };
 
+// Column lists for every read of the users table. select("*") on users fails
+// for anon and authenticated since the column-level grants in
+// supabase/migrations/20260612000001_users_select_lockdown.sql — these lists
+// must stay in sync with the GRANT SELECT statements there.
+// PUBLIC is what the anon role may read; AUTHED adds contact fields and the
+// own-profile / admin-screen fields granted to the authenticated role.
+export const USER_COLUMNS_PUBLIC =
+  "id, role, status, is_disabled, business_name, town, district, created_at";
+export const USER_COLUMNS_AUTHED =
+  USER_COLUMNS_PUBLIC +
+  ", phone, whatsapp, email" +
+  ", full_name, owner_name, years_trading, business_type, crops_traded" +
+  ", business_description, rejection_reason, resubmitted_at";
+
 export const DISTRICTS = ["Kodagu", "Chikmagalur", "Hassan", "Other"];
 
 export const DELIVERY_POINTS = ["Virajpet", "Gonikoppal", "Kushalnagar", "Madikeri", "Somwarpet", "Ponnampet", "Suntikoppa"];

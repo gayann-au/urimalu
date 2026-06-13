@@ -54,8 +54,11 @@ export function useUpdateReportStatus() {
   });
 }
 
+// RETURNING "id" instead of a bare .select(): the rows are only counted to
+// detect RLS-blocked writes, and RETURNING * is refused under the users
+// column grants (no SELECT on every column for authenticated).
 async function tryUpdate(id, patch) {
-  return await supabase.from("users").update(patch).eq("id", id).select();
+  return await supabase.from("users").update(patch).eq("id", id).select("id");
 }
 
 export function useToggleMerchantDisabled() {

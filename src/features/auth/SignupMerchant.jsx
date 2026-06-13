@@ -106,7 +106,10 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
           status: "PENDING",
           resubmitted_at: new Date().toISOString(),
         };
-        const { data, error } = await supabase.from("users").update(patch).eq("id", prefill.id).select();
+        // RETURNING is only used to detect an RLS-blocked update (zero rows
+        // back). "id" keeps that check working — a bare .select() means
+        // RETURNING *, which the users column grants no longer allow.
+        const { data, error } = await supabase.from("users").update(patch).eq("id", prefill.id).select("id");
         if (error) throw new Error(error.message);
         if (!data || data.length === 0) throw new Error("admin.rlsBlocked");
         qc.invalidateQueries({ queryKey: qk.users });

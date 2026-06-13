@@ -9,8 +9,11 @@ async function fetchAllLeads() {
 }
 export function useAllLeads() { return useQuery({ queryKey: qk.leads, queryFn: fetchAllLeads }); }
 
+// RETURNING "id" instead of a bare .select(): the rows are only counted to
+// detect RLS-blocked writes, and RETURNING * is refused under the users
+// column grants (no SELECT on every column for authenticated).
 async function tryUpdate(id, patch) {
-  return await supabase.from("users").update(patch).eq("id", id).select();
+  return await supabase.from("users").update(patch).eq("id", id).select("id");
 }
 
 // Approve, reject, or otherwise set a merchant's status.
@@ -52,7 +55,7 @@ export function useRemoveUser() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id) => {
-      const { data, error } = await supabase.from("users").delete().eq("id", id).select();
+      const { data, error } = await supabase.from("users").delete().eq("id", id).select("id");
       if (error) throw new Error(error.message);
       if (!data || data.length === 0) throw new Error("admin.rlsBlocked");
       return data[0];

@@ -1,9 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
+import { useAuth } from "../auth/useAuth";
+import { USER_COLUMNS_PUBLIC, USER_COLUMNS_AUTHED } from "../../lib/constants";
 
+// Full app-facing user rows. Only runs behind a login: AdminPage sits behind
+// AdminOnly and ProfilePage behind ProfileGuard, so the authenticated column
+// grant always applies. select("*") would be refused under column grants.
 async function fetchUsers() {
-  const { data, error } = await supabase.from("users").select("*");
+  const { data, error } = await supabase.from("users").select(USER_COLUMNS_AUTHED);
   if (error) throw error;
   return data || [];
 }
@@ -14,17 +19,32 @@ async function fetchReviews() {
   return data || [];
 }
 
+// Merchant columns the feed needs. The anon column grant excludes phone and
+// whatsapp, so the contact columns are requested only when a session exists —
+// for logged-out visitors they are simply absent from the merchant object,
+// and RateCard's !phone guards make the contact buttons no-ops.
+function feedUserColumns(isAuthed) {
+  return isAuthed ? `${USER_COLUMNS_PUBLIC}, phone, whatsapp` : USER_COLUMNS_PUBLIC;
+}
+
 // Fetch the public feed: active listings from approved, non-disabled merchants.
 //
 // We fetch listings and users separately and join in JS, matching the existing
-// pattern in this codebase. The merchant filter checks the DB status directly:
-// RLS blocks unapproved merchants from creating listings, so any listing that
-// exists already belongs to a truly approved merchant. No client-side
-// auto-approve logic is needed here.
-async function fetchFeedListings() {
+// pattern in this codebase. The merchant filter runs twice on purpose: the
+// .eq() filters push it into the database (and the users SELECT policies
+// enforce the same condition server-side), while the JS loop below stays as a
+// harmless second layer. RLS blocks unapproved merchants from creating
+// listings, so any listing that exists already belongs to a truly approved
+// merchant. No client-side auto-approve logic is needed here.
+async function fetchFeedListings(isAuthed) {
   const [listingsRes, usersRes] = await Promise.all([
     supabase.from("listings").select("*").eq("is_active", true),
-    supabase.from("users").select("*"),
+    supabase
+      .from("users")
+      .select(feedUserColumns(isAuthed))
+      .eq("role", "MERCHANT")
+      .eq("status", "APPROVED")
+      .eq("is_disabled", false),
   ]);
   if (listingsRes.error) throw listingsRes.error;
   if (usersRes.error)    throw usersRes.error;
@@ -58,7 +78,20 @@ async function fetchFeedListings() {
 
 export function useUsers()    { return useQuery({ queryKey: qk.users,    queryFn: fetchUsers }); }
 export function useReviews()  { return useQuery({ queryKey: qk.reviews,  queryFn: fetchReviews }); }
-export function useListings() { return useQuery({ queryKey: qk.listings, queryFn: fetchFeedListings }); }
+
+// The feed runs for both logged-out and logged-in visitors, but the users
+// column list differs per role, so the auth state is part of the query key:
+// flipping it on login/logout refetches with the matching column list instead
+// of serving cached phone-less rows to a logged-in user (or vice versa).
+// Existing invalidations of qk.listings still match — React Query
+// invalidation matches key prefixes.
+export function useListings() {
+  const { isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: [...qk.listings, isAuthenticated ? "authed" : "anon"],
+    queryFn: () => fetchFeedListings(isAuthenticated),
+  });
+}
 
 // Helper for the feed page: the unique, sorted list of crop names that appear
 // in the current feed. Useful for building crop filter chips. Filtering and
