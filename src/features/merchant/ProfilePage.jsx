@@ -14,10 +14,10 @@ import { useAddReview } from "../reviews/useReviews";
 import { ReviewForm } from "../reviews/ReviewForm";
 import { supabase } from "../../lib/supabase";
 import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
-import { formatINR, dayKey, lastNDays, listingPriceView } from "../../lib/constants";
+import { formatINR, dayKey, lastNDays, listingPriceView, BAG_WEIGHTS } from "../../lib/constants";
 
 // All listings for this merchant, active AND inactive. Public read.
-// Uses a distinct cache key from the dashboard's useMyListings — the public
+// Uses a distinct cache key from the dashboard's useMyListings. The public
 // profile view and the merchant's own private dashboard read the same table
 // but in different contexts and must not overwrite each other's cache.
 function useAllListingsForMerchant(merchantId) {
@@ -67,6 +67,7 @@ export default function ProfilePage() {
   const addReview   = useAddReview();
   const { trackView, trackLead } = useLeadTracking();
   const [showReview, setShowReview] = useState(false);
+  const [numberRevealed, setNumberRevealed] = useState(false);
 
   // Filter bar state
   const [search, setSearch]         = useState("");
@@ -181,6 +182,11 @@ export default function ProfilePage() {
     );
     window.open(`https://wa.me/${num}?text=${msg}`, "_blank");
   }
+  function onShowNumber() {
+    if (numberRevealed) return;
+    setNumberRevealed(true);
+    trackLead(merchant.id, "SHOW_NUMBER");
+  }
 
   return (
     <div className="flex flex-col flex-1 pb-10 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
@@ -199,9 +205,9 @@ export default function ProfilePage() {
         </p>
         <div className="mt-3 flex items-center gap-2 flex-wrap">
           <Badge tone="approved">{t("profile.verifiedMerchant")}</Badge>
-          {merchant.years_trading && (
+          {merchant.years_trading && i18n.exists(`years.${merchant.years_trading}`) && (
             <Badge tone="neutral">
-              {t("profile.tradingBadge", { years: merchant.years_trading })}
+              {t("profile.tradingBadge", { years: t(`years.${merchant.years_trading}`) })}
             </Badge>
           )}
         </div>
@@ -269,7 +275,17 @@ export default function ProfilePage() {
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className="text-gray-700">{merchant.owner_name || "-"}</span>
-            <span className="font-semibold text-gray-900 tabular-nums">{merchant.phone || "-"}</span>
+            {numberRevealed ? (
+              <span className="font-semibold text-gray-900 tabular-nums">{merchant.phone || "-"}</span>
+            ) : (
+              <button
+                type="button"
+                onClick={onShowNumber}
+                className="min-h-[36px] rounded-lg border-2 border-coorg-600 text-coorg-700 bg-white font-bold text-sm px-3 hover:bg-coorg-50 transition"
+              >
+                {t("common.showNumber")}
+              </button>
+            )}
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button
@@ -395,6 +411,9 @@ function ListingRow({ listing, t }) {
         <div className="text-xs text-gray-500 mt-0.5">{listing.variety_notes}</div>
       )}
       <ListingPrice price={price} t={t} />
+      {price.mode === "perkg" && price.perKg != null && (
+        <BagTotals perKg={price.perKg} t={t} />
+      )}
       {listing.notes && (
         <div className="text-xs text-gray-500 italic mt-1">{listing.notes}</div>
       )}
@@ -433,6 +452,41 @@ function ListingPrice({ price, t }) {
           {t("card.thatIsPerKg", { price: formatINR(price.perKg) })}
         </div>
       )}
+    </div>
+  );
+}
+
+// "See total for a bag": tappable weight chips that multiply price_per_kg,
+// mirroring the by-crop card so both screens read identically. Local state
+// only, defaults to 50 kg, no backend.
+function BagTotals({ perKg, t }) {
+  const [weight, setWeight] = useState(50);
+  const total = Math.round(weight * Number(perKg));
+  return (
+    <div className="mt-3 rounded-xl bg-gray-50 border border-gray-100 p-3">
+      <div className="text-xs font-semibold text-gray-500">{t("card.seeTotalForBag")}</div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {BAG_WEIGHTS.map((w) => {
+          const active = w === weight;
+          return (
+            <button
+              key={w}
+              type="button"
+              onClick={() => setWeight(w)}
+              className={`min-h-[36px] rounded-full px-3 text-xs font-bold border-2 transition ${
+                active
+                  ? "bg-coorg-600 text-white border-coorg-600"
+                  : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              {t("card.weightChip", { weight: w })}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-2 text-sm font-bold text-gray-800 tabular-nums">
+        {t("card.weightTotal", { weight, total: formatINR(total) })}
+      </div>
     </div>
   );
 }
