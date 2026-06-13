@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
+import { toTitleCaseCrop } from "../../lib/constants";
 
 // Fetch all listings (active and inactive) for the given merchant,
 // ordered by crop_name. The merchant needs to see inactive crops too
@@ -37,6 +38,11 @@ export function useSaveListing() {
       if (fields.call_for_price) {
         fields.price = null;
       }
+
+      // Normalise the crop name to a consistent Title Case so the same crop
+      // typed with different capitalisation is never stored as separate crops.
+      // Applies to both the insert and the update path below.
+      fields.crop_name = toTitleCaseCrop(fields.crop_name);
 
       let saved;
 

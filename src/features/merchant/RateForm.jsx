@@ -11,6 +11,7 @@ import {
   DEFAULT_CROP_SUGGESTIONS,
   computePricePerKg,
   formatINR,
+  toTitleCaseCrop,
 } from "../../lib/constants";
 
 // Preprocessor: empty string or null -> null, otherwise coerce to number.
@@ -130,7 +131,7 @@ export function RateForm({ listing, onSave, onCancel }) {
   function onSubmit(values) {
     const out = {
       ...(listing?.id ? { id: listing.id } : {}),
-      crop_name:      values.crop_name.trim(),
+      crop_name:      toTitleCaseCrop(values.crop_name),
       variety_notes:  values.variety_notes?.trim() || null,
       price:          values.call_for_price ? null : values.price,
       unit_label:     values.unit_label,

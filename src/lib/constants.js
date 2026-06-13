@@ -213,5 +213,21 @@ export function formatValidTill(value) {
   return `${dd}/${mm}/${String(d.getFullYear())}`;
 }
 
+// Normalise a crop name to a consistent Title Case so the same crop typed with
+// different capitalisation is never stored as separate crops. Trims the ends,
+// collapses any run of inner whitespace to a single space, lowercases, then
+// capitalises the first letter of each word. Returns an empty string for empty
+// or null input. Simple and dependency free.
+export function toTitleCaseCrop(name) {
+  if (!name) return "";
+  return String(name)
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .split(" ")
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
 // Indian mobile validation
 export const phoneRegex = /^[6-9]\d{9}$/;
