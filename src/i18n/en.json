@@ -16,6 +16,7 @@
     "language": "EN · ಕನ್ನಡ",
     "clearFilters": "Clear filters",
     "showNumber": "Show Number",
+    "hideNumber": "Hide",
     "call": "Call",
     "whatsapp": "WhatsApp",
     "verified": "Verified",
@@ -211,6 +212,7 @@
     "openPriceLabel": "Open price",
     "noOutturn": "no outturn test",
     "validTill": "Valid till",
+    "priceValidTill": "Price valid till {{date}}",
     "reconfirm": "Subject to reconfirmation",
     "delivery": "Delivery",
     "contact": "Contact",
@@ -338,6 +340,7 @@
   },
   "profile": {
     "title": "Merchant Profile",
+    "about": "About",
     "verifiedMerchant": "Verified Merchant",
     "memberSince": "Member since",
     "ratingSummary": "{{avg}} stars from {{count}} reviews",

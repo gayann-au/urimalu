@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLeadTracking } from "../../hooks/useLeadTracking";
 import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
-import { BAG_WEIGHTS, formatINR, listingPriceView } from "../../lib/constants";
+import { BAG_WEIGHTS, formatINR, listingPriceView, formatValidTill } from "../../lib/constants";
 
 export function RateCard({ item }) {
   const { t } = useTranslation();
@@ -28,6 +28,7 @@ export function RateCard({ item }) {
 
   const price = listingPriceView(item);
   const showBagTotals = price.mode === "perkg" && price.perKg != null;
+  const validTill = formatValidTill(item.valid_till);
 
   return (
     <article className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-gray-300 transition">
@@ -49,6 +50,12 @@ export function RateCard({ item }) {
 
       {/* Weight conversion: per-kg listings only */}
       {showBagTotals && <BagTotals perKg={price.perKg} t={t} />}
+
+      {validTill && (
+        <div className="mt-3 text-xs text-gray-500">
+          {t("card.priceValidTill", { date: validTill })}
+        </div>
+      )}
 
       {item.variety_notes && (
         <div className="mt-3 text-xs text-gray-500">{item.variety_notes}</div>

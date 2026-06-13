@@ -14,7 +14,7 @@ import { useAddReview } from "../reviews/useReviews";
 import { ReviewForm } from "../reviews/ReviewForm";
 import { supabase } from "../../lib/supabase";
 import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
-import { formatINR, dayKey, lastNDays, listingPriceView, BAG_WEIGHTS } from "../../lib/constants";
+import { formatINR, dayKey, lastNDays, listingPriceView, BAG_WEIGHTS, formatValidTill } from "../../lib/constants";
 
 // All listings for this merchant, active AND inactive. Public read.
 // Uses a distinct cache key from the dashboard's useMyListings. The public
@@ -68,6 +68,9 @@ export default function ProfilePage() {
   const { trackView, trackLead } = useLeadTracking();
   const [showReview, setShowReview] = useState(false);
   const [numberRevealed, setNumberRevealed] = useState(false);
+  // Separate from numberRevealed: remembers that the SHOW_NUMBER lead already
+  // fired this page visit, so toggling hide/show again never re-fires analytics.
+  const [numberLeadFired, setNumberLeadFired] = useState(false);
 
   // Filter bar state
   const [search, setSearch]         = useState("");
@@ -183,9 +186,13 @@ export default function ProfilePage() {
     window.open(`https://wa.me/${num}?text=${msg}`, "_blank");
   }
   function onShowNumber() {
-    if (numberRevealed) return;
     setNumberRevealed(true);
+    if (numberLeadFired) return;
+    setNumberLeadFired(true);
     trackLead(merchant.id, "SHOW_NUMBER");
+  }
+  function onHideNumber() {
+    setNumberRevealed(false);
   }
 
   return (
@@ -223,6 +230,16 @@ export default function ProfilePage() {
             <span className="text-sm text-gray-400">{t("review.noneYet")}</span>
           )}
         </div>
+        {/* Merchant-typed about text. Free text, rendered as-is (no translation
+            of content); only the label goes through i18n. Hidden when empty. */}
+        {merchant.business_description && merchant.business_description.trim() && (
+          <div className="mt-4">
+            <div className="text-xs font-semibold text-gray-500">{t("profile.about")}</div>
+            <p className="text-sm text-gray-700 mt-1 whitespace-pre-line">
+              {merchant.business_description}
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Crops: filter bar + list */}
@@ -276,7 +293,16 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className="text-gray-700">{merchant.owner_name || "-"}</span>
             {numberRevealed ? (
-              <span className="font-semibold text-gray-900 tabular-nums">{merchant.phone || "-"}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-900 tabular-nums">{merchant.phone || "-"}</span>
+                <button
+                  type="button"
+                  onClick={onHideNumber}
+                  className="text-xs font-semibold text-gray-500 underline"
+                >
+                  {t("common.hideNumber")}
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
@@ -401,6 +427,7 @@ function ListingRow({ listing, t }) {
   const active = !!listing.is_active;
   const dim = active ? "" : "opacity-60";
   const price = listingPriceView(listing);
+  const validTill = formatValidTill(listing.valid_till);
   return (
     <li className={`bg-white rounded-2xl border border-gray-200 p-4 ${dim}`}>
       <div className="flex items-start justify-between gap-2">
@@ -413,6 +440,11 @@ function ListingRow({ listing, t }) {
       <ListingPrice price={price} t={t} />
       {price.mode === "perkg" && price.perKg != null && (
         <BagTotals perKg={price.perKg} t={t} />
+      )}
+      {validTill && (
+        <div className="text-xs text-gray-500 mt-1">
+          {t("card.priceValidTill", { date: validTill })}
+        </div>
       )}
       {listing.notes && (
         <div className="text-xs text-gray-500 italic mt-1">{listing.notes}</div>

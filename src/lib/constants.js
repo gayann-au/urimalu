@@ -192,5 +192,26 @@ export function lastNDays(n = 7) {
   return out;
 }
 
+// Format a valid_till value as DD/MM/YYYY with zero padding, built explicitly
+// from the date parts so the output never varies by device locale. Date only
+// strings and ISO timestamps both reuse their leading YYYY-MM-DD, which avoids
+// any timezone shift. Returns "" for empty or unparseable values. Shared by the
+// merchant profile and the feed card so both render valid_till identically.
+export function formatValidTill(value) {
+  if (!value) return "";
+  const s = String(value).trim();
+  if (!s) return "";
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    const [, yyyy, mm, dd] = iso;
+    return `${dd}/${mm}/${yyyy}`;
+  }
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return "";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}/${String(d.getFullYear())}`;
+}
+
 // Indian mobile validation
 export const phoneRegex = /^[6-9]\d{9}$/;
