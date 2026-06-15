@@ -11,6 +11,7 @@ const DashboardPage   = lazy(() => import("../features/merchant/DashboardPage"))
 const HistoryPage     = lazy(() => import("../features/merchant/HistoryPage"));
 const ProfilePage     = lazy(() => import("../features/merchant/ProfilePage"));
 const AdminPage       = lazy(() => import("../features/admin/AdminPage"));
+const LandingPage     = lazy(() => import("../features/landing/LandingPage"));
 
 function PageLoader() {
   return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading…</div>;
@@ -25,7 +26,7 @@ function GuestOnly({ children }) {
     const s = profile.status;
     return <Navigate to={s === "APPROVED" ? "/merchant/dashboard" : "/merchant/pending"} replace/>;
   }
-  return <Navigate to="/" replace/>;
+  return <Navigate to="/feed" replace/>;
 }
 
 function MerchantPendingGuard() {
@@ -77,11 +78,22 @@ function FeedGuard() {
   return <FeedPage/>;
 }
 
+// Public marketing landing page lives at "/". Logged-in users skip it and go
+// to the feed; FeedGuard then sends merchants on to their dashboard, so every
+// signed-in role lands somewhere useful instead of the marketing page.
+function HomeRoute() {
+  const { profile, isLoading } = useAuth();
+  if (isLoading) return <PageLoader/>;
+  if (profile) return <Navigate to="/feed" replace/>;
+  return <LandingPage/>;
+}
+
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader/>}>
       <Routes>
-        <Route path="/" element={<FeedGuard/>}/>
+        <Route path="/"     element={<HomeRoute/>}/>
+        <Route path="/feed" element={<FeedGuard/>}/>
         <Route path="/login"             element={<GuestOnly><LoginPage/></GuestOnly>}/>
         <Route path="/signup/farmer"     element={<GuestOnly><SignupFarmer/></GuestOnly>}/>
         <Route path="/signup/merchant"   element={<GuestOnly><SignupMerchant/></GuestOnly>}/>
