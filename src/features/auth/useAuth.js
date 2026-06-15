@@ -73,6 +73,26 @@ function mapAuthError(error) {
   return "auth.loginError";
 }
 
+// Maps a Google sign-in failure to a friendly i18n code. A brand new Google
+// email surfaces as a database error because the handle_new_user trigger only
+// provisions FARMER or MERCHANT sign-ups, so treat that case as "no account".
+function mapGoogleError(error) {
+  const m = (error?.message || "").toLowerCase();
+  if (m.includes("network") || m.includes("failed to fetch")) return "auth.loginNetwork";
+  if (m.includes("database error") || m.includes("saving new user")) return "auth.googleNoAccount";
+  return "auth.googleError";
+}
+
+// Shared post-login redirect used by both password and Google sign-in: admins
+// to the console, merchants to their dashboard or the pending screen, everyone
+// else to the feed.
+function navigateByProfile(nav, profile) {
+  if (profile.role === "ADMIN") nav("/admin", { replace: true });
+  else if (profile.role === "MERCHANT") {
+    nav(profile.status === "APPROVED" ? "/merchant/dashboard" : "/merchant/pending", { replace: true });
+  } else nav("/", { replace: true });
+}
+
 export function useLogin() {
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -90,13 +110,37 @@ export function useLogin() {
       qc.setQueryData(qk.profile(data.user.id), profile);
       return profile;
     },
-    onSuccess: (profile) => {
-      if (profile.role === "ADMIN")    nav("/admin", { replace: true });
-      else if (profile.role === "MERCHANT") {
-        const status = profile.status;
-        nav(status === "APPROVED" ? "/merchant/dashboard" : "/merchant/pending", { replace: true });
-      } else nav("/", { replace: true });
+    onSuccess: (profile) => navigateByProfile(nav, profile),
+  });
+}
+
+export function useGoogleLogin() {
+  const nav = useNavigate();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (credential) => {
+      if (!credential) throw { code: "auth.googleError" };
+      // Supabase verifies the Google JWT server side and matches or creates the
+      // auth.users row, then mints a session. This is the credential check the
+      // task asks for, performed by Supabase instead of a separate backend.
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: credential,
+      });
+      if (error) throw { code: mapGoogleError(error), raw: error.message };
+      if (!data?.user?.id) throw { code: "auth.googleError" };
+      const profile = await fetchProfile(data.user.id);
+      // Existing users only: a first-time Google email has no users row, so sign
+      // back out and ask the visitor to register as Farmer or Merchant first.
+      if (!profile) {
+        await supabase.auth.signOut();
+        throw { code: "auth.googleNoAccount" };
+      }
+      qc.setQueryData(qk.session, data.session);
+      qc.setQueryData(qk.profile(data.user.id), profile);
+      return profile;
     },
+    onSuccess: (profile) => navigateByProfile(nav, profile),
   });
 }
 

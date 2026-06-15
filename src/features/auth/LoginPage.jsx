@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
@@ -7,7 +7,8 @@ import { z } from "zod";
 import { Header } from "../../components/layout/Header";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { useLogin } from "./useAuth";
+import { useLogin, useGoogleLogin } from "./useAuth";
+import { GoogleSignInButton } from "./GoogleSignInButton";
 
 const schema = z.object({
   email: z.string().email("auth.emailInvalid"),
@@ -17,6 +18,7 @@ const schema = z.object({
 export default function LoginPage() {
   const { t } = useTranslation();
   const login = useLogin();
+  const googleLogin = useGoogleLogin();
   const [topError, setTopError] = useState(null);
   const [showPw, setShowPw] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(schema) });
@@ -29,6 +31,17 @@ export default function LoginPage() {
       setTopError(e?.code || "auth.loginError");
     }
   }
+
+  // Receives the signed credential from Google Identity Services and exchanges
+  // it for a Supabase session. Errors surface through the same top banner.
+  const onGoogleCredential = useCallback(async (credential) => {
+    setTopError(null);
+    try {
+      await googleLogin.mutateAsync(credential);
+    } catch (e) {
+      setTopError(e?.code || "auth.googleError");
+    }
+  }, [googleLogin]);
 
   return (
     <div className="flex flex-col flex-1 items-center">
@@ -72,6 +85,12 @@ export default function LoginPage() {
             {login.isPending ? t("common.loading") : t("nav.login")}
           </Button>
         </form>
+        <div className="my-6 flex items-center gap-3">
+          <span className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs uppercase tracking-wide text-gray-400">{t("auth.orDivider")}</span>
+          <span className="h-px flex-1 bg-gray-200" />
+        </div>
+        <GoogleSignInButton onCredential={onGoogleCredential} />
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">{t("auth.newHere")}</p>
           <div className="mt-3 grid grid-cols-1 gap-2">
