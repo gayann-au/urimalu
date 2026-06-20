@@ -97,6 +97,7 @@
     "farmerHeading": "Your details",
     "merchantHeading": "Your business details",
     "sub": "View and update your information",
+    "reviewNotice": "Changing your business name, business type, or crops needs a quick review before it shows on Urimalu again. Your other details save right away.",
     "saved": "Changes saved",
     "savedPending": "Changes saved. Your account is pending review again.",
     "saveError": "Could not save your changes. Please try again",

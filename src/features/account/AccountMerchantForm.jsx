@@ -125,6 +125,17 @@ export default function AccountMerchantForm({ profile }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {/* Heads-up that the three review-sensitive fields below (business name,
+          business type, crops) need a quick approval before they show again.
+          Contact, owner, town, district, years, and description save instantly. */}
+      <div className="rounded-xl bg-coorg-50 border border-coorg-200 text-coorg-900 px-3 py-2.5 text-xs leading-relaxed flex gap-2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 mt-0.5">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span>{t("account.reviewNotice")}</span>
+      </div>
       <Input label={t("auth.businessName")} {...register("businessName")}
         error={errors.businessName ? t(errors.businessName.message) : null}/>
       <Input label={t("auth.ownerName")} {...register("ownerName")}
