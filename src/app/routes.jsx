@@ -1,9 +1,10 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../features/auth/useAuth";
 
 const FeedPage        = lazy(() => import("../features/feed/FeedPage"));
 const LoginPage       = lazy(() => import("../features/auth/LoginPage"));
+const OnboardingPage  = lazy(() => import("../features/auth/OnboardingPage"));
 const SignupFarmer    = lazy(() => import("../features/auth/SignupFarmer"));
 const SignupMerchant  = lazy(() => import("../features/auth/SignupMerchant"));
 const PendingPage     = lazy(() => import("../features/merchant/PendingPage"));
@@ -12,6 +13,7 @@ const HistoryPage     = lazy(() => import("../features/merchant/HistoryPage"));
 const ProfilePage     = lazy(() => import("../features/merchant/ProfilePage"));
 const AdminPage       = lazy(() => import("../features/admin/AdminPage"));
 const LandingPage     = lazy(() => import("../features/landing/LandingPage"));
+const AccountPage     = lazy(() => import("../features/account/AccountPage"));
 
 function PageLoader() {
   return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading…</div>;
@@ -88,13 +90,51 @@ function HomeRoute() {
   return <LandingPage/>;
 }
 
+// A brand new Google account has a session but no users row until it picks a
+// role. Such a visitor is sent to onboarding from any other page, so a refresh
+// mid-onboarding cannot drop them into the app half configured. Everyone else
+// (logged out, or logged in with a profile) passes through untouched.
+function RequireOnboarding({ children }) {
+  const { isAuthenticated, profile, isLoading } = useAuth();
+  const location = useLocation();
+  if (isLoading) return <PageLoader/>;
+  if (isAuthenticated && !profile && location.pathname !== "/onboarding") {
+    return <Navigate to="/onboarding" replace/>;
+  }
+  return children;
+}
+
+// The onboarding screen itself. Only a signed-in account with no profile row
+// belongs here: logged-out visitors go to login, already-onboarded users are
+// bounced to their normal landing spot.
+function OnboardingRoute() {
+  const { isAuthenticated, profile, isLoading } = useAuth();
+  if (isLoading) return <PageLoader/>;
+  if (!isAuthenticated) return <Navigate to="/login" replace/>;
+  if (profile) return <Navigate to="/feed" replace/>;
+  return <OnboardingPage/>;
+}
+
+// Self-service account page for any signed-in user with a profile. Logged-out
+// visitors go to login; profile-less Google accounts are already routed to
+// onboarding by RequireOnboarding before they reach here.
+function AccountRoute() {
+  const { profile, isLoading } = useAuth();
+  if (isLoading) return <PageLoader/>;
+  if (!profile) return <Navigate to="/login" replace/>;
+  return <AccountPage/>;
+}
+
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader/>}>
+      <RequireOnboarding>
       <Routes>
         <Route path="/"     element={<HomeRoute/>}/>
         <Route path="/feed" element={<FeedGuard/>}/>
         <Route path="/login"             element={<GuestOnly><LoginPage/></GuestOnly>}/>
+        <Route path="/onboarding"        element={<OnboardingRoute/>}/>
+        <Route path="/account"           element={<AccountRoute/>}/>
         <Route path="/signup/farmer"     element={<GuestOnly><SignupFarmer/></GuestOnly>}/>
         <Route path="/signup/merchant"   element={<GuestOnly><SignupMerchant/></GuestOnly>}/>
         <Route path="/merchant/pending"   element={<MerchantPendingGuard/>}/>
@@ -104,6 +144,7 @@ export function AppRoutes() {
         <Route path="/admin"              element={<AdminOnly><AdminPage/></AdminOnly>}/>
         <Route path="*" element={<Navigate to="/" replace/>}/>
       </Routes>
+      </RequireOnboarding>
     </Suspense>
   );
 }

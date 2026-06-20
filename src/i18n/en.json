@@ -34,7 +34,8 @@
     "signup": "Sign up",
     "dashboard": "Dashboard",
     "admin": "Admin",
-    "profile": "Profile"
+    "profile": "Profile",
+    "account": "My account"
   },
   "auth": {
     "loginTitle": "Welcome back",
@@ -71,7 +72,41 @@
     "businessType": "Type of business",
     "cropsTraded": "Primary crops traded (select at least one)",
     "businessDesc": "Brief description of business",
-    "businessDescPh": "e.g. Family-run coffee trading business since 1995, buying from estates in Virajpet and Gonikoppal"
+    "businessDescPh": "e.g. Family-run coffee trading business since 1995, buying from estates in Virajpet and Gonikoppal",
+    "onboardingError": "Could not finish setting up your account. Please try again",
+    "onboardingNoSession": "Your session has expired. Please sign in again"
+  },
+  "onboarding": {
+    "welcomeTitle": "Welcome to Urimalu",
+    "welcomeSub": "One quick question to finish setting up your account",
+    "whoAreYou": "How will you use Urimalu?",
+    "farmerTitle": "I am a Farmer",
+    "farmerDesc": "Browse daily merchant rates and contact buyers directly",
+    "merchantTitle": "I am a Merchant",
+    "merchantDesc": "Post your daily buying rates and reach farmers",
+    "farmerFormTitle": "Tell us about yourself",
+    "farmerFormSub": "This helps merchants know who they are dealing with",
+    "merchantFormTitle": "Tell us about your business",
+    "merchantFormSub": "We review every merchant before approval",
+    "finish": "Finish setup",
+    "back": "Back",
+    "differentAccount": "Use a different Google account"
+  },
+  "account": {
+    "title": "My account",
+    "farmerHeading": "Your details",
+    "merchantHeading": "Your business details",
+    "sub": "View and update your information",
+    "saved": "Changes saved",
+    "savedPending": "Changes saved. Your account is pending review again.",
+    "saveError": "Could not save your changes. Please try again",
+    "rlsBlocked": "This update was blocked. Please try again or contact support",
+    "emailLabel": "Email",
+    "roleLabel": "Account type",
+    "roleFarmer": "Farmer",
+    "roleMerchant": "Merchant",
+    "roleAdmin": "Admin",
+    "adminNote": "Admin accounts are managed from the admin panel."
   },
   "years": {
     "lt1": "Less than 1 year",

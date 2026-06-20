@@ -48,6 +48,15 @@ export function Header({ showBack = false, title }) {
             {lang === "kn" ? "ಕ·EN" : "EN·ಕ"}
           </button>
           {actionLink}
+          {profile && (
+            <Link to="/account" aria-label={t("nav.account")}
+              className="rounded-full bg-white/15 hover:bg-white/25 p-2 inline-flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </Link>
+          )}
           {profile ? (
             <button onClick={() => logout.mutate()} className="rounded-full bg-white/15 hover:bg-white/25 px-3 py-1.5 text-xs font-bold">
               {t("nav.logout")}

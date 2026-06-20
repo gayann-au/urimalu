@@ -73,9 +73,11 @@ function mapAuthError(error) {
   return "auth.loginError";
 }
 
-// Maps a Google sign-in failure to a friendly i18n code. A brand new Google
-// email surfaces as a database error because the handle_new_user trigger only
-// provisions FARMER or MERCHANT sign-ups, so treat that case as "no account".
+// Maps a Google sign-in failure to a friendly i18n code. The database-error
+// branch is a fallback for the brief window before the google_onboarding
+// migration is applied: until then the handle_new_user trigger still rejects a
+// role-less Google sign-up. Once the migration is live a new Google email no
+// longer errors here, it succeeds with no users row and is sent to onboarding.
 function mapGoogleError(error) {
   const m = (error?.message || "").toLowerCase();
   if (m.includes("network") || m.includes("failed to fetch")) return "auth.loginNetwork";
@@ -129,18 +131,19 @@ export function useGoogleLogin() {
       });
       if (error) throw { code: mapGoogleError(error), raw: error.message };
       if (!data?.user?.id) throw { code: "auth.googleError" };
-      const profile = await fetchProfile(data.user.id);
-      // Existing users only: a first-time Google email has no users row, so sign
-      // back out and ask the visitor to register as Farmer or Merchant first.
-      if (!profile) {
-        await supabase.auth.signOut();
-        throw { code: "auth.googleNoAccount" };
-      }
       qc.setQueryData(qk.session, data.session);
-      qc.setQueryData(qk.profile(data.user.id), profile);
-      return profile;
+      const profile = await fetchProfile(data.user.id);
+      // A first-time Google email has a session but no users row yet. Keep the
+      // session and hand the visitor to onboarding to pick Farmer or Merchant,
+      // instead of signing them out. Existing users have a row and go straight
+      // to their normal landing spot.
+      if (profile) qc.setQueryData(qk.profile(data.user.id), profile);
+      return { profile };
     },
-    onSuccess: (profile) => navigateByProfile(nav, profile),
+    onSuccess: ({ profile }) => {
+      if (profile) navigateByProfile(nav, profile);
+      else nav("/onboarding", { replace: true });
+    },
   });
 }
 
