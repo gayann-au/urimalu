@@ -329,6 +329,8 @@ export default function LandingPage() {
             <Link to="/signup/farmer">Farmers</Link>
             <Link to="/signup/merchant">Merchants</Link>
             <Link to="/login">Log in</Link>
+            <Link to="/privacy">Privacy Policy</Link>
+            <Link to="/terms">Terms of Service</Link>
           </div>
         </div>
         <div className="wrap">

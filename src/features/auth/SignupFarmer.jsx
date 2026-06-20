@@ -8,6 +8,7 @@ import { Header } from "../../components/layout/Header";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { useSignupFarmer } from "./useAuth";
+import LegalConsent from "../legal/LegalConsent";
 import { DISTRICTS, phoneRegex } from "../../lib/constants";
 
 const schema = z.object({
@@ -81,6 +82,7 @@ export default function SignupFarmer() {
               </div>
               {topError && <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold">{t(topError)}</div>}
               <Button type="submit" loading={signup.isPending} className="w-full">{signup.isPending ? t("common.loading") : t("nav.signup")}</Button>
+              <LegalConsent action="signing up" />
               <Link to="/login" className="block text-center text-sm text-coorg-700 font-semibold py-2">{t("nav.login")}</Link>
             </form>
           </>

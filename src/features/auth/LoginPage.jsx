@@ -9,6 +9,7 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { useLogin, useGoogleLogin } from "./useAuth";
 import { GoogleSignInButton } from "./GoogleSignInButton";
+import LegalConsent from "../legal/LegalConsent";
 
 const schema = z.object({
   email: z.string().email("auth.emailInvalid"),
@@ -91,6 +92,7 @@ export default function LoginPage() {
           <span className="h-px flex-1 bg-gray-200" />
         </div>
         <GoogleSignInButton onCredential={onGoogleCredential} />
+        <LegalConsent action="continuing" />
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">{t("auth.newHere")}</p>
           <div className="mt-3 grid grid-cols-1 gap-2">

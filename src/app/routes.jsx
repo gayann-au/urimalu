@@ -14,6 +14,8 @@ const ProfilePage     = lazy(() => import("../features/merchant/ProfilePage"));
 const AdminPage       = lazy(() => import("../features/admin/AdminPage"));
 const LandingPage     = lazy(() => import("../features/landing/LandingPage"));
 const AccountPage     = lazy(() => import("../features/account/AccountPage"));
+const PrivacyPage     = lazy(() => import("../features/legal/PrivacyPage"));
+const TermsPage       = lazy(() => import("../features/legal/TermsPage"));
 
 function PageLoader() {
   return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading…</div>;
@@ -142,6 +144,8 @@ export function AppRoutes() {
         <Route path="/merchant/history"   element={<MerchantHistoryGuard/>}/>
         <Route path="/merchant/:id"       element={<ProfileGuard/>}/>
         <Route path="/admin"              element={<AdminOnly><AdminPage/></AdminOnly>}/>
+        <Route path="/privacy"            element={<PrivacyPage/>}/>
+        <Route path="/terms"              element={<TermsPage/>}/>
         <Route path="*" element={<Navigate to="/" replace/>}/>
       </Routes>
       </RequireOnboarding>

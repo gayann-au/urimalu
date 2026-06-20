@@ -9,6 +9,7 @@ import { Header } from "../../components/layout/Header";
 import { Button } from "../../components/ui/Button";
 import { Input, Textarea, Select } from "../../components/ui/Input";
 import { useSignupMerchant } from "./useAuth";
+import LegalConsent from "../legal/LegalConsent";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
 import { toast } from "../../components/ui/Toast";
@@ -107,7 +108,7 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
           resubmitted_at: new Date().toISOString(),
         };
         // RETURNING is only used to detect an RLS-blocked update (zero rows
-        // back). "id" keeps that check working — a bare .select() means
+        // back). "id" keeps that check working. A bare .select() means
         // RETURNING *, which the users column grants no longer allow.
         const { data, error } = await supabase.from("users").update(patch).eq("id", prefill.id).select("id");
         if (error) throw new Error(error.message);
@@ -240,7 +241,10 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
               {t("common.cancel")}
             </button>
           ) : (
-            <Link to="/login" className="block text-center text-sm text-coorg-700 font-semibold py-2">{t("nav.login")}</Link>
+            <>
+              <LegalConsent action="registering" />
+              <Link to="/login" className="block text-center text-sm text-coorg-700 font-semibold py-2">{t("nav.login")}</Link>
+            </>
           )}
         </form>
       </main>
