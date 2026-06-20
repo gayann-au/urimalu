@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import "./LandingPage.css";
 
 // Urimalu marketing landing page, recreated from the Claude Design handoff.
@@ -7,9 +8,21 @@ import "./LandingPage.css";
 // scoped under .uri-landing so they never touch the rest of the app. Internal
 // links use react-router so navigation stays a single page transition.
 // The hero rate card is illustrative and uses sample numbers, not live data.
+//
+// Motion is handled with framer-motion: hero content plays a staggered load
+// reveal, every other block fades and rises into view on scroll, and buttons
+// and cards lift on hover with spring physics. All of it collapses to a plain
+// fade (or nothing) when the visitor prefers reduced motion.
+
+// Links rendered as motion components so buttons can lift and press.
+const MotionLink = motion.create(Link);
+
+// Shared easing, matches the --ease-out token used across the stylesheet.
+const EASE = [0.22, 0.61, 0.36, 1];
+
 export default function LandingPage() {
-  const rootRef = useRef(null);
   const [scrolled, setScrolled] = useState(false);
+  const reduce = useReducedMotion();
 
   // Sticky header gains a hairline border once the page is scrolled past the top.
   useEffect(() => {
@@ -19,49 +32,48 @@ export default function LandingPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Reveal on scroll. Mirrors the design prototype: fade and rise each .reveal
-  // element as it enters view, with a small stagger per sibling. Respects
-  // reduced motion by showing everything immediately.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const els = Array.from(root.querySelectorAll(".reveal"));
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const show = (el) => {
-      const sibs = Array.from(el.parentNode.querySelectorAll(".reveal"));
-      const i = Math.min(Math.max(sibs.indexOf(el), 0), 5);
-      el.style.transitionDelay = i * 70 + "ms";
-      el.classList.add("in");
-    };
-    if (reduce || !("IntersectionObserver" in window)) {
-      els.forEach((el) => el.classList.add("in"));
-      return;
-    }
-    els.forEach((el) => {
-      if (el.getBoundingClientRect().top < window.innerHeight * 0.92) show(el);
-    });
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((en) => {
-          if (en.isIntersecting) {
-            show(en.target);
-            io.unobserve(en.target);
-          }
-        });
-      },
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.12 }
-    );
-    els.forEach((el) => {
-      if (!el.classList.contains("in")) io.observe(el);
-    });
-    const fallback = setTimeout(() => {
-      els.forEach((el) => el.classList.add("in"));
-    }, 2400);
-    return () => {
-      io.disconnect();
-      clearTimeout(fallback);
-    };
-  }, []);
+  // Motion variants. When reduced motion is requested we drop the travel and
+  // keep only a gentle opacity change so nothing slides around.
+  const fadeUp = {
+    hidden: { opacity: 0, y: reduce ? 0 : 22 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
+  };
+  const stagger = {
+    hidden: {},
+    show: {
+      transition: { staggerChildren: reduce ? 0 : 0.09, delayChildren: 0.05 },
+    },
+  };
+  const slideInRight = {
+    hidden: { opacity: 0, x: reduce ? 0 : 48, scale: reduce ? 1 : 0.97 },
+    show: {
+      opacity: 1,
+      x: 0,
+      scale: 1,
+      transition: { duration: 0.75, ease: EASE, delay: reduce ? 0 : 0.12 },
+    },
+  };
+  const popIn = {
+    hidden: { opacity: 0, y: reduce ? 0 : 30, scale: reduce ? 1 : 0.98 },
+    show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.7, ease: EASE } },
+  };
+
+  // Hover and tap reactions. Spring physics give them the springy SaaS feel.
+  const cardHover = reduce
+    ? undefined
+    : { y: -6, transition: { type: "spring", stiffness: 320, damping: 22 } };
+  const btnHover = reduce
+    ? undefined
+    : { y: -2, transition: { type: "spring", stiffness: 420, damping: 18 } };
+  const btnTap = reduce ? undefined : { scale: 0.97 };
+
+  // Slow idle drift for the hero card, layered under its entrance animation.
+  const idleFloat = reduce
+    ? undefined
+    : { y: [0, -8, 0], transition: { duration: 6, ease: "easeInOut", repeat: Infinity } };
+
+  // Viewport config so each block animates once, when comfortably in view.
+  const inView = { once: true, amount: 0.2 };
 
   const arrow = (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -75,9 +87,14 @@ export default function LandingPage() {
   );
 
   return (
-    <div className="uri-landing" ref={rootRef}>
+    <div className="uri-landing">
       {/* Header */}
-      <header className={`hdr${scrolled ? " scrolled" : ""}`}>
+      <motion.header
+        className={`hdr${scrolled ? " scrolled" : ""}`}
+        initial={{ opacity: 0, y: reduce ? 0 : -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: EASE }}
+      >
         <div className="wrap hdr-in">
           <Link className="brand" to="/" aria-label="Urimalu home">
             <svg className="mark" viewBox="0 0 40 48" fill="none" aria-hidden="true">
@@ -96,134 +113,136 @@ export default function LandingPage() {
             </Link>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       <main>
         {/* Hero */}
         <section className="hero">
           <div className="wrap hero-grid">
-            <div className="hero-copy">
-              <span className="eyebrow pill reveal">
+            <motion.div className="hero-copy" variants={stagger} initial="hidden" animate="show">
+              <motion.span className="eyebrow pill" variants={fadeUp}>
                 <svg className="dot" viewBox="0 0 40 48" fill="none" aria-hidden="true">
                   <path d="M26.8 12.5c1-3 .2-5.6-2.4-6.9" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" />
                   <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="currentColor" />
                 </svg>
                 Daily crop prices
-              </span>
-              <h1 className="reveal">Real crop prices,<br /><span className="fire">with bite.</span></h1>
-              <p className="hero-sub reveal">Urimalu puts farmers and merchants on the same daily rates. Small platform, fierce honesty. Know the real price before you deal.</p>
-              <div className="hero-trust reveal">
+              </motion.span>
+              <motion.h1 variants={fadeUp}>Real crop prices,<br /><span className="fire">with bite.</span></motion.h1>
+              <motion.p className="hero-sub" variants={fadeUp}>Urimalu puts farmers and merchants on the same daily rates. Small platform, fierce honesty. Know the real price before you deal.</motion.p>
+              <motion.div className="hero-trust" variants={fadeUp}>
                 <span className="tc">{check}</span>
                 Free to join. Every merchant verified before they post.
-              </div>
-              <div className="btn-row reveal">
-                <Link className="btn btn-action" to="/signup/farmer">Sign up as a Farmer{arrow}</Link>
-                <Link className="btn btn-ink" to="/signup/merchant">Sign up as a Merchant{arrow}</Link>
-              </div>
-            </div>
+              </motion.div>
+              <motion.div className="btn-row" variants={fadeUp}>
+                <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>Sign up as a Farmer{arrow}</MotionLink>
+                <MotionLink className="btn btn-ink" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>Sign up as a Merchant{arrow}</MotionLink>
+              </motion.div>
+            </motion.div>
 
             {/* Hero visual, illustrative live rate card */}
-            <div className="hero-visual reveal" aria-hidden="true">
-              <div className="pulse-card">
-                <div className="pulse-head">
-                  <span className="pulse-label">Today's rate</span>
-                  <span className="pulse-live"><i></i>Live</span>
-                </div>
-                <div className="pulse-crop">
-                  <span className="bean">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <ellipse cx="12" cy="12" rx="6.5" ry="9" /><path d="M12 3.5c-2.4 3-2.4 14 0 17" />
+            <motion.div className="hero-visual" aria-hidden="true" variants={slideInRight} initial="hidden" animate="show">
+              <motion.div className="hero-visual-float" animate={idleFloat}>
+                <div className="pulse-card">
+                  <div className="pulse-head">
+                    <span className="pulse-label">Today's rate</span>
+                    <span className="pulse-live"><i></i>Live</span>
+                  </div>
+                  <div className="pulse-crop">
+                    <span className="bean">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <ellipse cx="12" cy="12" rx="6.5" ry="9" /><path d="M12 3.5c-2.4 3-2.4 14 0 17" />
+                      </svg>
+                    </span>
+                    Robusta Cherry, per 50kg bag
+                  </div>
+                  <div className="pulse-price">&#8377;9,840 <span className="unit">/bag</span></div>
+                  <span className="pulse-delta">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M7 17 17 7" /><path d="M9 7h8v8" />
                     </svg>
+                    4.2% vs yesterday
                   </span>
-                  Robusta Cherry, per 50kg bag
-                </div>
-                <div className="pulse-price">&#8377;9,840 <span className="unit">/bag</span></div>
-                <span className="pulse-delta">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M7 17 17 7" /><path d="M9 7h8v8" />
+                  <svg className="pulse-svg" viewBox="0 0 380 92" fill="none" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stopColor="#2F9B58" stopOpacity=".18" /><stop offset="1" stopColor="#2F9B58" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M4 72 L56 64 L106 74 L156 50 L206 58 L256 36 L306 42 L376 14 L376 92 L4 92 Z" fill="url(#pg)" />
+                    <path className="pulse-path" d="M4 72 L56 64 L106 74 L156 50 L206 58 L256 36 L306 42 L376 14" stroke="#1F7D44" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle className="pulse-glow" cx="376" cy="14" r="6" fill="#2F9B58" opacity=".35" />
+                    <circle className="pulse-dot" cx="376" cy="14" r="5" fill="#1F7D44" stroke="#fff" strokeWidth="2" />
                   </svg>
-                  4.2% vs yesterday
-                </span>
-                <svg className="pulse-svg" viewBox="0 0 380 92" fill="none" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0" stopColor="#2F9B58" stopOpacity=".18" /><stop offset="1" stopColor="#2F9B58" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path d="M4 72 L56 64 L106 74 L156 50 L206 58 L256 36 L306 42 L376 14 L376 92 L4 92 Z" fill="url(#pg)" />
-                  <path className="pulse-path" d="M4 72 L56 64 L106 74 L156 50 L206 58 L256 36 L306 42 L376 14" stroke="#1F7D44" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                  <circle className="pulse-glow" cx="376" cy="14" r="6" fill="#2F9B58" opacity=".35" />
-                  <circle className="pulse-dot" cx="376" cy="14" r="5" fill="#1F7D44" stroke="#fff" strokeWidth="2" />
-                </svg>
-                <div className="pulse-foot">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M3 12a9 9 0 1 0 9-9" /><polyline points="3 4 3 9 8 9" />
-                  </svg>
-                  Refreshes daily. Yesterday's price is yesterday's news.
+                  <div className="pulse-foot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M3 12a9 9 0 1 0 9-9" /><polyline points="3 4 3 9 8 9" />
+                    </svg>
+                    Refreshes daily. Yesterday's price is yesterday's news.
+                  </div>
                 </div>
-              </div>
-              <div className="float-chip">
-                <span className="vic">{check}</span>
-                <span>Verified merchant<small>Checked before posting</small></span>
-              </div>
-            </div>
+                <div className="float-chip">
+                  <span className="vic">{check}</span>
+                  <span>Verified merchant<small>Checked before posting</small></span>
+                </div>
+              </motion.div>
+            </motion.div>
           </div>
         </section>
 
         {/* How it works */}
         <section className="sec-pad" style={{ background: "var(--paper-2)" }}>
           <div className="wrap">
-            <div className="sec-head">
-              <span className="eyebrow reveal">How it works</span>
-              <h2 className="reveal">Four steps. No middle layer.</h2>
-            </div>
-            <div className="steps">
-              <div className="step reveal">
+            <motion.div className="sec-head" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
+              <motion.span className="eyebrow" variants={fadeUp}>How it works</motion.span>
+              <motion.h2 variants={fadeUp}>Four steps. No middle layer.</motion.h2>
+            </motion.div>
+            <motion.div className="steps" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
+              <motion.div className="step" variants={fadeUp} whileHover={cardHover}>
                 <div className="step-ic">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M7.5 3.5h6.7a2 2 0 0 1 1.4.6l5.3 5.3a2 2 0 0 1 0 2.8l-6.5 6.5a2 2 0 0 1-2.8 0l-5.3-5.3a2 2 0 0 1-.6-1.4V5.5a2 2 0 0 1 2-2Z" /><circle cx="10" cy="8" r="1.4" />
                   </svg>
                 </div>
                 <div className="step-n">STEP 01</div><div className="step-t">Merchants post their daily crop prices.</div>
-              </div>
-              <div className="step reveal">
+              </motion.div>
+              <motion.div className="step" variants={fadeUp} whileHover={cardHover}>
                 <div className="step-ic">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="6" y1="20" x2="6" y2="13" /><line x1="12" y1="20" x2="12" y2="8" /><line x1="18" y1="20" x2="18" y2="4" />
                   </svg>
                 </div>
                 <div className="step-n">STEP 02</div><div className="step-t">Farmers see and compare the real rates.</div>
-              </div>
-              <div className="step reveal">
+              </motion.div>
+              <motion.div className="step" variants={fadeUp} whileHover={cardHover}>
                 <div className="step-ic">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L19 18l1 3a2 2 0 0 1-2 2 16 16 0 0 1-16-16 2 2 0 0 1 2-2Z" />
                   </svg>
                 </div>
                 <div className="step-n">STEP 03</div><div className="step-t">They contact each other directly. No commission.</div>
-              </div>
-              <div className="step reveal">
+              </motion.div>
+              <motion.div className="step" variants={fadeUp} whileHover={cardHover}>
                 <div className="step-ic">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" />
                   </svg>
                 </div>
                 <div className="step-n">STEP 04</div><div className="step-t">Prices update daily, so every deal is current.</div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </section>
 
         {/* For farmers and merchants */}
         <section className="sec-pad">
           <div className="wrap">
-            <div className="sec-head" style={{ marginBottom: "46px" }}>
-              <span className="eyebrow reveal">Built for both sides</span>
-              <h2 className="reveal">One price. Two clear wins.</h2>
-            </div>
-            <div className="split">
+            <motion.div className="sec-head" style={{ marginBottom: "46px" }} variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
+              <motion.span className="eyebrow" variants={fadeUp}>Built for both sides</motion.span>
+              <motion.h2 variants={fadeUp}>One price. Two clear wins.</motion.h2>
+            </motion.div>
+            <motion.div className="split" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
               {/* Farmers */}
-              <div className="panel panel-farmer reveal">
+              <motion.div className="panel panel-farmer" variants={popIn} whileHover={cardHover}>
                 <svg className="panel-chilli-bg" viewBox="0 0 40 48" fill="none" aria-hidden="true">
                   <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="currentColor" />
                 </svg>
@@ -242,11 +261,11 @@ export default function LandingPage() {
                   <li><span className="chk">{check}</span>Free, forever, on any phone</li>
                 </ul>
                 <div className="panel-foot">
-                  <Link className="btn btn-action" to="/signup/farmer">Sign up as a Farmer{arrow}</Link>
+                  <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>Sign up as a Farmer{arrow}</MotionLink>
                 </div>
-              </div>
+              </motion.div>
               {/* Merchants */}
-              <div className="panel panel-merchant reveal">
+              <motion.div className="panel panel-merchant" variants={popIn} whileHover={cardHover}>
                 <svg className="panel-chilli-bg" viewBox="0 0 40 48" fill="none" aria-hidden="true">
                   <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="currentColor" />
                 </svg>
@@ -265,36 +284,36 @@ export default function LandingPage() {
                   <li><span className="chk">{check}</span>A verified badge that builds trust</li>
                 </ul>
                 <div className="panel-foot">
-                  <Link className="btn btn-light" to="/signup/merchant">Sign up as a Merchant{arrow}</Link>
+                  <MotionLink className="btn btn-light" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>Sign up as a Merchant{arrow}</MotionLink>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </section>
 
         {/* Closing CTA */}
         <section className="wrap" style={{ paddingBottom: "clamp(64px,9vw,112px)" }}>
-          <div className="cta reveal">
-            <div className="cta-in">
-              <span className="eyebrow on-ink">
+          <motion.div className="cta" variants={popIn} initial="hidden" whileInView="show" viewport={inView}>
+            <motion.div className="cta-in" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
+              <motion.span className="eyebrow on-ink" variants={fadeUp}>
                 <svg className="dot" viewBox="0 0 40 48" fill="none" aria-hidden="true">
                   <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="currentColor" />
                 </svg>
                 Small platform, big honesty
-              </span>
-              <h2>Today's price is waiting. Go and take it.</h2>
-              <p>Join Urimalu free and deal on real daily rates from your first morning.</p>
-              <div className="btn-row">
-                <Link className="btn btn-action" to="/signup/farmer">Sign up as a Farmer{arrow}</Link>
-                <Link className="btn btn-outline-light" to="/signup/merchant">Sign up as a Merchant{arrow}</Link>
-              </div>
-            </div>
-          </div>
+              </motion.span>
+              <motion.h2 variants={fadeUp}>Today's price is waiting. Go and take it.</motion.h2>
+              <motion.p variants={fadeUp}>Join Urimalu free and deal on real daily rates from your first morning.</motion.p>
+              <motion.div className="btn-row" variants={fadeUp}>
+                <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>Sign up as a Farmer{arrow}</MotionLink>
+                <MotionLink className="btn btn-outline-light" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>Sign up as a Merchant{arrow}</MotionLink>
+              </motion.div>
+            </motion.div>
+          </motion.div>
         </section>
       </main>
 
       {/* Footer */}
-      <footer className="ft">
+      <motion.footer className="ft" initial="hidden" whileInView="show" viewport={inView} variants={fadeUp}>
         <div className="wrap ft-in">
           <div>
             <div className="ft-brand">
@@ -318,7 +337,7 @@ export default function LandingPage() {
             <span>Made for farmers and merchants.</span>
           </div>
         </div>
-      </footer>
+      </motion.footer>
     </div>
   );
 }

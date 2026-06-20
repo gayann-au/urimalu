@@ -61,20 +61,19 @@
   font-family:var(--font-sans);font-weight:700;font-size:1.0625rem;line-height:1;
   padding:16px 26px;border-radius:var(--radius-md);border:2px solid transparent;cursor:pointer;
   min-height:54px;width:100%;text-align:center;letter-spacing:-.005em;
-  transition:transform .15s var(--ease-out),background .2s,box-shadow .25s,border-color .2s,color .2s}
+  transition:background .2s,box-shadow .25s,border-color .2s,color .2s}
 .uri-landing .btn svg{width:19px;height:19px;flex:none;transition:transform .25s var(--ease-out)}
-.uri-landing .btn:active{transform:scale(.97)}
 .uri-landing .btn-action{background:var(--crop-600);color:#fff;box-shadow:var(--shadow-action)}
-.uri-landing .btn-action:hover{background:var(--crop-700);box-shadow:0 18px 38px rgba(31,125,68,.40);transform:translateY(-1px)}
+.uri-landing .btn-action:hover{background:var(--crop-700);box-shadow:0 18px 38px rgba(31,125,68,.40)}
 .uri-landing .btn-action:hover svg{transform:translateX(3px)}
 .uri-landing .btn-ink{background:var(--ink-900);color:var(--paper)}
-.uri-landing .btn-ink:hover{background:#000;box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.uri-landing .btn-ink:hover{background:#000;box-shadow:var(--shadow-md)}
 .uri-landing .btn-ink:hover svg{transform:translateX(3px)}
 .uri-landing .btn-light{background:#fff;color:var(--ink-900)}
-.uri-landing .btn-light:hover{background:var(--paper);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.uri-landing .btn-light:hover{background:var(--paper);box-shadow:var(--shadow-md)}
 .uri-landing .btn-light:hover svg{transform:translateX(3px)}
 .uri-landing .btn-outline-light{background:transparent;color:#fff;border-color:rgba(255,255,255,.34)}
-.uri-landing .btn-outline-light:hover{border-color:#fff;background:rgba(255,255,255,.08);transform:translateY(-1px)}
+.uri-landing .btn-outline-light:hover{border-color:#fff;background:rgba(255,255,255,.08)}
 .uri-landing .btn-outline-light:hover svg{transform:translateX(3px)}
 .uri-landing .btn-row{display:grid;gap:13px;margin-top:34px}
 @media(min-width:560px){.uri-landing .btn{width:auto}.uri-landing .btn-row{grid-auto-flow:column;justify-content:start}}
@@ -154,8 +153,8 @@
 @media(min-width:620px){.uri-landing .steps{grid-template-columns:repeat(2,1fr)}}
 @media(min-width:980px){.uri-landing .steps{grid-template-columns:repeat(4,1fr)}}
 .uri-landing .step{background:var(--card);border:1px solid var(--ink-200);border-radius:var(--radius-lg);
-  padding:28px 26px;box-shadow:var(--shadow-sm);transition:transform .26s var(--ease-out),box-shadow .26s,border-color .26s}
-.uri-landing .step:hover{transform:translateY(-5px);box-shadow:var(--shadow-md);border-color:var(--crop-200)}
+  padding:28px 26px;box-shadow:var(--shadow-sm);transition:box-shadow .26s,border-color .26s}
+.uri-landing .step:hover{box-shadow:var(--shadow-md);border-color:var(--crop-200)}
 .uri-landing .step-ic{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;
   background:var(--crop-50);color:var(--crop-600);margin-bottom:20px}
 .uri-landing .step-ic svg{width:26px;height:26px}
@@ -219,9 +218,9 @@
   border-top:1px solid var(--ink-100);padding-top:24px;margin-top:26px;font-size:.88rem;color:var(--ink-500)}
 @media(min-width:760px){.uri-landing .ft-in{flex-direction:row;align-items:flex-start;justify-content:space-between}}
 
-/* Reveal on scroll */
-.uri-landing .reveal{opacity:0;transform:translateY(20px);transition:opacity .62s var(--ease-out),transform .62s var(--ease-out)}
-.uri-landing .reveal.in{opacity:1;transform:none}
+/* Scroll reveals and entrance animations are handled by framer-motion in
+   LandingPage.jsx. The keyframes below stay CSS, they drive the decorative
+   loops (hero glow, live dot, sparkline draw) that run independently. */
 
 /* Motion, decorative, opt in only */
 @media(prefers-reduced-motion:no-preference){
@@ -242,5 +241,5 @@
 @keyframes uri-pop{0%{opacity:0;transform:scale(.4)}100%{opacity:1;transform:scale(1)}}
 @keyframes uri-pulse-glow{0%,100%{opacity:.35;r:6}50%{opacity:.9;r:8.5}}
 @keyframes uri-float-in{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){.uri-landing .reveal{opacity:1;transform:none;transition:none}
+@media(prefers-reduced-motion:reduce){
   .uri-landing .pulse-path{stroke-dashoffset:0}.uri-landing .pulse-dot{opacity:1}.uri-landing .float-chip{opacity:1}}
