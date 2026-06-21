@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
+import { motion, useReducedMotion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Header } from "../../components/layout/Header";
-import { Badge } from "../../components/ui/Badge";
 import { Stars } from "../../components/icons/Stars";
 import { Toggle } from "../../components/ui/Toggle";
 import { useAuth } from "../auth/useAuth";
@@ -15,6 +15,9 @@ import { ReviewForm } from "../reviews/ReviewForm";
 import { supabase } from "../../lib/supabase";
 import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
 import { formatINR, dayKey, lastNDays, listingPriceView, BAG_WEIGHTS, formatValidTill } from "../../lib/constants";
+
+// Shared easing, matches the landing page --ease-out token.
+const EASE = [0.22, 0.61, 0.36, 1];
 
 // All listings for this merchant, active AND inactive. Public read.
 // Uses a distinct cache key from the dashboard's useMyListings. The public
@@ -60,6 +63,7 @@ export default function ProfilePage() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
   const { profile: me } = useAuth();
+  const reduce = useReducedMotion();
   const usersQ      = useUsers();
   const listingsQ   = useAllListingsForMerchant(id);
   const reviewsQ    = useReviews();
@@ -137,11 +141,27 @@ export default function ProfilePage() {
     if (merchant) trackView(merchant.id);
   }, [merchant?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Motion variants. Reduced motion drops the travel and keeps a gentle fade.
+  const fadeUp = {
+    hidden: { opacity: 0, y: reduce ? 0 : 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
+  };
+  const stagger = {
+    hidden: {},
+    show: { transition: { staggerChildren: reduce ? 0 : 0.07, delayChildren: 0.04 } },
+  };
+  const cardHover = reduce
+    ? undefined
+    : { y: -4, transition: { type: "spring", stiffness: 320, damping: 24 } };
+  const btnHover = reduce ? undefined : { y: -1 };
+  const btnTap = reduce ? undefined : { scale: 0.97 };
+  const inView = { once: true, amount: 0.15 };
+
   if (usersQ.isLoading) {
     return (
       <div className="flex flex-col flex-1">
         <Header showBack title={t("profile.title")}/>
-        <div className="p-6 text-center text-gray-500">{t("common.loading")}</div>
+        <div className="p-6 text-center text-ink-500">{t("common.loading")}</div>
       </div>
     );
   }
@@ -149,7 +169,7 @@ export default function ProfilePage() {
     return (
       <div className="flex flex-col flex-1">
         <Header showBack title={t("profile.title")}/>
-        <div className="p-6 text-center text-gray-500">{t("profile.notFound")}</div>
+        <div className="p-6 text-center text-ink-500">{t("profile.notFound")}</div>
       </div>
     );
   }
@@ -157,7 +177,7 @@ export default function ProfilePage() {
     return (
       <div className="flex flex-col flex-1">
         <Header showBack title={t("profile.title")}/>
-        <div className="p-6 text-center text-gray-500">{t("profile.notVisible")}</div>
+        <div className="p-6 text-center text-ink-500">{t("profile.notVisible")}</div>
       </div>
     );
   }
@@ -196,70 +216,99 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 pb-10 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
+    <div className="flex flex-col flex-1 pb-14 w-full mx-auto max-w-5xl px-4 md:px-6">
       <Header showBack title={t("profile.title")}/>
 
       {/* Identity */}
-      <section className="px-4 py-5 border-b border-gray-100">
-        <h2 className="text-2xl font-bold text-chilli-700 leading-tight">{merchant.business_name}</h2>
-        {merchant.owner_name && (
-          <p className="text-sm text-gray-500 mt-1">{merchant.owner_name}</p>
-        )}
-        <p className="text-sm text-gray-500">
-          {merchant.town}
-          {merchant.town && merchant.district ? ", " : ""}
-          {merchant.district}
-        </p>
-        <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <Badge tone="approved">{t("profile.verifiedMerchant")}</Badge>
-          {merchant.years_trading && i18n.exists(`years.${merchant.years_trading}`) && (
-            <Badge tone="neutral">
-              {t("profile.tradingBadge", { years: t(`years.${merchant.years_trading}`) })}
-            </Badge>
-          )}
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          {reviews.length > 0 ? (
-            <>
-              <Stars value={avg} size={16}/>
-              <span className="text-sm text-gray-700">
-                {t("profile.ratingSummary", { avg: avg.toFixed(1), count: reviews.length })}
-              </span>
-            </>
-          ) : (
-            <span className="text-sm text-gray-400">{t("review.noneYet")}</span>
-          )}
-        </div>
-        {/* Merchant-typed about text. Free text, rendered as-is (no translation
-            of content); only the label goes through i18n. Hidden when empty. */}
-        {merchant.business_description && merchant.business_description.trim() && (
-          <div className="mt-4">
-            <div className="text-xs font-semibold text-gray-500">{t("profile.about")}</div>
-            <p className="text-sm text-gray-700 mt-1 whitespace-pre-line">
-              {merchant.business_description}
+      <motion.section
+        className="pt-6"
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+      >
+        <div className="bg-white rounded-3xl border border-ink-100 shadow-sm p-6 md:p-8">
+          <motion.h2
+            variants={fadeUp}
+            className="font-display text-3xl md:text-4xl font-extrabold text-chilli-700 leading-[1.05] tracking-tight break-words"
+          >
+            {merchant.business_name}
+          </motion.h2>
+
+          <motion.div variants={fadeUp} className="mt-2 space-y-0.5">
+            {merchant.owner_name && (
+              <p className="text-sm text-ink-600">{merchant.owner_name}</p>
+            )}
+            <p className="text-sm text-ink-500">
+              {merchant.town}
+              {merchant.town && merchant.district ? ", " : ""}
+              {merchant.district}
             </p>
-          </div>
-        )}
-      </section>
+          </motion.div>
+
+          <motion.div variants={fadeUp} className="mt-4 flex items-center gap-2 flex-wrap">
+            <Pill tone="crop">
+              <CheckIcon/>
+              {t("profile.verifiedMerchant")}
+            </Pill>
+            {merchant.years_trading && i18n.exists(`years.${merchant.years_trading}`) && (
+              <Pill tone="neutral">
+                {t("profile.tradingBadge", { years: t(`years.${merchant.years_trading}`) })}
+              </Pill>
+            )}
+          </motion.div>
+
+          <motion.div variants={fadeUp} className="mt-3 flex items-center gap-2">
+            {reviews.length > 0 ? (
+              <>
+                <Stars value={avg} size={16}/>
+                <span className="text-sm text-ink-700">
+                  {t("profile.ratingSummary", { avg: avg.toFixed(1), count: reviews.length })}
+                </span>
+              </>
+            ) : (
+              <span className="text-sm text-ink-400">{t("review.noneYet")}</span>
+            )}
+          </motion.div>
+
+          {/* Merchant-typed about text. Free text, rendered as-is (no translation
+              of content); only the label goes through i18n. Hidden when empty.
+              Contained to a readable measure with word breaking so long or
+              unbroken input wraps cleanly instead of overflowing. */}
+          {merchant.business_description && merchant.business_description.trim() && (
+            <motion.div variants={fadeUp} className="mt-5 rounded-2xl bg-paper-2 p-4 md:p-5">
+              <div className="text-xs font-bold uppercase tracking-wide text-ink-500">{t("profile.about")}</div>
+              <p className="mt-1.5 max-w-prose text-[15px] leading-relaxed text-ink-700 whitespace-pre-line break-words">
+                {merchant.business_description}
+              </p>
+            </motion.div>
+          )}
+        </div>
+      </motion.section>
 
       {/* Crops: filter bar + list */}
-      <section className="px-4 pt-6">
+      <motion.section
+        className="pt-10"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="show"
+        viewport={inView}
+      >
         <SectionHeader>{t("profile.cropsHeading")}</SectionHeader>
 
         {/* Filter bar */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-3 mb-3 space-y-3">
+        <div className="bg-white rounded-3xl border border-ink-100 shadow-sm p-4 mb-4 space-y-3">
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("feed.searchCrop")}
-            className="w-full min-h-[44px] rounded-xl border-2 border-gray-200 focus:border-coorg-500 outline-none px-3 text-sm"
+            className="w-full min-h-[46px] rounded-2xl border-2 border-ink-200 focus:border-coorg-500 outline-none px-4 text-sm bg-white"
           />
           <div className="grid grid-cols-2 gap-2 items-center">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="min-h-[44px] rounded-xl border-2 border-gray-200 focus:border-coorg-500 outline-none px-3 text-sm bg-white"
+              className="min-h-[46px] rounded-2xl border-2 border-ink-200 focus:border-coorg-500 outline-none px-3 text-sm bg-white"
             >
               <option value="name">{t("profile.sortByName")}</option>
               <option value="price">{t("profile.sortByPrice")}</option>
@@ -274,82 +323,106 @@ export default function ProfilePage() {
 
         {/* Listings */}
         {listingsQ.isLoading ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 animate-pulse h-24"/>
+          <div className="bg-white rounded-3xl border border-ink-100 shadow-sm p-6 animate-pulse h-28"/>
         ) : filtered.length === 0 ? (
           <Empty>{t("profile.noCropsMatch")}</Empty>
         ) : (
-          <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <motion.ul
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            variants={stagger}
+            initial="hidden"
+            whileInView="show"
+            viewport={inView}
+          >
             {filtered.map((l) => (
-              <ListingRow key={l.id} listing={l} t={t}/>
+              <ListingRow key={l.id} listing={l} t={t} fadeUp={fadeUp} cardHover={cardHover}/>
             ))}
-          </ul>
+          </motion.ul>
         )}
-      </section>
+      </motion.section>
 
       {/* Contact */}
-      <section className="px-4 pt-8">
+      <motion.section
+        className="pt-10"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="show"
+        viewport={inView}
+      >
         <SectionHeader>{t("card.contact")}</SectionHeader>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="bg-white rounded-3xl border border-ink-100 shadow-sm p-6">
           <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-gray-700">{merchant.owner_name || "-"}</span>
+            <span className="text-ink-700 font-medium">{merchant.owner_name || "-"}</span>
             {numberRevealed ? (
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-gray-900 tabular-nums">{merchant.phone || "-"}</span>
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-ink-900 tabular-nums">{merchant.phone || "-"}</span>
                 <button
                   type="button"
                   onClick={onHideNumber}
-                  className="text-xs font-semibold text-gray-500 underline"
+                  className="text-xs font-semibold text-ink-500 underline"
                 >
                   {t("common.hideNumber")}
                 </button>
               </div>
             ) : (
-              <button
+              <motion.button
                 type="button"
                 onClick={onShowNumber}
-                className="min-h-[36px] rounded-lg border-2 border-coorg-600 text-coorg-700 bg-white font-bold text-sm px-3 hover:bg-coorg-50 transition"
+                whileHover={btnHover}
+                whileTap={btnTap}
+                className="min-h-[40px] rounded-full border-2 border-coorg-600 text-coorg-700 bg-white font-bold text-sm px-4 hover:bg-coorg-50 transition-colors"
               >
                 {t("common.showNumber")}
-              </button>
+              </motion.button>
             )}
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <button
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <motion.button
               type="button"
               onClick={onCall}
-              className="min-h-[48px] rounded-xl border-2 border-coorg-600 text-coorg-700 bg-white font-bold text-sm hover:bg-coorg-50 transition"
+              whileHover={btnHover}
+              whileTap={btnTap}
+              className="min-h-[52px] rounded-full border-2 border-coorg-600 text-coorg-700 bg-white font-bold text-sm hover:bg-coorg-50 transition-colors"
             >
               {t("common.call")}
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
               onClick={onWa}
-              className="min-h-[48px] rounded-xl bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition"
+              whileHover={btnHover}
+              whileTap={btnTap}
+              className="min-h-[52px] rounded-full bg-coorg-600 text-white font-bold text-sm shadow-sm hover:bg-coorg-700 transition-colors"
             >
               {t("common.whatsapp")}
-            </button>
+            </motion.button>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Price history: one chart per crop with at least 2 data points */}
-      <section className="px-4 pt-8">
+      <motion.section
+        className="pt-10"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="show"
+        viewport={inView}
+      >
         <SectionHeader>{t("profile.historyHeading")}</SectionHeader>
         {historyQ.isLoading ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 animate-pulse h-48"/>
+          <div className="bg-white rounded-3xl border border-ink-100 shadow-sm p-6 animate-pulse h-48"/>
         ) : histories.length === 0 ? (
           <Empty>{t("profile.notEnoughData")}</Empty>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {histories.map((h) => (
-              <div key={h.crop} className="bg-white rounded-2xl border border-gray-200 p-4">
-                <div className="text-sm font-semibold text-gray-900 mb-3">{h.crop}</div>
+              <div key={h.crop} className="bg-white rounded-3xl border border-ink-100 shadow-sm p-5 md:p-6">
+                <div className="text-sm font-bold text-ink-900 mb-3">{h.crop}</div>
                 <div className="h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={h.data} margin={{ top: 5, right: 8, bottom: 0, left: -12 }}>
-                      <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false}/>
-                      <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} width={40}/>
-                      <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}/>
+                      <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#8A7D78" }} axisLine={false} tickLine={false}/>
+                      <YAxis tick={{ fontSize: 10, fill: "#8A7D78" }} axisLine={false} tickLine={false} width={40}/>
+                      <Tooltip contentStyle={{ borderRadius: 14, border: "1px solid #E6DED8", fontSize: 12 }}/>
                       <Bar
                         dataKey="price"
                         fill="#1f7d44"
@@ -363,23 +436,31 @@ export default function ProfilePage() {
             ))}
           </div>
         )}
-      </section>
+      </motion.section>
 
       {/* Reviews */}
-      <section className="px-4 pt-8">
+      <motion.section
+        className="pt-10"
+        variants={fadeUp}
+        initial="hidden"
+        whileInView="show"
+        viewport={inView}
+      >
         <SectionHeader>{t("profile.reviewsHeading", { count: reviews.length })}</SectionHeader>
 
         {canReview && (
           <>
-            <button
+            <motion.button
               type="button"
               onClick={() => setShowReview((s) => !s)}
-              className="w-full min-h-[48px] rounded-xl border-2 border-coorg-600 text-coorg-700 font-bold text-sm hover:bg-coorg-50 transition"
+              whileHover={btnHover}
+              whileTap={btnTap}
+              className="w-full min-h-[52px] rounded-full border-2 border-coorg-600 text-coorg-700 font-bold text-sm hover:bg-coorg-50 transition-colors"
             >
               {t("profile.leaveReview")}
-            </button>
+            </motion.button>
             {showReview && (
-              <div className="mt-3">
+              <div className="mt-4">
                 <ReviewForm
                   onCancel={() => setShowReview(false)}
                   onSubmit={async (p) => {
@@ -397,62 +478,75 @@ export default function ProfilePage() {
         )}
 
         {reviews.length === 0 ? (
-          <Empty>{t("profile.noReviewsCta")}</Empty>
+          <div className={canReview ? "mt-4" : ""}>
+            <Empty>{t("profile.noReviewsCta")}</Empty>
+          </div>
         ) : (
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-4 space-y-3">
             {reviews.map((r) => (
-              <li key={r.id} className="bg-white rounded-2xl border border-gray-200 p-4">
+              <li key={r.id} className="bg-white rounded-3xl border border-ink-100 shadow-sm p-5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-bold text-ink-900">
                     {t("profile.starsLabel", { n: r.rating })}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-ink-400">
                     {new Date(r.created_at).toLocaleDateString(locale, {
                       day: "numeric", month: "short", year: "numeric",
                     })}
                   </span>
                 </div>
-                <div className="text-xs text-gray-500 mt-0.5">{r.author_name}</div>
-                {r.comment && <p className="mt-2 text-sm text-gray-700">{r.comment}</p>}
+                <div className="text-xs text-ink-500 mt-0.5">{r.author_name}</div>
+                {r.comment && <p className="mt-2 text-sm text-ink-700">{r.comment}</p>}
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </motion.section>
     </div>
   );
 }
 
-function ListingRow({ listing, t }) {
+function ListingRow({ listing, t, fadeUp, cardHover }) {
   const active = !!listing.is_active;
   const dim = active ? "" : "opacity-60";
   const price = listingPriceView(listing);
   const validTill = formatValidTill(listing.valid_till);
   return (
-    <li className={`bg-white rounded-2xl border border-gray-200 p-4 ${dim}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="font-bold text-gray-900">{listing.crop_name}</div>
-        <FreshnessBadge confirmedAt={listing.confirmed_at} className="shrink-0" />
+    <motion.li
+      variants={fadeUp}
+      whileHover={cardHover}
+      className={`bg-white rounded-3xl border border-ink-100 shadow-sm p-5 md:p-6 ${dim}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="w-11 h-11 rounded-2xl bg-coorg-50 text-coorg-600 grid place-items-center shrink-0">
+            <BeanIcon/>
+          </span>
+          <div className="min-w-0">
+            <div className="font-display font-extrabold text-lg text-ink-900 leading-tight truncate">{listing.crop_name}</div>
+            {listing.variety_notes && (
+              <div className="text-xs text-ink-500 mt-0.5 truncate">{listing.variety_notes}</div>
+            )}
+          </div>
+        </div>
+        <FreshnessBadge confirmedAt={listing.confirmed_at} className="bg-paper-2 rounded-full px-2.5 py-1 shrink-0" />
       </div>
-      {listing.variety_notes && (
-        <div className="text-xs text-gray-500 mt-0.5">{listing.variety_notes}</div>
-      )}
       <ListingPrice price={price} t={t} />
       {price.mode === "perkg" && price.perKg != null && (
         <BagTotals perKg={price.perKg} t={t} />
       )}
       {validTill && (
-        <div className="text-xs text-gray-500 mt-1">
+        <div className="text-xs text-ink-500 mt-2">
           {t("card.priceValidTill", { date: validTill })}
         </div>
       )}
       {listing.notes && (
-        <div className="text-xs text-gray-500 italic mt-1">{listing.notes}</div>
+        <div className="text-xs text-ink-500 italic mt-1">{listing.notes}</div>
       )}
       {!active && (
-        <div className="text-xs text-gray-500 italic mt-2">{t("card.notBuyingToday")}</div>
+        <div className="text-xs text-ink-500 italic mt-2">{t("card.notBuyingToday")}</div>
       )}
-    </li>
+    </motion.li>
   );
 }
 
@@ -461,26 +555,26 @@ function ListingRow({ listing, t }) {
 // a quiet per-kg line below, and "per" is never doubled.
 function ListingPrice({ price, t }) {
   if (price.mode === "call") {
-    return <div className="mt-1 text-sm font-bold text-gray-700">{t("card.callForPrice")}</div>;
+    return <div className="mt-3 text-base font-bold text-ink-700">{t("card.callForPrice")}</div>;
   }
   if (price.mode === "perkg") {
-    if (price.hero == null) return <div className="mt-1 text-sm font-bold text-gray-500">-</div>;
+    if (price.hero == null) return <div className="mt-3 text-base font-bold text-ink-400">-</div>;
     return (
-      <div className="mt-1 flex items-baseline gap-1.5">
-        <span className="text-lg font-extrabold text-coorg-700 tabular-nums">{formatINR(price.hero)}</span>
-        <span className="text-xs font-semibold text-gray-500">{t("card.perKgSuffix")}</span>
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span className="text-2xl font-extrabold text-coorg-700 tabular-nums">{formatINR(price.hero)}</span>
+        <span className="text-xs font-semibold text-ink-500">{t("card.perKgSuffix")}</span>
       </div>
     );
   }
-  if (price.hero == null) return <div className="mt-1 text-sm font-bold text-gray-500">-</div>;
+  if (price.hero == null) return <div className="mt-3 text-base font-bold text-ink-400">-</div>;
   return (
-    <div className="mt-1">
+    <div className="mt-3">
       <div className="flex items-baseline gap-1.5">
-        <span className="text-lg font-extrabold text-coorg-700 tabular-nums">{formatINR(price.hero)}</span>
-        <span className="text-xs font-semibold text-gray-500">{listingUnitPhrase(t, price.unitLabel)}</span>
+        <span className="text-2xl font-extrabold text-coorg-700 tabular-nums">{formatINR(price.hero)}</span>
+        <span className="text-xs font-semibold text-ink-500">{listingUnitPhrase(t, price.unitLabel)}</span>
       </div>
       {price.perKg != null && (
-        <div className="text-xs text-gray-500 tabular-nums mt-0.5">
+        <div className="text-xs text-ink-500 tabular-nums mt-0.5">
           {t("card.thatIsPerKg", { price: formatINR(price.perKg) })}
         </div>
       )}
@@ -495,9 +589,9 @@ function BagTotals({ perKg, t }) {
   const [weight, setWeight] = useState(50);
   const total = Math.round(weight * Number(perKg));
   return (
-    <div className="mt-3 rounded-xl bg-gray-50 border border-gray-100 p-3">
-      <div className="text-xs font-semibold text-gray-500">{t("card.seeTotalForBag")}</div>
-      <div className="mt-2 flex flex-wrap gap-2">
+    <div className="mt-4 rounded-2xl bg-paper-2 p-4">
+      <div className="text-xs font-bold uppercase tracking-wide text-ink-500">{t("card.seeTotalForBag")}</div>
+      <div className="mt-2.5 flex flex-wrap gap-2">
         {BAG_WEIGHTS.map((w) => {
           const active = w === weight;
           return (
@@ -505,10 +599,10 @@ function BagTotals({ perKg, t }) {
               key={w}
               type="button"
               onClick={() => setWeight(w)}
-              className={`min-h-[36px] rounded-full px-3 text-xs font-bold border-2 transition ${
+              className={`min-h-[36px] rounded-full px-3.5 text-xs font-bold border-2 transition-colors ${
                 active
                   ? "bg-coorg-600 text-white border-coorg-600"
-                  : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+                  : "bg-white text-ink-700 border-ink-200 hover:border-coorg-300"
               }`}
             >
               {t("card.weightChip", { weight: w })}
@@ -516,7 +610,7 @@ function BagTotals({ perKg, t }) {
           );
         })}
       </div>
-      <div className="mt-2 text-sm font-bold text-gray-800 tabular-nums">
+      <div className="mt-3 text-sm font-bold text-ink-800 tabular-nums">
         {t("card.weightTotal", { weight, total: formatINR(total) })}
       </div>
     </div>
@@ -539,13 +633,46 @@ function priceKey(item) {
   return isNaN(n) ? -Infinity : n;
 }
 
+// Soft pill in the landing style: tinted background, same-hue bold text, gentle
+// border. Tones map to the shared palette (crop green, chilli red, warm neutral).
+function Pill({ tone = "neutral", className = "", children }) {
+  const tones = {
+    crop:    "bg-coorg-50 text-coorg-700 border border-coorg-100",
+    chilli:  "bg-chilli-50 text-chilli-700 border border-chilli-100",
+    neutral: "bg-paper-2 text-ink-700 border border-ink-100",
+  };
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${tones[tone] || tones.neutral} ${className}`}>
+      {children}
+    </span>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+// Coffee-bean glyph from the landing hero, used as the soft crop icon.
+function BeanIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <ellipse cx="12" cy="12" rx="6.5" ry="9" />
+      <path d="M12 3.5c-2.4 3-2.4 14 0 17" />
+    </svg>
+  );
+}
+
 function SectionHeader({ children }) {
-  return <h3 className="text-base font-bold text-gray-900 mb-3">{children}</h3>;
+  return <h3 className="font-display text-xl md:text-2xl font-extrabold tracking-tight text-ink-900 mb-4">{children}</h3>;
 }
 
 function Empty({ children }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center text-gray-500">
+    <div className="bg-white rounded-3xl border border-ink-100 shadow-sm p-8 text-center text-ink-500">
       {children}
     </div>
   );
