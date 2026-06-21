@@ -53,7 +53,7 @@ export default function SignupFarmer() {
         {stage === "form" && (
           <>
             <div className="text-center mb-5">
-              <h2 className="text-2xl font-extrabold text-gray-900">{t("auth.farmerSignup")}</h2>
+              <h2 className="text-2xl font-extrabold text-chilli-700">{t("auth.farmerSignup")}</h2>
             </div>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <Input label={t("auth.fullName")} {...register("fullName")} error={errors.fullName ? t(errors.fullName.message) : null}/>

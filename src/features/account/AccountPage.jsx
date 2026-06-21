@@ -32,7 +32,7 @@ export default function AccountPage() {
       <Header showBack title={t("account.title")}/>
       <main className="w-full max-w-md px-5 py-6 flex-1">
         <div className="mb-5">
-          <h2 className="text-2xl font-extrabold text-gray-900">{heading}</h2>
+          <h2 className="text-2xl font-extrabold text-chilli-700">{heading}</h2>
           <p className="text-sm text-gray-500 mt-1">{t("account.sub")}</p>
         </div>
 

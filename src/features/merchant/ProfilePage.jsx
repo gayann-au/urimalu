@@ -201,7 +201,7 @@ export default function ProfilePage() {
 
       {/* Identity */}
       <section className="px-4 py-5 border-b border-gray-100">
-        <h2 className="text-2xl font-bold text-gray-900 leading-tight">{merchant.business_name}</h2>
+        <h2 className="text-2xl font-bold text-chilli-700 leading-tight">{merchant.business_name}</h2>
         {merchant.owner_name && (
           <p className="text-sm text-gray-500 mt-1">{merchant.owner_name}</p>
         )}

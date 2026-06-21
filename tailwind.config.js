@@ -47,9 +47,40 @@ export default {
           400: "#FF9A47",
           500: "#FF6A1A",
         },
+        // Warm cream surfaces and a warm near-black "ink" scale, lifted from the
+        // landing design system so the whole app shares one palette. The gray
+        // override below remaps every existing gray utility to the warm ink
+        // scale, so all neutrals across the app turn warm with no per file edits.
+        paper: "#FBF9F7",
+        "paper-2": "#F4F0EC",
+        card: "#FFFFFF",
+        ink: {
+          100: "#F0EAE5",
+          200: "#E6DED8",
+          300: "#C8BEB8",
+          500: "#8A7D78",
+          600: "#6B5E5A",
+          700: "#4B403D",
+          800: "#2A211F",
+          900: "#1A1413",
+        },
+        gray: {
+          50:  "#FAF7F4",
+          100: "#F0EAE5",
+          200: "#E6DED8",
+          300: "#C8BEB8",
+          400: "#A89E98",
+          500: "#8A7D78",
+          600: "#6B5E5A",
+          700: "#4B403D",
+          800: "#2A211F",
+          900: "#1A1413",
+          950: "#120D0C",
+        },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['"Hanken Grotesk"', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        display: ['"Bricolage Grotesque"', '"Hanken Grotesk"', 'system-ui', 'sans-serif'],
       }
     },
   },

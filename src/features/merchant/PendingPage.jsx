@@ -105,7 +105,7 @@ export default function PendingPage() {
         <div className="h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
           <CheckIcon/>
         </div>
-        <h2 className="text-2xl font-extrabold text-gray-900">{t("pending.title")}</h2>
+        <h2 className="text-2xl font-extrabold text-chilli-700">{t("pending.title")}</h2>
         <p className="text-base text-gray-600 mt-2 max-w-sm">{t("pending.sub")}</p>
 
         <div className="mt-6 rounded-2xl bg-gray-50 border border-gray-200 px-4 py-3 text-left w-full max-w-sm">

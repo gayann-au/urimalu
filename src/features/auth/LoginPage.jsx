@@ -49,7 +49,7 @@ export default function LoginPage() {
       <Header showBack/>
       <main className="w-full max-w-md px-5 py-6 flex-1">
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-extrabold text-gray-900">{t("auth.loginTitle")}</h2>
+          <h2 className="text-2xl font-extrabold text-chilli-700">{t("auth.loginTitle")}</h2>
           <p className="text-sm text-gray-500 mt-1">{t("auth.loginSub")}</p>
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

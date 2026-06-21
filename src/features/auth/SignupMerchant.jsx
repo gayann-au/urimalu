@@ -142,7 +142,7 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
       <Header showBack/>
       <main className="w-full max-w-md px-5 py-5 flex-1">
         <div className="text-center mb-5">
-          <h2 className="text-2xl font-extrabold text-gray-900">
+          <h2 className="text-2xl font-extrabold text-chilli-700">
             {resubmitMode ? t("pending.resubmitTitle") : t("auth.merchantSignup")}
           </h2>
           <p className="text-sm text-gray-500 mt-1">

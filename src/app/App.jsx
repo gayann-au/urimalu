@@ -6,7 +6,7 @@ export default function App() {
   return (
     <Providers>
       <BrowserRouter>
-        <div className="min-h-screen w-full bg-white flex flex-col">
+        <div className="min-h-screen w-full bg-paper flex flex-col">
           <AppRoutes/>
         </div>
       </BrowserRouter>

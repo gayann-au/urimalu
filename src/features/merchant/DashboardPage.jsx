@@ -47,7 +47,7 @@ export default function DashboardPage() {
   async function handleSave(payload) {
     // Duplicate crop_name guard. Only applies when ADDING (no payload.id).
     // Match case-insensitively and trimmed against listings already loaded
-    // by useMyListings — no extra query.
+    // by useMyListings, no extra query.
     if (!payload.id) {
       const normalized = (payload.crop_name || "").trim().toLowerCase();
       const duplicate = listings.find(
@@ -114,7 +114,7 @@ export default function DashboardPage() {
 
       {/* Top: identity and crop count */}
       <section className="px-4 py-5 border-b border-gray-100">
-        <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+        <h1 className="text-2xl font-bold text-chilli-700 leading-tight">
           {profile.business_name}
         </h1>
         <p className="text-sm text-gray-500 mt-1">{t("dashboard.yourDailyPrices")}</p>

@@ -75,7 +75,7 @@ export default function OnboardingMerchantForm({ onBack }) {
   return (
     <div>
       <div className="text-center mb-5">
-        <h2 className="text-2xl font-extrabold text-gray-900">{t("onboarding.merchantFormTitle")}</h2>
+        <h2 className="text-2xl font-extrabold text-chilli-700">{t("onboarding.merchantFormTitle")}</h2>
         <p className="text-sm text-gray-500 mt-1">{t("onboarding.merchantFormSub")}</p>
       </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
