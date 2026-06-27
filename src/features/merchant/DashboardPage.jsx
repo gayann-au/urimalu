@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
 import { Button } from "../../components/ui/Button";
 import { Toggle } from "../../components/ui/Toggle";
@@ -14,10 +15,12 @@ import {
   useConfirmTodaysPrices,
 } from "./useMerchant";
 import { toast } from "../../components/ui/Toast";
+import { useUriMotion } from "../../lib/uiMotion";
 import { formatINR } from "../../lib/constants";
 
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
+  const m = useUriMotion();
   const nav = useNavigate();
   const { profile } = useAuth();
 
@@ -109,33 +112,34 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 pb-8 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
+    <div className="flex flex-col flex-1 pb-10 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
       <Header/>
 
       {/* Top: identity and crop count */}
-      <section className="px-4 py-5 border-b border-gray-100">
-        <h1 className="text-2xl font-bold text-chilli-700 leading-tight">
+      <motion.section variants={m.stagger} initial="hidden" animate="show" className="py-6 border-b border-ink-100">
+        <motion.h1 variants={m.fadeUp} className="font-display text-2xl md:text-3xl font-extrabold tracking-tight text-chilli-700 leading-tight break-words">
           {profile.business_name}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">{t("dashboard.yourDailyPrices")}</p>
-        <p className="text-xs text-gray-400 mt-1 tabular-nums">
+        </motion.h1>
+        <motion.p variants={m.fadeUp} className="text-sm text-ink-500 mt-1">{t("dashboard.yourDailyPrices")}</motion.p>
+        <motion.p variants={m.fadeUp} className="text-xs text-ink-500 mt-1 tabular-nums">
           {listings.length === 1
             ? t("dashboard.cropCountOne")
             : t("dashboard.cropCountN", { count: listings.length })}
-        </p>
-        <button
+        </motion.p>
+        <motion.button
+          variants={m.fadeUp}
           type="button"
           onClick={() => nav("/merchant/history")}
           className="mt-2 text-sm text-coorg-700 font-semibold underline"
         >
           {t("dashboard.priceHistory")}
-        </button>
-      </section>
+        </motion.button>
+      </motion.section>
 
       {/* Confirm today's prices. Most prominent action on the screen.
           Only shown when the merchant has at least one active listing. */}
       {activeListings.length > 0 && (
-        <section className="px-4 pt-5">
+        <section className="pt-6">
           <Button
             size="lg"
             className="w-full"
@@ -144,27 +148,33 @@ export default function DashboardPage() {
           >
             {t("dashboard.confirmTodaysPrices")}
           </Button>
-          <p className="text-xs text-gray-500 text-center mt-2">
+          <p className="text-xs text-ink-500 text-center mt-2">
             {lastConfirmed}
           </p>
         </section>
       )}
 
       {/* Crop list */}
-      <section className="px-4 pt-5">
+      <section className="pt-6">
         {listingsQ.isLoading ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 animate-pulse h-24"/>
+          <div className="bg-white rounded-3xl border border-ink-200 shadow-sm p-6 animate-pulse h-24"/>
         ) : listings.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-            <p className="text-sm font-semibold text-gray-700">
+          <div className="bg-white rounded-3xl border border-ink-200 shadow-sm p-8 text-center">
+            <p className="text-sm font-semibold text-ink-700">
               {t("dashboard.emptyCropsHeading")}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-ink-500 mt-1">
               {t("dashboard.emptyCropsBody")}
             </p>
           </div>
         ) : (
-          <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <motion.ul
+            variants={m.stagger}
+            initial="hidden"
+            whileInView="show"
+            viewport={m.inView}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          >
             {listings.map((l) => (
               <ListingRow
                 key={l.id}
@@ -173,15 +183,17 @@ export default function DashboardPage() {
                 onEdit={() => openEdit(l)}
                 onDelete={() => handleDelete(l)}
                 t={t}
+                fadeUp={m.fadeUp}
+                cardHover={m.cardHover}
               />
             ))}
-          </ul>
+          </motion.ul>
         )}
       </section>
 
       {/* Add crop CTA. Hidden while a form is open. */}
       {!formOpen && (
-        <section className="px-4 pt-4">
+        <section className="pt-4">
           <Button size="lg" variant="outline" className="w-full" onClick={openAdd}>
             {t("dashboard.addCrop")}
           </Button>
@@ -190,10 +202,10 @@ export default function DashboardPage() {
 
       {/* Inline form panel. Mounted only when open, so closing fully resets it. */}
       {formOpen && (
-        <section className="px-4 pt-4">
-          <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <section className="pt-4">
+          <div className="bg-white rounded-3xl border border-ink-200 shadow-sm p-5 md:p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-gray-900">
+              <h2 className="font-display text-lg font-extrabold tracking-tight text-ink-900">
                 {editingListing
                   ? t("dashboard.editCropHeading", { cropName: editingListing.crop_name })
                   : t("dashboard.addCrop")}
@@ -201,7 +213,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={closeForm}
-                className="text-sm text-gray-500 underline"
+                className="text-sm text-ink-500 underline"
               >
                 {t("common.cancel")}
               </button>
@@ -246,7 +258,7 @@ function lastConfirmedLabel(listings, t, lang) {
   return t("dashboard.lastConfirmedOn", { date });
 }
 
-function ListingRow({ listing, onToggle, onEdit, onDelete, t }) {
+function ListingRow({ listing, onToggle, onEdit, onDelete, t, fadeUp, cardHover }) {
   const active = !!listing.is_active;
   const rowDim = active ? "" : "opacity-60";
 
@@ -264,27 +276,31 @@ function ListingRow({ listing, onToggle, onEdit, onDelete, t }) {
       : null;
 
   return (
-    <li className={`bg-white rounded-2xl border border-gray-200 p-4 ${rowDim}`}>
+    <motion.li
+      variants={fadeUp}
+      whileHover={cardHover}
+      className={`bg-white rounded-3xl border border-ink-200 shadow-sm p-5 ${rowDim}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="font-bold text-gray-900 truncate">
+          <div className="font-display font-extrabold text-lg text-ink-900 leading-tight truncate">
             {listing.crop_name}
           </div>
           {listing.variety_notes && (
-            <div className="text-xs text-gray-500 truncate mt-0.5">
+            <div className="text-xs text-ink-500 truncate mt-0.5">
               {listing.variety_notes}
             </div>
           )}
-          <div className="text-sm font-semibold text-coorg-700 mt-1 tabular-nums">
+          <div className="text-base font-extrabold text-coorg-700 mt-2 tabular-nums">
             {priceLine}
           </div>
           {perKgLine && (
-            <div className="text-xs text-gray-500 tabular-nums">
+            <div className="text-xs text-ink-500 tabular-nums">
               {perKgLine}
             </div>
           )}
           {!active && (
-            <div className="text-xs text-gray-500 italic mt-1">
+            <div className="text-xs text-ink-500 italic mt-1">
               {t("card.notBuyingToday")}
             </div>
           )}
@@ -296,7 +312,7 @@ function ListingRow({ listing, onToggle, onEdit, onDelete, t }) {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2">
         <Button size="sm" variant="outline" onClick={onEdit}>
           {t("common.edit")}
         </Button>
@@ -304,6 +320,6 @@ function ListingRow({ listing, onToggle, onEdit, onDelete, t }) {
           {t("common.delete")}
         </Button>
       </div>
-    </li>
+    </motion.li>
   );
 }

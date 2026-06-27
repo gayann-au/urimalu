@@ -19,7 +19,7 @@ const sizes = {
 export const Button = forwardRef(function Button(
   { variant = "primary", size = "md", className = "", loading = false, disabled, children, ...rest }, ref
 ) {
-  const cls = `inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] ${variants[variant]} ${sizes[size]} ${className}`;
+  const cls = `inline-flex items-center justify-center gap-2 font-semibold rounded-[14px] transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] ${variants[variant]} ${sizes[size]} ${className}`;
   return (
     <button ref={ref} disabled={disabled || loading} className={cls} {...rest}>
       {loading && (

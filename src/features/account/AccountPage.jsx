@@ -1,8 +1,10 @@
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
 import { useAuth } from "../auth/useAuth";
 import AccountFarmerForm from "./AccountFarmerForm";
 import AccountMerchantForm from "./AccountMerchantForm";
+import { useUriMotion } from "../../lib/uiMotion";
 
 const ROLE_LABEL_KEY = {
   FARMER: "account.roleFarmer",
@@ -16,6 +18,7 @@ const ROLE_LABEL_KEY = {
 // separate read-only page and is not affected by this screen.
 export default function AccountPage() {
   const { t } = useTranslation();
+  const m = useUriMotion();
   const { profile } = useAuth();
   if (!profile) return null; // AccountRoute guards this; defensive only.
 
@@ -30,29 +33,31 @@ export default function AccountPage() {
   return (
     <div className="flex flex-col flex-1 items-center">
       <Header showBack title={t("account.title")}/>
-      <main className="w-full max-w-md px-5 py-6 flex-1">
-        <div className="mb-5">
-          <h2 className="text-2xl font-extrabold text-chilli-700">{heading}</h2>
-          <p className="text-sm text-gray-500 mt-1">{t("account.sub")}</p>
-        </div>
+      <main className="w-full max-w-md px-5 py-8 flex-1">
+        <motion.div variants={m.stagger} initial="hidden" animate="show">
+          <div className="mb-6">
+            <motion.h2 variants={m.fadeUp} className="font-display text-3xl font-extrabold tracking-tight text-chilli-700">{heading}</motion.h2>
+            <motion.p variants={m.fadeUp} className="text-sm text-ink-500 mt-1.5">{t("account.sub")}</motion.p>
+          </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 mb-6 text-sm">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-gray-500">{t("account.emailLabel")}</span>
-            <span className="font-semibold text-gray-900 truncate">{profile.email || "-"}</span>
-          </div>
-          <div className="flex items-center justify-between gap-3 mt-2">
-            <span className="text-gray-500">{t("account.roleLabel")}</span>
-            <span className="font-semibold text-gray-900">
-              {t(ROLE_LABEL_KEY[profile.role] || "account.roleLabel")}
-            </span>
-          </div>
-        </div>
+          <motion.div variants={m.fadeUp} className="rounded-2xl border border-ink-200 bg-paper-2 p-4 mb-6 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-ink-500">{t("account.emailLabel")}</span>
+              <span className="font-semibold text-ink-900 truncate">{profile.email || "-"}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3 mt-2">
+              <span className="text-ink-500">{t("account.roleLabel")}</span>
+              <span className="font-semibold text-ink-900">
+                {t(ROLE_LABEL_KEY[profile.role] || "account.roleLabel")}
+              </span>
+            </div>
+          </motion.div>
+        </motion.div>
 
         {isFarmer && <AccountFarmerForm profile={profile}/>}
         {isMerchant && <AccountMerchantForm profile={profile}/>}
         {!isFarmer && !isMerchant && (
-          <p className="text-sm text-gray-500">{t("account.adminNote")}</p>
+          <p className="text-sm text-ink-500">{t("account.adminNote")}</p>
         )}
       </main>
     </div>

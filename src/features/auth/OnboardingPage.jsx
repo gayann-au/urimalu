@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
 import { useAuth, useLogout } from "./useAuth";
 import OnboardingFarmerForm from "./OnboardingFarmerForm";
 import OnboardingMerchantForm from "./OnboardingMerchantForm";
+import { useUriMotion } from "../../lib/uiMotion";
 
 // Google onboarding screen. Reached only by a signed-in account that has no
 // public.users row yet (a brand new Google sign-up). Step one asks the single
@@ -11,18 +13,23 @@ import OnboardingMerchantForm from "./OnboardingMerchantForm";
 // the matching password sign-up collects. After that the user is fully set up
 // with the correct role and lands in the app.
 
-function RoleCard({ onClick, icon, title, desc }) {
+function RoleCard({ onClick, icon, title, desc, variants, whileHover, whileTap }) {
   return (
-    <button onClick={onClick}
-      className="w-full text-left rounded-2xl border-2 border-coorg-200 hover:border-coorg-600 hover:bg-coorg-50 p-5 transition active:scale-[0.99] flex items-start gap-4">
-      <span className="shrink-0 h-12 w-12 rounded-xl bg-coorg-100 text-coorg-700 flex items-center justify-center">
+    <motion.button
+      onClick={onClick}
+      variants={variants}
+      whileHover={whileHover}
+      whileTap={whileTap}
+      className="w-full text-left rounded-3xl bg-white border border-ink-200 shadow-sm hover:shadow-md hover:border-coorg-300 p-6 transition-colors flex items-start gap-4"
+    >
+      <span className="shrink-0 h-12 w-12 rounded-[14px] bg-coorg-50 text-coorg-600 flex items-center justify-center">
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="block text-lg font-extrabold text-gray-900">{title}</span>
-        <span className="block text-sm text-gray-500 mt-0.5">{desc}</span>
+        <span className="block font-display text-lg font-extrabold tracking-tight text-ink-900">{title}</span>
+        <span className="block text-sm text-ink-500 mt-0.5">{desc}</span>
       </span>
-    </button>
+    </motion.button>
   );
 }
 
@@ -43,6 +50,7 @@ const merchantIcon = (
 
 export default function OnboardingPage() {
   const { t } = useTranslation();
+  const m = useUriMotion();
   const { user } = useAuth();
   const logout = useLogout();
   const [stage, setStage] = useState("role"); // role -> farmer | merchant
@@ -52,28 +60,30 @@ export default function OnboardingPage() {
   return (
     <div className="flex flex-col flex-1 items-center">
       <Header/>
-      <main className="w-full max-w-md px-5 py-6 flex-1">
+      <main className="w-full max-w-md px-5 py-8 flex-1">
         {stage === "role" && (
-          <>
+          <motion.div variants={m.stagger} initial="hidden" animate="show">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-extrabold text-chilli-700">{t("onboarding.welcomeTitle")}</h2>
-              <p className="text-sm text-gray-500 mt-1">{t("onboarding.welcomeSub")}</p>
+              <motion.h2 variants={m.fadeUp} className="font-display text-3xl font-extrabold tracking-tight text-chilli-700">{t("onboarding.welcomeTitle")}</motion.h2>
+              <motion.p variants={m.fadeUp} className="text-sm text-ink-500 mt-1.5">{t("onboarding.welcomeSub")}</motion.p>
               {user?.email && (
-                <p className="text-xs text-gray-400 mt-2 truncate">{user.email}</p>
+                <motion.p variants={m.fadeUp} className="text-xs text-ink-500 mt-2 truncate">{user.email}</motion.p>
               )}
             </div>
-            <p className="text-sm font-semibold text-gray-700 mb-3">{t("onboarding.whoAreYou")}</p>
+            <motion.p variants={m.fadeUp} className="text-sm font-semibold text-ink-700 mb-3">{t("onboarding.whoAreYou")}</motion.p>
             <div className="space-y-3">
               <RoleCard onClick={() => setStage("farmer")} icon={farmerIcon}
-                title={t("onboarding.farmerTitle")} desc={t("onboarding.farmerDesc")}/>
+                title={t("onboarding.farmerTitle")} desc={t("onboarding.farmerDesc")}
+                variants={m.fadeUp} whileHover={m.cardHover} whileTap={m.btnTap}/>
               <RoleCard onClick={() => setStage("merchant")} icon={merchantIcon}
-                title={t("onboarding.merchantTitle")} desc={t("onboarding.merchantDesc")}/>
+                title={t("onboarding.merchantTitle")} desc={t("onboarding.merchantDesc")}
+                variants={m.fadeUp} whileHover={m.cardHover} whileTap={m.btnTap}/>
             </div>
-            <button onClick={() => logout.mutate()}
-              className="mt-8 block text-center text-sm text-gray-400 underline w-full">
+            <motion.button variants={m.fadeUp} onClick={() => logout.mutate()}
+              className="mt-8 block text-center text-sm text-ink-500 underline w-full">
               {t("onboarding.differentAccount")}
-            </button>
-          </>
+            </motion.button>
+          </motion.div>
         )}
 
         {stage === "farmer" && <OnboardingFarmerForm onBack={backToRole}/>}
