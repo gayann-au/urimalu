@@ -1,10 +1,32 @@
 import { useMemo, useState, useDeferredValue } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
 import { RateCard } from "./RateCard";
 import { useAuth } from "../auth/useAuth";
 import { useListings, uniqueCropsInFeed, groupFeedByMerchant } from "./useFeed";
+import { useUriMotion } from "../../lib/uiMotion";
+
+// Storefront glyph, the soft icon that anchors each merchant card the way the
+// landing step cards are anchored by their icon boxes.
+function StoreIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 9 5 4h14l2 5"/>
+      <path d="M4 9h16v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9Z"/>
+      <path d="M9 9v3a3 3 0 0 0 6 0V9"/>
+    </svg>
+  );
+}
+
+function Arrow() {
+  return (
+    <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+    </svg>
+  );
+}
 
 export default function FeedPage() {
   const { t } = useTranslation();
@@ -19,7 +41,7 @@ export default function FeedPage() {
       <Header/>
 
       {/* Tabs */}
-      <div className="bg-white border-b border-gray-100 sticky top-[64px] z-20">
+      <div className="bg-white border-b border-ink-100 sticky top-[64px] z-20">
         <div className="flex">
           <TabButton active={tab === "merchants"} onClick={() => setTab("merchants")}>
             {t("feed.byMerchant")}
@@ -44,10 +66,10 @@ function TabButton({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 min-h-[48px] px-3 text-sm font-bold border-b-2 transition ${
+      className={`flex-1 min-h-[48px] px-3 text-sm font-bold border-b-2 transition-colors ${
         active
           ? "border-coorg-600 text-coorg-700"
-          : "border-transparent text-gray-500"
+          : "border-transparent text-ink-500 hover:text-ink-700"
       }`}
     >
       {children}
@@ -59,6 +81,7 @@ function TabButton({ active, onClick, children }) {
 
 function MerchantsTab({ items, isLoading, loggedIn }) {
   const { t } = useTranslation();
+  const m = useUriMotion();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
@@ -77,28 +100,28 @@ function MerchantsTab({ items, isLoading, loggedIn }) {
 
   return (
     <>
-      <div className="bg-white border-b border-gray-100 px-4 py-3">
+      <div className="bg-white border-b border-ink-100 px-4 py-3">
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("feed.searchMerchant")}
-          className="w-full min-h-[48px] rounded-xl border-2 border-gray-200 focus:border-coorg-500 outline-none px-4 text-base"
+          className="w-full min-h-[48px] rounded-2xl border-2 border-ink-200 focus:border-coorg-500 outline-none px-4 text-base bg-white"
         />
       </div>
 
-      <main className="flex-1 px-4 py-4">
+      <main className="flex-1 px-4 py-5">
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="bg-white rounded-2xl border border-gray-200 p-5 animate-pulse h-32"
+                className="bg-white rounded-[18px] border border-ink-200 shadow-sm p-7 animate-pulse h-44"
               />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center text-gray-500 py-16">
+          <div className="text-center text-ink-500 py-16">
             <p>
               {deferredSearch.trim()
                 ? t("feed.noMerchantsMatch")
@@ -106,7 +129,13 @@ function MerchantsTab({ items, isLoading, loggedIn }) {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <motion.div
+            variants={m.stagger}
+            initial="hidden"
+            whileInView="show"
+            viewport={m.inView}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          >
             {loggedIn
               ? filtered.map((g) => (
                   <MerchantCard
@@ -122,7 +151,7 @@ function MerchantsTab({ items, isLoading, loggedIn }) {
                     onLogin={() => nav("/login")}
                   />
                 ))}
-          </div>
+          </motion.div>
         )}
       </main>
     </>
@@ -131,32 +160,41 @@ function MerchantsTab({ items, isLoading, loggedIn }) {
 
 function MerchantCard({ group, onView }) {
   const { t, i18n } = useTranslation();
+  const m = useUriMotion();
   const { merchant, crop_count, last_confirmed_at } = group;
   const freshLabel = freshnessLabel(last_confirmed_at, t, i18n.language);
   return (
-    <article className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-gray-300 transition">
-      <h3 className="text-lg font-bold text-gray-900 leading-tight truncate">
+    <motion.article
+      variants={m.fadeUp}
+      whileHover={m.cardHover}
+      className="group bg-white rounded-[18px] border border-ink-200 shadow-sm hover:shadow-md hover:border-crop-200 p-7 transition-colors"
+    >
+      <span className="h-11 w-11 rounded-[14px] bg-crop-50 text-crop-600 grid place-items-center mb-4">
+        <StoreIcon/>
+      </span>
+      <h3 className="font-display text-xl font-extrabold tracking-tight text-ink-900 leading-tight truncate">
         {merchant.business_name}
       </h3>
-      <p className="text-sm text-gray-500 mt-0.5 truncate">
+      <p className="text-sm text-ink-500 mt-1 truncate">
         {merchant.town}
         {merchant.town && merchant.district ? ", " : ""}
         {merchant.district}
       </p>
-      <p className="text-sm text-gray-700 mt-2 tabular-nums">
+      <p className="text-sm font-semibold text-ink-700 mt-3 tabular-nums">
         {crop_count === 1
           ? t("feed.buyingOneCrop")
           : t("feed.buyingNCrops", { count: crop_count })}
       </p>
-      <p className="text-xs text-gray-400 mt-1">{freshLabel}</p>
+      <p className="text-xs text-ink-500 mt-1">{freshLabel}</p>
       <button
         type="button"
         onClick={onView}
-        className="mt-4 w-full min-h-[48px] rounded-xl bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition"
+        className="mt-5 w-full min-h-[48px] rounded-[14px] bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition-colors inline-flex items-center justify-center gap-2"
       >
         {t("feed.viewCropPrices")}
+        <Arrow/>
       </button>
-    </article>
+    </motion.article>
   );
 }
 
@@ -165,39 +203,39 @@ function MerchantCard({ group, onView }) {
 // Only business_name is rendered from the group.
 function MerchantCardGated({ group, onLogin }) {
   const { t } = useTranslation();
+  const m = useUriMotion();
   const name = group.merchant.business_name;
   return (
-    <article className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-gray-300 transition">
-      <h3 className="text-lg font-bold text-gray-900 leading-tight truncate">
+    <motion.article
+      variants={m.fadeUp}
+      whileHover={m.cardHover}
+      className="group bg-white rounded-[18px] border border-ink-200 shadow-sm hover:shadow-md hover:border-crop-200 p-7 transition-colors"
+    >
+      <span className="h-11 w-11 rounded-[14px] bg-crop-50 text-crop-600 grid place-items-center mb-4">
+        <StoreIcon/>
+      </span>
+      <h3 className="font-display text-xl font-extrabold tracking-tight text-ink-900 leading-tight truncate">
         {name}
       </h3>
       {/* Static placeholders, blurred. No real town/district/count/date here. */}
-      <p
-        aria-hidden="true"
-        className="text-sm text-gray-500 mt-0.5 truncate select-none blur-sm"
-      >
+      <p aria-hidden="true" className="text-sm text-ink-500 mt-1 truncate select-none blur-sm">
         xxxxxxxx, xxxxxxx
       </p>
-      <p
-        aria-hidden="true"
-        className="text-sm text-gray-700 mt-2 tabular-nums select-none blur-sm"
-      >
+      <p aria-hidden="true" className="text-sm font-semibold text-ink-700 mt-3 tabular-nums select-none blur-sm">
         Buying x crops today
       </p>
-      <p
-        aria-hidden="true"
-        className="text-xs text-gray-400 mt-1 select-none blur-sm"
-      >
+      <p aria-hidden="true" className="text-xs text-ink-500 mt-1 select-none blur-sm">
         Updated xx xxx
       </p>
       <button
         type="button"
         onClick={onLogin}
-        className="mt-4 w-full min-h-[48px] rounded-xl bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition"
+        className="mt-5 w-full min-h-[48px] rounded-[14px] bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition-colors inline-flex items-center justify-center gap-2"
       >
         {t("feed.loginToSeePrices")}
+        <Arrow/>
       </button>
-    </article>
+    </motion.article>
   );
 }
 
@@ -205,6 +243,7 @@ function MerchantCardGated({ group, onLogin }) {
 
 function CropsTab({ items, isLoading, loggedIn }) {
   const { t } = useTranslation();
+  const m = useUriMotion();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
   const [cropChip, setCropChip] = useState(null);
@@ -237,16 +276,17 @@ function CropsTab({ items, isLoading, loggedIn }) {
   if (!loggedIn) {
     return (
       <main className="flex-1 px-4 py-12">
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center">
-          <p className="text-sm text-gray-700">
+        <div className="bg-white rounded-3xl border border-ink-200 shadow-sm p-8 text-center max-w-md mx-auto">
+          <p className="text-sm text-ink-700">
             {t("feed.loggedOutCropHint")}
           </p>
           <button
             type="button"
             onClick={() => nav("/login")}
-            className="mt-4 w-full min-h-[48px] rounded-xl bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition"
+            className="group mt-5 w-full min-h-[48px] rounded-[14px] bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition-colors inline-flex items-center justify-center gap-2"
           >
             {t("nav.login")}
+            <Arrow/>
           </button>
         </div>
       </main>
@@ -255,14 +295,14 @@ function CropsTab({ items, isLoading, loggedIn }) {
 
   return (
     <>
-      <div className="bg-white border-b border-gray-100">
+      <div className="bg-white border-b border-ink-100">
         <div className="px-4 pt-3">
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("feed.searchCrop")}
-            className="w-full min-h-[48px] rounded-xl border-2 border-gray-200 focus:border-coorg-500 outline-none px-4 text-base"
+            className="w-full min-h-[48px] rounded-2xl border-2 border-ink-200 focus:border-coorg-500 outline-none px-4 text-base bg-white"
           />
         </div>
         {crops.length > 0 && (
@@ -273,10 +313,10 @@ function CropsTab({ items, isLoading, loggedIn }) {
                 <button
                   key={c}
                   onClick={() => toggleChip(c)}
-                  className={`whitespace-nowrap rounded-full px-4 min-h-[40px] text-sm font-semibold border-2 transition ${
+                  className={`whitespace-nowrap rounded-full px-4 min-h-[40px] text-sm font-semibold border-2 transition-colors ${
                     active
                       ? "bg-coorg-600 text-white border-coorg-600"
-                      : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+                      : "bg-white text-ink-700 border-ink-200 hover:border-coorg-300"
                   }`}
                 >
                   {c}
@@ -286,7 +326,7 @@ function CropsTab({ items, isLoading, loggedIn }) {
             {isFiltered && (
               <button
                 onClick={clearAll}
-                className="whitespace-nowrap rounded-full px-3 min-h-[40px] text-sm font-semibold text-gray-500 underline"
+                className="whitespace-nowrap rounded-full px-3 min-h-[40px] text-sm font-semibold text-ink-500 underline"
               >
                 {t("feed.clearFilter")}
               </button>
@@ -295,30 +335,36 @@ function CropsTab({ items, isLoading, loggedIn }) {
         )}
       </div>
 
-      <main className="flex-1 px-4 py-4">
+      <main className="flex-1 px-4 py-5">
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="bg-white rounded-2xl border border-gray-200 p-5 animate-pulse h-40"
+                className="bg-white rounded-[18px] border border-ink-200 shadow-sm p-7 animate-pulse h-40"
               />
             ))}
           </div>
         ) : !isFiltered ? (
-          <div className="text-center text-gray-500 py-12">
+          <div className="text-center text-ink-500 py-12">
             <p className="text-sm">
               {t("feed.pickCropHint")}
             </p>
           </div>
         ) : list.length === 0 ? (
-          <div className="text-center text-gray-500 py-16">
+          <div className="text-center text-ink-500 py-16">
             <p>{t("feed.noListingsMatch")}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <motion.div
+            variants={m.stagger}
+            initial="hidden"
+            whileInView="show"
+            viewport={m.inView}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          >
             {list.map((item) => <RateCard key={item.id} item={item}/>)}
-          </div>
+          </motion.div>
         )}
       </main>
     </>

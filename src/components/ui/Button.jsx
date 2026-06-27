@@ -9,6 +9,14 @@ const variants = {
   emerald:   "bg-emerald-600 text-white hover:bg-emerald-700",
   whatsapp:  "bg-[#25D366] text-white hover:bg-emerald-600",
   subtle:    "bg-gray-100 text-gray-700 hover:bg-gray-200",
+  // Calm secondary action: white with a warm ink border. For non-destructive
+  // choices like Reject (open the reason form), Dismiss, and Cancel.
+  neutral:   "bg-white border-2 border-ink-200 text-ink-700 hover:border-ink-300 hover:bg-paper-2",
+  // Quiet destructive: chilli outline rather than a loud red block. For Remove
+  // and Disable, so the destructive option is present but never shouts.
+  dangerSoft:"bg-white border-2 border-chilli-200 text-chilli-700 hover:bg-chilli-50",
+  // Committed negative action, the brand red. For confirming a rejection.
+  chilli:    "bg-chilli-600 text-white hover:bg-chilli-700",
 };
 const sizes = {
   sm: "px-3 py-1.5 text-xs",
