@@ -16,6 +16,8 @@ const LandingPage     = lazy(() => import("../features/landing/LandingPage"));
 const AccountPage     = lazy(() => import("../features/account/AccountPage"));
 const PrivacyPage     = lazy(() => import("../features/legal/PrivacyPage"));
 const TermsPage       = lazy(() => import("../features/legal/TermsPage"));
+const ForgotPasswordPage = lazy(() => import("../features/auth/ForgotPasswordPage"));
+const ResetPasswordPage  = lazy(() => import("../features/auth/ResetPasswordPage"));
 
 function PageLoader() {
   return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading…</div>;
@@ -100,7 +102,7 @@ function RequireOnboarding({ children }) {
   const { isAuthenticated, profile, isLoading } = useAuth();
   const location = useLocation();
   if (isLoading) return <PageLoader/>;
-  if (isAuthenticated && !profile && location.pathname !== "/onboarding") {
+  if (isAuthenticated && !profile && location.pathname !== "/onboarding" && location.pathname !== "/reset-password") {
     return <Navigate to="/onboarding" replace/>;
   }
   return children;
@@ -146,6 +148,8 @@ export function AppRoutes() {
         <Route path="/admin"              element={<AdminOnly><AdminPage/></AdminOnly>}/>
         <Route path="/privacy"            element={<PrivacyPage/>}/>
         <Route path="/terms"              element={<TermsPage/>}/>
+        <Route path="/forgot-password"    element={<GuestOnly><ForgotPasswordPage/></GuestOnly>}/>
+        <Route path="/reset-password"     element={<ResetPasswordPage/>}/>
         <Route path="*" element={<Navigate to="/" replace/>}/>
       </Routes>
       </RequireOnboarding>

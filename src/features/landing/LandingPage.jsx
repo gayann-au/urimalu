@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
+import { supabase, isSupabaseConfigured } from "../../lib/supabase";
+import { formatINR, dayKey } from "../../lib/constants";
 import "./LandingPage.css";
 
 // Urimalu marketing landing page, recreated from the Claude Design handoff.
@@ -22,6 +24,7 @@ const EASE = [0.22, 0.61, 0.36, 1];
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
+  const [liveRate, setLiveRate] = useState(null);
   const reduce = useReducedMotion();
 
   // Sticky header gains a hairline border once the page is scrolled past the top.
@@ -30,6 +33,65 @@ export default function LandingPage() {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Live hero rate. The landing is otherwise static, so this is the only
+  // Supabase call here and it is guarded by isSupabaseConfigured. It reads the
+  // most recently confirmed active listing for the crop name and price, then
+  // the same crop's price_history for the day-over-day change. Any failure or
+  // missing data leaves the illustrative placeholder values untouched.
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let active = true;
+    (async () => {
+      try {
+        const { data: listings, error } = await supabase
+          .from("listings")
+          .select("crop_name, price, unit_label, price_per_kg, call_for_price, merchant_id, confirmed_at")
+          .eq("is_active", true)
+          .order("confirmed_at", { ascending: false, nullsFirst: false })
+          .limit(1);
+        if (error) throw error;
+        const l = listings && listings[0];
+        if (!l) return;
+
+        const hero = l.price != null ? Number(l.price)
+          : l.price_per_kg != null ? Number(l.price_per_kg)
+          : null;
+        if (hero == null || Number.isNaN(hero)) return;
+        const unit = l.price != null && l.unit_label ? l.unit_label : "kg";
+
+        // Day-over-day change from the same crop and merchant's price history.
+        let deltaPct = null;
+        const { data: hist } = await supabase
+          .from("price_history")
+          .select("price_per_kg, recorded_at")
+          .eq("merchant_id", l.merchant_id)
+          .eq("crop_name", l.crop_name)
+          .order("recorded_at", { ascending: false })
+          .limit(20);
+        if (hist && hist.length) {
+          const perDay = [];
+          const seen = new Set();
+          for (const r of hist) {
+            if (r.price_per_kg == null) continue;
+            const d = dayKey(r.recorded_at);
+            if (seen.has(d)) continue;
+            seen.add(d);
+            perDay.push(Number(r.price_per_kg));
+            if (perDay.length >= 2) break;
+          }
+          if (perDay.length >= 2 && perDay[1] > 0) {
+            deltaPct = ((perDay[0] - perDay[1]) / perDay[1]) * 100;
+          }
+        }
+
+        if (active) setLiveRate({ cropName: l.crop_name, hero, unit, deltaPct });
+      } catch {
+        // Keep the placeholder on any error.
+      }
+    })();
+    return () => { active = false; };
   }, []);
 
   // Motion variants. When reduced motion is requested we drop the travel and
@@ -153,15 +215,17 @@ export default function LandingPage() {
                         <ellipse cx="12" cy="12" rx="6.5" ry="9" /><path d="M12 3.5c-2.4 3-2.4 14 0 17" />
                       </svg>
                     </span>
-                    Robusta Cherry, per 50kg bag
+                    {liveRate ? liveRate.cropName : "Robusta Cherry, per 50kg bag"}
                   </div>
-                  <div className="pulse-price">&#8377;9,840 <span className="unit">/bag</span></div>
-                  <span className="pulse-delta">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M7 17 17 7" /><path d="M9 7h8v8" />
-                    </svg>
-                    4.2% vs yesterday
-                  </span>
+                  <div className="pulse-price">{liveRate ? formatINR(liveRate.hero) : "₹9,840"} <span className="unit">{liveRate ? `/${liveRate.unit}` : "/bag"}</span></div>
+                  {(!liveRate || liveRate.deltaPct != null) && (
+                    <span className="pulse-delta">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M7 17 17 7" /><path d="M9 7h8v8" />
+                      </svg>
+                      {liveRate ? `${liveRate.deltaPct >= 0 ? "+" : ""}${liveRate.deltaPct.toFixed(1)}% vs yesterday` : "4.2% vs yesterday"}
+                    </span>
+                  )}
                   <svg className="pulse-svg" viewBox="0 0 380 92" fill="none" preserveAspectRatio="none">
                     <defs>
                       <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">

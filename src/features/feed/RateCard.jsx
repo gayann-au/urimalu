@@ -1,28 +1,41 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 import { useLeadTracking } from "../../hooks/useLeadTracking";
 import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
+import { useUriMotion } from "../../lib/uiMotion";
 import { BAG_WEIGHTS, formatINR, listingPriceView, formatValidTill } from "../../lib/constants";
+
+// Coffee-bean glyph, the soft crop icon shared with the merchant profile cards.
+function BeanIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <ellipse cx="12" cy="12" rx="6.5" ry="9" />
+      <path d="M12 3.5c-2.4 3-2.4 14 0 17" />
+    </svg>
+  );
+}
 
 export function RateCard({ item }) {
   const { t } = useTranslation();
+  const m = useUriMotion();
   const { trackLead } = useLeadTracking();
-  const m = item.merchant || {};
+  const merchant = item.merchant || {};
 
-  const callPhone = m.phone;
-  const waPhone = m.whatsapp || m.phone;
+  const callPhone = merchant.phone;
+  const waPhone = merchant.whatsapp || merchant.phone;
 
   function onCall() {
     if (!callPhone) return;
-    trackLead(m.id, "CALL");
+    trackLead(merchant.id, "CALL");
     window.location.href = `tel:${callPhone}`;
   }
 
   function onWa() {
     if (!waPhone) return;
-    trackLead(m.id, "WHATSAPP");
+    trackLead(merchant.id, "WHATSAPP");
     const num = String(waPhone).replace(/[^0-9]/g, "");
-    const msg = encodeURIComponent(t("profile.waMessage", { name: m.business_name || "" }));
+    const msg = encodeURIComponent(t("profile.waMessage", { name: merchant.business_name || "" }));
     window.open(`https://wa.me/${num}?text=${msg}`, "_blank");
   }
 
@@ -31,19 +44,30 @@ export function RateCard({ item }) {
   const validTill = formatValidTill(item.valid_till);
 
   return (
-    <article className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-gray-300 transition">
-      {/* Top: crop name + freshness badge (top right) */}
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="text-lg font-bold text-gray-900 leading-tight truncate">
-          {item.crop_name}
-        </h3>
-        <FreshnessBadge confirmedAt={item.confirmed_at} className="mt-0.5 shrink-0" />
+    <motion.article
+      variants={m.fadeUp}
+      whileHover={m.cardHover}
+      className="bg-white rounded-[18px] border border-ink-200 shadow-sm hover:shadow-md hover:border-crop-200 p-6 transition-colors"
+    >
+      {/* Top: crop name with icon box + freshness pill on the right */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="h-11 w-11 rounded-2xl bg-crop-50 text-crop-600 grid place-items-center shrink-0">
+            <BeanIcon/>
+          </span>
+          <div className="min-w-0">
+            <h3 className="font-display text-lg font-extrabold tracking-tight text-ink-900 leading-tight truncate">
+              {item.crop_name}
+            </h3>
+            <p className="text-sm text-ink-500 mt-0.5 truncate">
+              {merchant.business_name}
+              {merchant.town && merchant.business_name ? ", " : ""}
+              {merchant.town}
+            </p>
+          </div>
+        </div>
+        <FreshnessBadge confirmedAt={item.confirmed_at} className="bg-paper-2 rounded-full px-2.5 py-1 shrink-0" />
       </div>
-      <p className="text-sm text-gray-500 mt-0.5 truncate">
-        {m.business_name}
-        {m.town && m.business_name ? ", " : ""}
-        {m.town}
-      </p>
 
       {/* Price */}
       <PriceBlock price={price} t={t} />
@@ -52,36 +76,36 @@ export function RateCard({ item }) {
       {showBagTotals && <BagTotals perKg={price.perKg} t={t} />}
 
       {validTill && (
-        <div className="mt-3 text-xs text-gray-500">
+        <div className="mt-3 text-xs text-ink-500">
           {t("card.priceValidTill", { date: validTill })}
         </div>
       )}
 
       {item.variety_notes && (
-        <div className="mt-3 text-xs text-gray-500">{item.variety_notes}</div>
+        <div className="mt-3 text-xs text-ink-500">{item.variety_notes}</div>
       )}
       {item.notes && (
-        <div className="mt-1 text-xs text-gray-500 italic">{item.notes}</div>
+        <div className="mt-1 text-xs text-ink-500 italic">{item.notes}</div>
       )}
 
       {/* Actions: Call as outline, WhatsApp as solid green. No raw number shown. */}
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-5 grid grid-cols-2 gap-3">
         <button
           type="button"
           onClick={onCall}
-          className="min-h-[48px] rounded-xl border-2 border-coorg-600 text-coorg-700 bg-white font-bold text-sm hover:bg-coorg-50 transition"
+          className="min-h-[48px] rounded-full border-2 border-coorg-600 text-coorg-700 bg-white font-bold text-sm hover:bg-coorg-50 transition-colors"
         >
           {t("common.call")}
         </button>
         <button
           type="button"
           onClick={onWa}
-          className="min-h-[48px] rounded-xl bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition"
+          className="min-h-[48px] rounded-full bg-coorg-600 text-white font-bold text-sm shadow-sm hover:bg-coorg-700 transition-colors"
         >
           {t("common.whatsapp")}
         </button>
       </div>
-    </article>
+    </motion.article>
   );
 }
 
@@ -89,33 +113,33 @@ export function RateCard({ item }) {
 // (bag or quintal) with a quiet per-kg line below. Never prints "per" twice.
 function PriceBlock({ price, t }) {
   if (price.mode === "call") {
-    return <div className="mt-3 text-lg font-bold text-gray-600">{t("card.callForPrice")}</div>;
+    return <div className="mt-4 text-lg font-bold text-ink-700">{t("card.callForPrice")}</div>;
   }
 
   if (price.mode === "perkg") {
     if (price.hero == null) {
-      return <div className="mt-3 text-lg font-bold text-gray-500">-</div>;
+      return <div className="mt-4 text-lg font-bold text-ink-400">-</div>;
     }
     return (
-      <div className="mt-3 flex items-baseline gap-1.5">
+      <div className="mt-4 flex items-baseline gap-1.5">
         <span className="text-3xl font-extrabold text-coorg-700 tabular-nums">{formatINR(price.hero)}</span>
-        <span className="text-sm font-semibold text-gray-500">{t("card.perKgSuffix")}</span>
+        <span className="text-sm font-semibold text-ink-500">{t("card.perKgSuffix")}</span>
       </div>
     );
   }
 
   // mode "unit": entered price is the hero, per-kg is the quiet secondary line.
   if (price.hero == null) {
-    return <div className="mt-3 text-lg font-bold text-gray-500">-</div>;
+    return <div className="mt-4 text-lg font-bold text-ink-400">-</div>;
   }
   return (
-    <div className="mt-3">
+    <div className="mt-4">
       <div className="flex items-baseline gap-1.5">
         <span className="text-3xl font-extrabold text-coorg-700 tabular-nums">{formatINR(price.hero)}</span>
-        <span className="text-sm font-semibold text-gray-500">{unitPhrase(t, price.unitLabel)}</span>
+        <span className="text-sm font-semibold text-ink-500">{unitPhrase(t, price.unitLabel)}</span>
       </div>
       {price.perKg != null && (
-        <div className="mt-1 text-sm text-gray-500 tabular-nums">
+        <div className="mt-1 text-sm text-ink-500 tabular-nums">
           {t("card.thatIsPerKg", { price: formatINR(price.perKg) })}
         </div>
       )}
@@ -137,9 +161,9 @@ function BagTotals({ perKg, t }) {
   const [weight, setWeight] = useState(50);
   const total = Math.round(weight * Number(perKg));
   return (
-    <div className="mt-4 rounded-xl bg-gray-50 border border-gray-100 p-3">
-      <div className="text-xs font-semibold text-gray-500">{t("card.seeTotalForBag")}</div>
-      <div className="mt-2 flex flex-wrap gap-2">
+    <div className="mt-4 rounded-2xl bg-paper-2 p-4">
+      <div className="text-xs font-bold uppercase tracking-wide text-ink-500">{t("card.seeTotalForBag")}</div>
+      <div className="mt-2.5 flex flex-wrap gap-2">
         {BAG_WEIGHTS.map((w) => {
           const active = w === weight;
           return (
@@ -147,10 +171,10 @@ function BagTotals({ perKg, t }) {
               key={w}
               type="button"
               onClick={() => setWeight(w)}
-              className={`min-h-[36px] rounded-full px-3 text-xs font-bold border-2 transition ${
+              className={`min-h-[36px] rounded-full px-3.5 text-xs font-bold border-2 transition-colors ${
                 active
                   ? "bg-coorg-600 text-white border-coorg-600"
-                  : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+                  : "bg-white text-ink-700 border-ink-200 hover:border-coorg-300"
               }`}
             >
               {t("card.weightChip", { weight: w })}
@@ -158,7 +182,7 @@ function BagTotals({ perKg, t }) {
           );
         })}
       </div>
-      <div className="mt-2 text-sm font-bold text-gray-800 tabular-nums">
+      <div className="mt-3 text-sm font-bold text-ink-800 tabular-nums">
         {t("card.weightTotal", { weight, total: formatINR(total) })}
       </div>
     </div>

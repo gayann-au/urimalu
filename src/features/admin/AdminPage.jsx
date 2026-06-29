@@ -16,22 +16,35 @@ export default function AdminPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState("merchants");
   const { data: openReports = [] } = useReports();
+  const { data: users = [] } = useUsers();
   const openCount = openReports.length;
+  // Count of merchants waiting on a review decision, surfaced as a badge so the
+  // admin notices new signups and re-reviews without opening the tab. It reads
+  // the same users query the merchants tab uses, so it is current on load and
+  // on every refetch.
+  const pendingCount = users.filter(u => u.role === "MERCHANT" && u.status === "PENDING").length;
+  const tabCount = { merchants: pendingCount, reports: openCount };
   return (
     <div className="flex flex-col flex-1 pb-10 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
       <Header title={t("admin.title")}/>
       <nav className="bg-white border-b border-ink-100 sticky top-[64px] z-20">
         <div className="flex overflow-x-auto no-scrollbar">
           {TABS.map(k => {
-            const label = k === "reports"
-              ? `${t("report.openReports")}${openCount > 0 ? ` (${openCount})` : ""}`
-              : t(`admin.tabs.${k}`);
+            const label = k === "reports" ? t("report.openReports") : t(`admin.tabs.${k}`);
+            const count = tabCount[k] || 0;
             return (
               <button key={k} onClick={() => setTab(k)}
                 className={`flex-1 min-w-max px-4 py-3 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors ${
                   tab === k ? "border-coorg-600 text-coorg-700" : "border-transparent text-ink-500 hover:text-ink-700"
                 }`}>
-                {label}
+                <span className="inline-flex items-center gap-1.5">
+                  {label}
+                  {count > 0 && (
+                    <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-chilli-600 text-white text-[10px] font-bold leading-none">
+                      {count}
+                    </span>
+                  )}
+                </span>
               </button>
             );
           })}
