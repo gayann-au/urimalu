@@ -6,6 +6,7 @@ import { Header } from "../../components/layout/Header";
 import { RateCard } from "./RateCard";
 import { useAuth } from "../auth/useAuth";
 import { useListings, uniqueCropsInFeed, groupFeedByMerchant } from "./useFeed";
+import { LoadError } from "../../components/ui/LoadError";
 import { useUriMotion } from "../../lib/uiMotion";
 
 // Storefront glyph, the soft icon that anchors each merchant card the way the
@@ -53,9 +54,9 @@ export default function FeedPage() {
       </div>
 
       {tab === "merchants" ? (
-        <MerchantsTab items={items} isLoading={listingsQ.isLoading} loggedIn={loggedIn}/>
+        <MerchantsTab items={items} isLoading={listingsQ.isLoading} isError={listingsQ.isError} onRetry={() => listingsQ.refetch()} loggedIn={loggedIn}/>
       ) : (
-        <CropsTab items={items} isLoading={listingsQ.isLoading} loggedIn={loggedIn}/>
+        <CropsTab items={items} isLoading={listingsQ.isLoading} isError={listingsQ.isError} onRetry={() => listingsQ.refetch()} loggedIn={loggedIn}/>
       )}
     </div>
   );
@@ -79,7 +80,7 @@ function TabButton({ active, onClick, children }) {
 
 // ----- By Merchant tab -----
 
-function MerchantsTab({ items, isLoading, loggedIn }) {
+function MerchantsTab({ items, isLoading, isError, onRetry, loggedIn }) {
   const { t } = useTranslation();
   const m = useUriMotion();
   const nav = useNavigate();
@@ -111,7 +112,9 @@ function MerchantsTab({ items, isLoading, loggedIn }) {
       </div>
 
       <main className="flex-1 px-4 py-5">
-        {isLoading ? (
+        {isError ? (
+          <LoadError onRetry={onRetry}/>
+        ) : isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[0, 1, 2].map((i) => (
               <div
@@ -241,7 +244,7 @@ function MerchantCardGated({ group, onLogin }) {
 
 // ----- By Crop tab -----
 
-function CropsTab({ items, isLoading, loggedIn }) {
+function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
   const { t } = useTranslation();
   const m = useUriMotion();
   const nav = useNavigate();
@@ -336,7 +339,9 @@ function CropsTab({ items, isLoading, loggedIn }) {
       </div>
 
       <main className="flex-1 px-4 py-5">
-        {isLoading ? (
+        {isError ? (
+          <LoadError onRetry={onRetry}/>
+        ) : isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[0, 1, 2].map((i) => (
               <div

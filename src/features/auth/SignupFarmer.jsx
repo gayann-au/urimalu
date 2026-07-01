@@ -28,6 +28,7 @@ export default function SignupFarmer() {
   const [profile, setProfile] = useState(null);
   const [district, setDistrict] = useState(null);
   const [topError, setTopError] = useState(null);
+  const [districtError, setDistrictError] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(schema) });
@@ -43,9 +44,15 @@ export default function SignupFarmer() {
 
   async function pickDistrict(d) {
     setDistrict(d);
-    // Update profile with district then nav to feed (handled in mutation success)
+    setDistrictError(false);
+    // Save the district, then go to the feed. A failed write used to be
+    // swallowed silently; now it surfaces a message so the user can retry.
     const { supabase } = await import("../../lib/supabase");
-    await supabase.from("users").update({ district: d }).eq("id", profile.id);
+    const { error } = await supabase.from("users").update({ district: d }).eq("id", profile.id);
+    if (error) {
+      setDistrictError(true);
+      return;
+    }
     navigate("/");
   }
 
@@ -108,6 +115,11 @@ export default function SignupFarmer() {
                   </button>
                 ))}
               </div>
+              {districtError && (
+                <div className="mt-4 rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold text-center">
+                  {t("auth.districtError")}
+                </div>
+              )}
             </div>
           </div>
         )}

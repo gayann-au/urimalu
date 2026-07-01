@@ -8,13 +8,22 @@ export function ReviewForm({ onCancel, onSubmit }) {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   async function submit(e) {
     e.preventDefault();
     if (rating < 1) return;
     setBusy(true);
-    try { await onSubmit({ rating, comment: comment.trim() }); }
-    finally { setBusy(false); }
+    setFailed(false);
+    try {
+      await onSubmit({ rating, comment: comment.trim() });
+    } catch {
+      // A failed submit used to vanish silently. Show a clear message and keep
+      // the form open so the user can retry.
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -34,6 +43,11 @@ export function ReviewForm({ onCancel, onSubmit }) {
         </div>
       </div>
       <Textarea label={t("review.commentOpt")} rows={3} value={comment} onChange={e => setComment(e.target.value)}/>
+      {failed && (
+        <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold">
+          {t("review.submitError")}
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <Button type="button" variant="ghost" onClick={onCancel}>{t("common.cancel")}</Button>
         <Button type="submit" loading={busy}>{t("review.submitReview")}</Button>

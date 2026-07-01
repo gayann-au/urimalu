@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/useAuth";
 
 const FeedPage        = lazy(() => import("../features/feed/FeedPage"));
@@ -21,6 +22,27 @@ const ResetPasswordPage  = lazy(() => import("../features/auth/ResetPasswordPage
 
 function PageLoader() {
   return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading…</div>;
+}
+
+// Shown when a signed-in visitor's account could not be loaded (a failed
+// request, not a missing row). Offers a retry instead of dropping the user into
+// onboarding, which would wrongly treat a fetch failure as "no account yet".
+function AuthErrorScreen({ onRetry }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-1 items-center justify-center min-h-screen p-6">
+      <div className="bg-white rounded-3xl border border-ink-200 shadow-sm p-8 text-center max-w-sm w-full">
+        <p className="text-sm font-semibold text-ink-700">{t("auth.profileLoadError")}</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-[14px] border-2 border-coorg-600 text-coorg-700 bg-white font-bold text-sm px-5 hover:bg-coorg-50 transition-colors"
+        >
+          {t("common.retry")}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function GuestOnly({ children }) {
@@ -99,9 +121,12 @@ function HomeRoute() {
 // mid-onboarding cannot drop them into the app half configured. Everyone else
 // (logged out, or logged in with a profile) passes through untouched.
 function RequireOnboarding({ children }) {
-  const { isAuthenticated, profile, isLoading } = useAuth();
+  const { isAuthenticated, profile, isLoading, profileLoadError, refetchAuth } = useAuth();
   const location = useLocation();
   if (isLoading) return <PageLoader/>;
+  // A failed account fetch is not the same as "no account yet": show a retry
+  // screen instead of routing an existing user back through onboarding.
+  if (isAuthenticated && profileLoadError) return <AuthErrorScreen onRetry={refetchAuth}/>;
   if (isAuthenticated && !profile && location.pathname !== "/onboarding" && location.pathname !== "/reset-password") {
     return <Navigate to="/onboarding" replace/>;
   }

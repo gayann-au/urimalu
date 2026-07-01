@@ -8,6 +8,7 @@ import { useUsers, useReviews } from "../feed/useFeed";
 import { useSetMerchantStatus, useRemoveUser, useRemoveReview } from "./useAdmin";
 import { useReports, useUpdateReportStatus, useToggleMerchantDisabled } from "./useReports";
 import { toast } from "../../components/ui/Toast";
+import { LoadError } from "../../components/ui/LoadError";
 import { useUriMotion } from "../../lib/uiMotion";
 
 const TABS = ["merchants", "farmers", "reviews", "reports"];
@@ -93,7 +94,8 @@ const CARD = "bg-white rounded-2xl border border-ink-200 shadow-sm hover:shadow-
 function MerchantsTab() {
   const { t } = useTranslation();
   const m = useUriMotion();
-  const { data: users = [] } = useUsers();
+  const usersQ = useUsers();
+  const users = usersQ.data || [];
   const setStatus = useSetMerchantStatus();
   const removeUser = useRemoveUser();
   const [filter, setFilter] = useState("all");
@@ -116,6 +118,8 @@ function MerchantsTab() {
     catch (e) { toast({ tone: "err", text: e.message?.startsWith("admin.") ? t(e.message) : e.message || "Error" }); }
     finally { setBusyId(null); }
   }
+
+  if (usersQ.isError) return <LoadError onRetry={() => usersQ.refetch()}/>;
 
   return (
     <>
@@ -224,8 +228,10 @@ function MerchantsTab() {
 function FarmersTab() {
   const { t } = useTranslation();
   const m = useUriMotion();
-  const { data: users = [] } = useUsers();
+  const usersQ = useUsers();
+  const users = usersQ.data || [];
   const removeUser = useRemoveUser();
+  if (usersQ.isError) return <LoadError onRetry={() => usersQ.refetch()}/>;
   const farmers = users.filter(u => u.role === "FARMER").sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   if (farmers.length === 0) return <Empty text={t("admin.noFarmers")}/>;
   return (
@@ -253,10 +259,13 @@ function FarmersTab() {
 function ReviewsTab() {
   const { t } = useTranslation();
   const m = useUriMotion();
-  const { data: users = [] } = useUsers();
-  const { data: reviews = [] } = useReviews();
+  const usersQ = useUsers();
+  const reviewsQ = useReviews();
+  const users = usersQ.data || [];
+  const reviews = reviewsQ.data || [];
   const removeReview = useRemoveReview();
   const byId = useMemo(() => new Map(users.map(u => [u.id, u])), [users]);
+  if (usersQ.isError || reviewsQ.isError) return <LoadError onRetry={() => { usersQ.refetch(); reviewsQ.refetch(); }}/>;
   if (reviews.length === 0) return <Empty text={t("admin.noReviews")}/>;
   return (
     <motion.ul variants={m.stagger} initial="hidden" animate="show"
@@ -287,8 +296,11 @@ function ReviewsTab() {
 function ReportsTab() {
   const { t } = useTranslation();
   const m = useUriMotion();
-  const { data: reports = [], isLoading } = useReports();
-  const { data: users = [] } = useUsers();
+  const reportsQ = useReports();
+  const reports = reportsQ.data || [];
+  const isLoading = reportsQ.isLoading;
+  const usersQ = useUsers();
+  const users = usersQ.data || [];
   const updateStatus = useUpdateReportStatus();
   const toggleDisabled = useToggleMerchantDisabled();
   const [busyId, setBusyId] = useState(null);
@@ -338,7 +350,9 @@ function ReportsTab() {
   return (
     <>
       <div className="text-xs font-bold uppercase tracking-wide text-ink-500 mb-3">{t("report.openReports")}</div>
-      {isLoading ? (
+      {reportsQ.isError ? (
+        <LoadError onRetry={() => reportsQ.refetch()}/>
+      ) : isLoading ? (
         <div className="bg-white rounded-2xl border border-ink-200 shadow-sm p-4 animate-pulse h-24"/>
       ) : reports.length === 0 ? (
         <Empty text="-"/>

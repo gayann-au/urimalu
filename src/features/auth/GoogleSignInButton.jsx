@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 // Google Identity Services loader and button.
 //
@@ -39,6 +40,7 @@ function loadGsi() {
 }
 
 export function GoogleSignInButton({ onCredential }) {
+  const { t } = useTranslation();
   const holder = useRef(null);
   // Keep the latest callback in a ref so the setup effect can run once without
   // re initialising GIS (and re prompting One Tap) on every parent render.
@@ -83,6 +85,13 @@ export function GoogleSignInButton({ onCredential }) {
     };
   }, []);
 
-  if (!clientId || failed) return null;
+  // No client id means Google sign-in is not configured at all, so render
+  // nothing. A load failure is different: the feature exists but the Google
+  // script could not load, so tell the user and point them back at email and
+  // password, which still work.
+  if (!clientId) return null;
+  if (failed) {
+    return <p className="text-center text-sm text-ink-500">{t("auth.googleUnavailable")}</p>;
+  }
   return <div ref={holder} className="flex w-full justify-center" />;
 }

@@ -25,7 +25,9 @@
     "comingSoon": "Coming soon",
     "show": "Show",
     "hide": "Hide",
-    "edit": "Edit"
+    "edit": "Edit",
+    "loadError": "Couldn't load. Please try again.",
+    "retry": "Try again"
   },
   "nav": {
     "feed": "Feed",
@@ -74,7 +76,10 @@
     "businessDesc": "Brief description of business",
     "businessDescPh": "e.g. Family-run coffee trading business since 1995, buying from estates in Virajpet and Gonikoppal",
     "onboardingError": "Could not finish setting up your account. Please try again",
-    "onboardingNoSession": "Your session has expired. Please sign in again"
+    "onboardingNoSession": "Your session has expired. Please sign in again",
+    "profileLoadError": "We couldn't load your account. Please check your connection and try again.",
+    "districtError": "Could not save your district. Please try again.",
+    "googleUnavailable": "Google sign-in is not available right now. Please use email and password."
   },
   "onboarding": {
     "welcomeTitle": "Welcome to Urimalu",
@@ -293,7 +298,8 @@
     "noneYet": "No reviews yet",
     "flag": "Flag",
     "flagged": "Flagged",
-    "loginToReview": "Login as farmer to leave a review"
+    "loginToReview": "Login as farmer to leave a review",
+    "submitError": "Couldn't submit your review. Please try again."
   },
   "dashboard": {
     "myHistory": "My rates history",

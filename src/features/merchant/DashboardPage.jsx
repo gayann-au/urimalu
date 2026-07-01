@@ -15,6 +15,7 @@ import {
   useConfirmTodaysPrices,
 } from "./useMerchant";
 import { toast } from "../../components/ui/Toast";
+import { LoadError } from "../../components/ui/LoadError";
 import { useUriMotion } from "../../lib/uiMotion";
 import { formatINR } from "../../lib/constants";
 
@@ -156,7 +157,9 @@ export default function DashboardPage() {
 
       {/* Crop list */}
       <section className="pt-6">
-        {listingsQ.isLoading ? (
+        {listingsQ.isError ? (
+          <LoadError onRetry={() => listingsQ.refetch()}/>
+        ) : listingsQ.isLoading ? (
           <div className="bg-white rounded-3xl border border-ink-200 shadow-sm p-6 animate-pulse h-24"/>
         ) : listings.length === 0 ? (
           <div className="bg-white rounded-3xl border border-ink-200 shadow-sm p-8 text-center">

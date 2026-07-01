@@ -7,13 +7,18 @@ import { USER_COLUMNS_AUTHED } from "../../lib/constants";
 
 // Own row, so the authenticated column grant applies — select("*") is
 // refused under the column grants from the users_select_lockdown migration.
+// Throws on a failed request so a network or server error stays distinct from a
+// genuine "no profile yet" result (data is null only when no row exists). The
+// caller can then tell a fetch that simply failed apart from an account with no
+// users row, instead of treating both the same and sending the user to
+// onboarding.
 async function fetchProfile(userId) {
   if (!userId) return null;
   const { data, error } = await supabase.from("users").select(USER_COLUMNS_AUTHED).eq("id", userId).maybeSingle();
   if (error) {
     // eslint-disable-next-line no-console
     console.error("[useAuth.fetchProfile]", error);
-    return null;
+    throw error;
   }
   return data;
 }
@@ -25,7 +30,8 @@ export function useAuth() {
   const sessionQuery = useQuery({
     queryKey: qk.session,
     queryFn: async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
       return data.session;
     },
     staleTime: Infinity,
@@ -52,6 +58,10 @@ export function useAuth() {
   const role = profile?.role || null;
   const effectiveStatus = profile?.role === "MERCHANT" ? profile.status : null;
   const isLoading = sessionQuery.isLoading || (!!userId && profileQuery.isLoading);
+  // True only when a real session exists but its profile request failed. Kept
+  // separate from "no profile" so the router can show a retry screen instead of
+  // looping an existing user back through onboarding on a transient failure.
+  const profileLoadError = !!userId && profileQuery.isError;
 
   return {
     user: sessionQuery.data?.user || null,
@@ -61,7 +71,9 @@ export function useAuth() {
     effectiveStatus,
     isAuthenticated: !!sessionQuery.data,
     isLoading,
+    profileLoadError,
     refetchProfile: profileQuery.refetch,
+    refetchAuth: () => { sessionQuery.refetch(); if (userId) profileQuery.refetch(); },
   };
 }
 
@@ -106,7 +118,15 @@ export function useLogin() {
       console.log("[login] response", { user: !!data?.user, error });
       if (error) throw { code: mapAuthError(error), raw: error.message };
       if (!data?.user?.id) throw { code: "auth.loginError" };
-      const profile = await fetchProfile(data.user.id);
+      let profile = null;
+      try {
+        profile = await fetchProfile(data.user.id);
+      } catch (err) {
+        // The sign-in worked but the follow-up profile read failed. Show a
+        // generic error rather than "row missing", which would wrongly imply
+        // the account does not exist.
+        throw { code: "auth.loginError", raw: err?.message };
+      }
       if (!profile) throw { code: "auth.loginRowMissing" };
       qc.setQueryData(qk.session, data.session);
       qc.setQueryData(qk.profile(data.user.id), profile);
@@ -132,7 +152,15 @@ export function useGoogleLogin() {
       if (error) throw { code: mapGoogleError(error), raw: error.message };
       if (!data?.user?.id) throw { code: "auth.googleError" };
       qc.setQueryData(qk.session, data.session);
-      const profile = await fetchProfile(data.user.id);
+      let profile = null;
+      try {
+        profile = await fetchProfile(data.user.id);
+      } catch (err) {
+        // A failed profile read must not be mistaken for a brand new account,
+        // which would wrongly push an existing user into onboarding. Surface
+        // the error so the login screen shows it instead.
+        throw { code: mapGoogleError(err), raw: err?.message };
+      }
       // A first-time Google email has a session but no users row yet. Keep the
       // session and hand the visitor to onboarding to pick Farmer or Merchant,
       // instead of signing them out. Existing users have a row and go straight
@@ -175,7 +203,12 @@ export function useSignupFarmer() {
         district: data.district || null,
       }).eq("id", userId);
       if (updErr) throw { code: "auth.loginError", raw: updErr.message };
-      const profile = await fetchProfile(userId);
+      let profile = null;
+      try {
+        profile = await fetchProfile(userId);
+      } catch (err) {
+        throw { code: "auth.loginError", raw: err?.message };
+      }
       qc.setQueryData(qk.profile(userId), profile);
       return profile;
     },
@@ -218,7 +251,12 @@ export function useSignupMerchant() {
         business_description: (data.businessDescription || "").slice(0, 200) || null,
       }).eq("id", userId);
       if (updErr) throw { code: "auth.loginError", raw: updErr.message };
-      const profile = await fetchProfile(userId);
+      let profile = null;
+      try {
+        profile = await fetchProfile(userId);
+      } catch (err) {
+        throw { code: "auth.loginError", raw: err?.message };
+      }
       qc.setQueryData(qk.profile(userId), profile);
       return profile;
     },

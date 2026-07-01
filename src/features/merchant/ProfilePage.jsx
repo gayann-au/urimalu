@@ -9,6 +9,7 @@ import { Stars } from "../../components/icons/Stars";
 import { Toggle } from "../../components/ui/Toggle";
 import { useAuth } from "../auth/useAuth";
 import { useUsers, useReviews } from "../feed/useFeed";
+import { LoadError } from "../../components/ui/LoadError";
 import { useLeadTracking } from "../../hooks/useLeadTracking";
 import { useAddReview } from "../reviews/useReviews";
 import { ReviewForm } from "../reviews/ReviewForm";
@@ -162,6 +163,14 @@ export default function ProfilePage() {
       <div className="flex flex-col flex-1">
         <Header showBack title={t("profile.title")}/>
         <div className="p-6 text-center text-ink-500">{t("common.loading")}</div>
+      </div>
+    );
+  }
+  if (usersQ.isError) {
+    return (
+      <div className="flex flex-col flex-1">
+        <Header showBack title={t("profile.title")}/>
+        <div className="p-6"><LoadError onRetry={() => usersQ.refetch()}/></div>
       </div>
     );
   }
@@ -322,7 +331,9 @@ export default function ProfilePage() {
         </div>
 
         {/* Listings */}
-        {listingsQ.isLoading ? (
+        {listingsQ.isError ? (
+          <LoadError onRetry={() => listingsQ.refetch()}/>
+        ) : listingsQ.isLoading ? (
           <div className="bg-white rounded-3xl border border-ink-100 shadow-sm p-6 animate-pulse h-28"/>
         ) : filtered.length === 0 ? (
           <Empty>{t("profile.noCropsMatch")}</Empty>
@@ -408,7 +419,9 @@ export default function ProfilePage() {
         viewport={inView}
       >
         <SectionHeader>{t("profile.historyHeading")}</SectionHeader>
-        {historyQ.isLoading ? (
+        {historyQ.isError ? (
+          <LoadError onRetry={() => historyQ.refetch()}/>
+        ) : historyQ.isLoading ? (
           <div className="bg-white rounded-3xl border border-ink-100 shadow-sm p-6 animate-pulse h-48"/>
         ) : histories.length === 0 ? (
           <Empty>{t("profile.notEnoughData")}</Empty>
@@ -464,6 +477,8 @@ export default function ProfilePage() {
                 <ReviewForm
                   onCancel={() => setShowReview(false)}
                   onSubmit={async (p) => {
+                    // Let a failed submit reject so ReviewForm shows its error
+                    // message; only close the form once the save succeeds.
                     await addReview.mutateAsync({
                       merchantId: merchant.id,
                       authorName: me.full_name || t("profile.defaultFarmerName"),
@@ -477,7 +492,11 @@ export default function ProfilePage() {
           </>
         )}
 
-        {reviews.length === 0 ? (
+        {reviewsQ.isError ? (
+          <div className={canReview ? "mt-4" : ""}>
+            <LoadError onRetry={() => reviewsQ.refetch()}/>
+          </div>
+        ) : reviews.length === 0 ? (
           <div className={canReview ? "mt-4" : ""}>
             <Empty>{t("profile.noReviewsCta")}</Empty>
           </div>

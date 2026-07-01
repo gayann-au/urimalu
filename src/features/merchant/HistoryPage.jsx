@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
 import { useAuth } from "../auth/useAuth";
 import { useMyPriceHistory, groupHistoryByDate } from "./useMerchant";
+import { LoadError } from "../../components/ui/LoadError";
 import { useUriMotion } from "../../lib/uiMotion";
 import { formatINR } from "../../lib/constants";
 
@@ -32,7 +33,9 @@ export default function HistoryPage() {
       <Header showBack title={t("dashboard.priceHistory")}/>
 
       <main className="py-6">
-        {historyQ.isLoading ? (
+        {historyQ.isError ? (
+          <LoadError onRetry={() => historyQ.refetch()}/>
+        ) : historyQ.isLoading ? (
           <div className="bg-white rounded-3xl border border-ink-200 shadow-sm p-6 animate-pulse h-24"/>
         ) : groups.length === 0 ? (
           <div className="bg-white rounded-3xl border border-ink-200 shadow-sm p-8 text-center">
