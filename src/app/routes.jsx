@@ -19,6 +19,7 @@ const PrivacyPage     = lazy(() => import("../features/legal/PrivacyPage"));
 const TermsPage       = lazy(() => import("../features/legal/TermsPage"));
 const ForgotPasswordPage = lazy(() => import("../features/auth/ForgotPasswordPage"));
 const ResetPasswordPage  = lazy(() => import("../features/auth/ResetPasswordPage"));
+const NotFoundPage       = lazy(() => import("./NotFoundPage"));
 
 function PageLoader() {
   return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading…</div>;
@@ -175,7 +176,7 @@ export function AppRoutes() {
         <Route path="/terms"              element={<TermsPage/>}/>
         <Route path="/forgot-password"    element={<GuestOnly><ForgotPasswordPage/></GuestOnly>}/>
         <Route path="/reset-password"     element={<ResetPasswordPage/>}/>
-        <Route path="*" element={<Navigate to="/" replace/>}/>
+        <Route path="*" element={<NotFoundPage/>}/>
       </Routes>
       </RequireOnboarding>
     </Suspense>

@@ -408,6 +408,11 @@
     "waMessage": "Namaste {{name}}, I saw your rate on Urimalu.",
     "defaultFarmerName": "Farmer"
   },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The page you are looking for does not exist or has moved.",
+    "home": "Back to home"
+  },
   "history": {
     "noHistoryHeading": "No price history yet.",
     "noHistoryBody": "Confirm prices on the dashboard to start recording history.",

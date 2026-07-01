@@ -7,6 +7,8 @@ import { RateCard } from "./RateCard";
 import { useAuth } from "../auth/useAuth";
 import { useListings, uniqueCropsInFeed, groupFeedByMerchant } from "./useFeed";
 import { LoadError } from "../../components/ui/LoadError";
+import { useRealtimeListings } from "../../hooks/useRealtimeListings";
+import { useUiStore } from "../../hooks/useUiStore";
 import { useUriMotion } from "../../lib/uiMotion";
 
 // Storefront glyph, the soft icon that anchors each merchant card the way the
@@ -29,6 +31,16 @@ function Arrow() {
   );
 }
 
+// Circular refresh glyph for the "new rates, tap to refresh" banner.
+function RefreshIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+      <path d="M21 3v6h-6"/>
+    </svg>
+  );
+}
+
 export default function FeedPage() {
   const { t } = useTranslation();
   const listingsQ = useListings();
@@ -37,9 +49,38 @@ export default function FeedPage() {
   const loggedIn = !!profile;
   const [tab, setTab] = useState("merchants");
 
+  // Listen for new listings in real time. The hook bumps the store's
+  // newRatesCount on each insert and fails silently if the socket drops, so a
+  // dropped connection simply shows no banner.
+  useRealtimeListings();
+  const newRatesCount = useUiStore((s) => s.newRatesCount);
+  const clearNewRates = useUiStore((s) => s.clearNewRates);
+
+  // Tapping the banner pulls the latest feed and clears the pending count.
+  function refreshNewRates() {
+    listingsQ.refetch();
+    clearNewRates();
+  }
+
   return (
     <div className="flex flex-col flex-1 pb-12 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
       <Header/>
+
+      {/* Real time "new rates" banner. Floats below the header and only shows
+          when the realtime hook has counted at least one new listing since the
+          last refresh. Tapping it refetches the feed and clears the count. */}
+      {newRatesCount > 0 && (
+        <div className="fixed top-[72px] left-1/2 -translate-x-1/2 z-40 w-full max-w-md px-4 flex justify-center pointer-events-none">
+          <button
+            type="button"
+            onClick={refreshNewRates}
+            className="pointer-events-auto inline-flex items-center gap-2 min-h-[44px] rounded-full bg-coorg-600 text-white font-bold text-sm px-5 shadow-lg hover:bg-coorg-700 transition-colors"
+          >
+            <RefreshIcon/>
+            {t("feed.newRates", { n: newRatesCount })}
+          </button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="bg-white border-b border-ink-100 sticky top-[64px] z-20">
