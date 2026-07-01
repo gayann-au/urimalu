@@ -40,16 +40,22 @@ function loadGsi() {
 }
 
 export function GoogleSignInButton({ onCredential }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const holder = useRef(null);
-  // Keep the latest callback in a ref so the setup effect can run once without
-  // re initialising GIS (and re prompting One Tap) on every parent render.
+  // Keep the latest callback in a ref so the setup effect does not need
+  // onCredential in its deps and does not re initialise GIS on every parent
+  // render. It re runs only when the app language changes.
   const callbackRef = useRef(onCredential);
+  const promptedRef = useRef(false);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     callbackRef.current = onCredential;
   }, [onCredential]);
+
+  // The current app language, passed to GIS as hl so the button and One Tap
+  // render in the app language instead of the browser system locale.
+  const lang = i18n.language;
 
   useEffect(() => {
     if (!clientId || !holder.current) return undefined;
@@ -60,10 +66,14 @@ export function GoogleSignInButton({ onCredential }) {
         if (cancelled || !holder.current) return;
         window.google.accounts.id.initialize({
           client_id: clientId,
+          hl: lang,
           callback: (response) => {
             if (response?.credential) callbackRef.current(response.credential);
           },
         });
+        // Clear any button from a previous render so a language change swaps the
+        // button cleanly instead of stacking a second one.
+        holder.current.replaceChildren();
         window.google.accounts.id.renderButton(holder.current, {
           type: "standard",
           theme: "outline",
@@ -72,9 +82,14 @@ export function GoogleSignInButton({ onCredential }) {
           shape: "pill",
           width: holder.current.offsetWidth || 320,
           logo_alignment: "center",
+          hl: lang,
         });
-        // One Tap prompt for the GSI experience.
-        window.google.accounts.id.prompt();
+        // Show the One Tap prompt only once, so switching language does not
+        // re prompt on every change.
+        if (!promptedRef.current) {
+          promptedRef.current = true;
+          window.google.accounts.id.prompt();
+        }
       })
       .catch(() => {
         if (!cancelled) setFailed(true);
@@ -83,7 +98,7 @@ export function GoogleSignInButton({ onCredential }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lang]);
 
   // No client id means Google sign-in is not configured at all, so render
   // nothing. A load failure is different: the feature exists but the Google

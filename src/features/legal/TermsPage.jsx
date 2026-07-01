@@ -7,9 +7,9 @@ export default function TermsPage() {
   return (
     <LegalPage title="Terms of Service" lastUpdated="20 June 2026">
       <P>
-        Welcome to Urimalu. Urimalu is a small marketplace based in Dubai, United
-        Arab Emirates, that helps farmers and merchants see real daily crop prices
-        and contact each other. By using Urimalu you agree to these terms. If you
+        Welcome to Urimalu. Urimalu is a small marketplace based in India, that
+        helps farmers and merchants see real daily crop prices and contact each
+        other. By using Urimalu you agree to these terms. If you
         do not agree, please do not use the app.
       </P>
 
@@ -93,8 +93,9 @@ export default function TermsPage() {
 
       <H2>Which laws apply</H2>
       <P>
-        These terms are governed by the laws of Dubai and the United Arab
-        Emirates.
+        These terms are governed by the laws of India, including the Information
+        Technology Act 2000 and the Information Technology Rules made under it.
+        Any disputes will be handled by the courts of India.
       </P>
 
       <H2>Contact us</H2>

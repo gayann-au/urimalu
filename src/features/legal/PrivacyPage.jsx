@@ -1,12 +1,12 @@
 import LegalPage, { H2, P, UL } from "./LegalPage";
 
-// Plain language privacy policy for Urimalu, a Dubai based marketplace that
+// Plain language privacy policy for Urimalu, an India based marketplace that
 // connects farmers and merchants. Written to be easy to read, not legalese.
 export default function PrivacyPage() {
   return (
     <LegalPage title="Privacy Policy" lastUpdated="20 June 2026">
       <P>
-        Urimalu is a small marketplace based in Dubai, United Arab Emirates. It
+        Urimalu is a small marketplace based in India. It
         connects farmers and merchants so they can see real daily crop prices and
         deal with each other directly. This page explains, in plain words, what
         information we collect, why we collect it, and what you can do about it.
@@ -83,6 +83,14 @@ export default function PrivacyPage() {
       <P>
         We may update this policy from time to time. When we do, we will change
         the date at the top of this page. Please check back now and then.
+      </P>
+
+      <H2>Which laws apply</H2>
+      <P>
+        We handle your information in line with Indian law, including the
+        Information Technology Act 2000 and the Information Technology Rules made
+        under it. Any disputes about your privacy will be handled by the courts
+        of India.
       </P>
 
       <H2>Contact us</H2>

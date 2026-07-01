@@ -203,10 +203,20 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* Inline form panel. Mounted only when open, so closing fully resets it. */}
+      {/* Add / edit form. Shown as a bottom sheet on mobile and a centered modal
+          on larger screens, so tapping Edit or Add crop brings the form into
+          view immediately instead of appending it below the cards, where on a
+          phone it would sit off screen and look like nothing happened. The sheet
+          scrolls internally so a tall form stays usable on small screens. */}
       {formOpen && (
-        <section className="pt-4">
-          <div className="bg-white rounded-3xl border border-ink-200 shadow-sm p-5 md:p-6">
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center"
+          onClick={closeForm}
+        >
+          <div
+            className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-white rounded-t-3xl sm:rounded-3xl shadow-xl p-5 md:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-lg font-extrabold tracking-tight text-ink-900">
                 {editingListing
@@ -216,7 +226,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={closeForm}
-                className="text-sm text-ink-500 underline"
+                className="min-h-[44px] px-2 -mr-2 text-sm text-ink-500 underline"
               >
                 {t("common.cancel")}
               </button>
@@ -227,7 +237,7 @@ export default function DashboardPage() {
               onCancel={closeForm}
             />
           </div>
-        </section>
+        </div>
       )}
     </div>
   );

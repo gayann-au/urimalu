@@ -13,7 +13,7 @@ import { BackIcon } from "../icons/Sprite";
 
 // Quiet text action, the same treatment as the landing header login link.
 const NAV_LINK =
-  "rounded-[11px] px-3 py-2 text-sm font-semibold text-ink-700 hover:text-crop-700 hover:bg-crop-50 transition-colors whitespace-nowrap inline-flex items-center gap-1.5";
+  "rounded-[11px] px-2 sm:px-3 min-h-[44px] text-sm font-semibold text-ink-700 hover:text-crop-700 hover:bg-crop-50 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 shrink-0";
 
 // Chilli mark from the landing logo, drawn with the brand token hex values.
 function BrandMark() {
@@ -60,15 +60,15 @@ export function Header({ showBack = false, title }) {
         scrolled ? "border-ink-200" : "border-transparent"
       }`}
     >
-      <div className="flex items-center justify-between gap-2 h-16 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
+      <div className="flex items-center justify-between gap-1 sm:gap-2 h-16 w-full mx-auto max-w-screen-2xl px-2 sm:px-4 md:px-6 lg:px-8">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {showBack ? (
             <button onClick={() => nav(-1)} aria-label={t("common.back")}
-              className="p-2 -ml-2 rounded-full text-ink-700 hover:text-crop-700 hover:bg-crop-50 active:scale-95 transition-colors">
+              className="h-11 w-11 -ml-2 rounded-full text-ink-700 hover:text-crop-700 hover:bg-crop-50 active:scale-95 transition-colors inline-flex items-center justify-center shrink-0">
               <BackIcon/>
             </button>
           ) : (
-            <Link to="/" className="flex items-center gap-2.5 min-w-0">
+            <Link to="/" className="flex items-center gap-2.5 min-w-0 min-h-[44px]">
               <BrandMark/>
               <div className="leading-tight min-w-0">
                 <div className={`font-display font-extrabold text-lg tracking-tight text-ink-900 truncate ${lang === "kn" ? "kn" : ""}`}>{t("app.name")}</div>
@@ -78,16 +78,16 @@ export function Header({ showBack = false, title }) {
           )}
           {title && <h1 className="font-display font-extrabold text-lg tracking-tight text-ink-900 truncate ml-1">{title}</h1>}
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           <button onClick={toggleLang}
-            className="rounded-[11px] px-3 py-2 text-xs font-bold tracking-wide text-ink-700 border border-ink-200 hover:text-crop-700 hover:border-crop-300 hover:bg-crop-50 transition-colors"
+            className="rounded-[11px] px-2 sm:px-3 min-h-[44px] text-xs font-bold tracking-wide text-ink-700 border border-ink-200 hover:text-crop-700 hover:border-crop-300 hover:bg-crop-50 transition-colors inline-flex items-center shrink-0"
             aria-label="Toggle language">
             {lang === "kn" ? "ಕ·EN" : "EN·ಕ"}
           </button>
           {actionLink}
           {profile && (
             <Link to="/account" aria-label={t("nav.account")}
-              className="rounded-full p-2 text-ink-700 hover:text-crop-700 hover:bg-crop-50 transition-colors inline-flex items-center justify-center">
+              className="rounded-full h-11 w-11 text-ink-700 hover:text-crop-700 hover:bg-crop-50 transition-colors inline-flex items-center justify-center shrink-0">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
                 <circle cx="12" cy="7" r="4"/>
@@ -99,7 +99,7 @@ export function Header({ showBack = false, title }) {
               {t("nav.logout")}
             </button>
           ) : (
-            <Link to="/login" className="rounded-[11px] bg-coorg-600 text-white px-3.5 py-2 text-sm font-bold hover:bg-coorg-700 transition-colors whitespace-nowrap">
+            <Link to="/login" className="rounded-[11px] bg-coorg-600 text-white px-3 min-h-[44px] text-sm font-bold hover:bg-coorg-700 transition-colors whitespace-nowrap inline-flex items-center shrink-0">
               {t("nav.login")}
             </Link>
           )}
