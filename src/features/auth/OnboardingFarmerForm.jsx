@@ -48,9 +48,9 @@ export default function OnboardingFarmerForm({ onBack }) {
       </motion.div>
       <motion.div variants={m.fadeUp} initial="hidden" animate="show" className="bg-white rounded-3xl border border-ink-200 shadow-sm p-6 md:p-7">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input label={t("auth.fullName")} {...register("fullName")}
+          <Input label={t("auth.fullName")} maxLength={100} {...register("fullName")}
             error={errors.fullName ? t(errors.fullName.message) : null}/>
-          <Input label={t("auth.phone")} type="tel" placeholder="98XXXXXXXX" {...register("phone")}
+          <Input label={t("auth.phone")} type="tel" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
             error={errors.phone ? t(errors.phone.message) : null}/>
           <Select label={t("auth.district")} {...register("district")}>
             {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}

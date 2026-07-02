@@ -115,6 +115,7 @@ export default function PendingPage() {
         </motion.div>
         <motion.h2 variants={m.fadeUp} className="font-display text-3xl font-extrabold tracking-tight text-chilli-700">{t("pending.title")}</motion.h2>
         <motion.p variants={m.fadeUp} className="text-base text-ink-600 mt-2 max-w-sm">{t("pending.sub")}</motion.p>
+        <motion.p variants={m.fadeUp} className="text-sm text-ink-500 mt-2 max-w-sm">{t("pending.timeline")}</motion.p>
 
         <motion.div variants={m.fadeUp} className="mt-6 rounded-2xl bg-white border border-ink-200 shadow-sm px-5 py-4 text-left w-full max-w-sm">
           <div className="font-bold text-ink-900 break-words">{profile.business_name}</div>

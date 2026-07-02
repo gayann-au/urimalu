@@ -1,4 +1,4 @@
-import { useMemo, useState, useDeferredValue } from "react";
+import { useEffect, useMemo, useState, useDeferredValue } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -9,7 +9,9 @@ import { useListings, uniqueCropsInFeed, groupFeedByMerchant } from "./useFeed";
 import { LoadError } from "../../components/ui/LoadError";
 import { useRealtimeListings } from "../../hooks/useRealtimeListings";
 import { useUiStore } from "../../hooks/useUiStore";
+import { toast } from "../../components/ui/Toast";
 import { useUriMotion } from "../../lib/uiMotion";
+import { WELCOME_FLAG_KEY } from "../../lib/constants";
 
 // Storefront glyph, the soft icon that anchors each merchant card the way the
 // landing step cards are anchored by their icon boxes.
@@ -48,6 +50,18 @@ export default function FeedPage() {
   const { profile } = useAuth();
   const loggedIn = !!profile;
   const [tab, setTab] = useState("merchants");
+
+  // One-time welcome after farmer signup: the signup flows set a sessionStorage
+  // flag, the feed shows the toast once and clears it, so a refresh or a later
+  // visit never repeats it.
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(WELCOME_FLAG_KEY)) {
+        sessionStorage.removeItem(WELCOME_FLAG_KEY);
+        toast({ text: t("welcome.firstLogin") });
+      }
+    } catch {}
+  }, [t]);
 
   // Listen for new listings in real time. The hook bumps the store's
   // newRatesCount on each insert and fails silently if the socket drops, so a
@@ -146,6 +160,7 @@ function MerchantsTab({ items, isLoading, isError, onRetry, loggedIn }) {
         <input
           type="search"
           value={search}
+          maxLength={100}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("feed.searchMerchant")}
           className="w-full min-h-[48px] rounded-2xl border-2 border-ink-200 focus:border-coorg-500 outline-none px-4 text-base bg-white"
@@ -344,6 +359,7 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
           <input
             type="search"
             value={search}
+            maxLength={100}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("feed.searchCrop")}
             className="w-full min-h-[48px] rounded-2xl border-2 border-ink-200 focus:border-coorg-500 outline-none px-4 text-base bg-white"

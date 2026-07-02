@@ -58,10 +58,19 @@ function GuestOnly({ children }) {
   return <Navigate to="/feed" replace/>;
 }
 
+// Where a signed-in non-merchant belongs when they hit a merchant-only route:
+// admins to the console, farmers (and any other role) to their feed. Only
+// logged-out visitors go to login.
+function nonMerchantRedirect(profile) {
+  if (!profile) return <Navigate to="/login" replace/>;
+  if (profile.role === "ADMIN") return <Navigate to="/admin" replace/>;
+  return <Navigate to="/feed" replace/>;
+}
+
 function MerchantPendingGuard() {
   const { profile, isLoading } = useAuth();
   if (isLoading) return <PageLoader/>;
-  if (!profile || profile.role !== "MERCHANT") return <Navigate to="/login" replace/>;
+  if (!profile || profile.role !== "MERCHANT") return nonMerchantRedirect(profile);
   if (profile.status === "APPROVED") return <Navigate to="/merchant/dashboard" replace/>;
   return <PendingPage/>;
 }
@@ -69,7 +78,7 @@ function MerchantPendingGuard() {
 function MerchantDashboardGuard() {
   const { profile, isLoading } = useAuth();
   if (isLoading) return <PageLoader/>;
-  if (!profile || profile.role !== "MERCHANT") return <Navigate to="/login" replace/>;
+  if (!profile || profile.role !== "MERCHANT") return nonMerchantRedirect(profile);
   if (profile.status !== "APPROVED") return <Navigate to="/merchant/pending" replace/>;
   return <DashboardPage/>;
 }
@@ -77,7 +86,7 @@ function MerchantDashboardGuard() {
 function MerchantHistoryGuard() {
   const { profile, isLoading } = useAuth();
   if (isLoading) return <PageLoader/>;
-  if (!profile || profile.role !== "MERCHANT") return <Navigate to="/login" replace/>;
+  if (!profile || profile.role !== "MERCHANT") return nonMerchantRedirect(profile);
   if (profile.status !== "APPROVED") return <Navigate to="/merchant/pending" replace/>;
   return <HistoryPage/>;
 }

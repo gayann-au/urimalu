@@ -67,11 +67,11 @@ export default function SignupFarmer() {
             </motion.div>
             <motion.div variants={m.fadeUp} initial="hidden" animate="show" className="bg-white rounded-3xl border border-ink-200 shadow-sm p-6 md:p-7">
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <Input label={t("auth.fullName")} {...register("fullName")} error={errors.fullName ? t(errors.fullName.message) : null}/>
-                <Input label={t("auth.phone")} type="tel" placeholder="98XXXXXXXX" {...register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
-                <Input label={t("auth.email")} type="email" autoComplete="email" {...register("email")} error={errors.email ? t(errors.email.message) : null}/>
+                <Input label={t("auth.fullName")} maxLength={100} {...register("fullName")} error={errors.fullName ? t(errors.fullName.message) : null}/>
+                <Input label={t("auth.phone")} type="tel" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
+                <Input label={t("auth.email")} type="email" autoComplete="email" maxLength={255} {...register("email")} error={errors.email ? t(errors.email.message) : null}/>
                 <div className="relative">
-                  <Input label={t("auth.password")} type={showPw ? "text" : "password"} autoComplete="new-password" {...register("password")} error={errors.password ? t(errors.password.message) : null}/>
+                  <Input label={t("auth.password")} type={showPw ? "text" : "password"} autoComplete="new-password" maxLength={72} {...register("password")} error={errors.password ? t(errors.password.message) : null}/>
                   <button
                     type="button"
                     onClick={() => setShowPw(s => !s)}

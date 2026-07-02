@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
-import { USER_COLUMNS_AUTHED } from "../../lib/constants";
+import { USER_COLUMNS_AUTHED, WELCOME_FLAG_KEY } from "../../lib/constants";
 
 // Onboarding for brand new Google accounts. The Google session already exists
 // (Supabase minted it from the verified id token) but there is no public.users
@@ -63,6 +63,9 @@ export function useFarmerOnboarding() {
       }),
     onSuccess: ({ userId, profile }) => {
       if (profile) qc.setQueryData(qk.profile(userId), profile);
+      // One-time flag: the feed shows a single welcome toast on the first
+      // login after signup, then clears it.
+      try { sessionStorage.setItem(WELCOME_FLAG_KEY, "1"); } catch {}
       // Farmers land on the feed, same as the password farmer sign-up.
       nav("/", { replace: true });
     },

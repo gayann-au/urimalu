@@ -309,6 +309,7 @@ export default function ProfilePage() {
           <input
             type="search"
             value={search}
+            maxLength={100}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("feed.searchCrop")}
             className="w-full min-h-[46px] rounded-2xl border-2 border-ink-200 focus:border-coorg-500 outline-none px-4 text-sm bg-white"

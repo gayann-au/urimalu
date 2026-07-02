@@ -42,7 +42,7 @@ export function ReviewForm({ onCancel, onSubmit }) {
           ))}
         </div>
       </div>
-      <Textarea label={t("review.commentOpt")} rows={3} value={comment} onChange={e => setComment(e.target.value)}/>
+      <Textarea label={t("review.commentOpt")} rows={3} maxLength={500} value={comment} onChange={e => setComment(e.target.value)}/>
       {failed && (
         <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold">
           {t("review.submitError")}

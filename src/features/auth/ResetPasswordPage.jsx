@@ -5,6 +5,7 @@ import { Header } from "../../components/layout/Header";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { supabase } from "../../lib/supabase";
+import { markManualSignOut } from "./useAuth";
 import { useUriMotion } from "../../lib/uiMotion";
 
 // Step two of password recovery, reached from the reset email link. The supabase
@@ -75,7 +76,10 @@ export default function ResetPasswordPage() {
     try {
       const { error: err } = await supabase.auth.updateUser({ password });
       if (err) throw err;
-      // Sign out the recovery session so the user logs in fresh with the new password.
+      // Sign out the recovery session so the user logs in fresh with the new
+      // password. Marked as intentional so the session-expiry handler in
+      // useAuth does not show its "session expired" message here.
+      markManualSignOut();
       await supabase.auth.signOut();
       setPhase("done");
     } catch (err) {
@@ -119,7 +123,7 @@ export default function ResetPasswordPage() {
           {phase === "ready" && (
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="relative">
-                <Input label="New password" type={showPw ? "text" : "password"} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)}/>
+                <Input label="New password" type={showPw ? "text" : "password"} autoComplete="new-password" maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)}/>
                 <button
                   type="button"
                   onClick={() => setShowPw(s => !s)}

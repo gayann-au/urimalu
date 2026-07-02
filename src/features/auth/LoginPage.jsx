@@ -58,10 +58,10 @@ export default function LoginPage() {
 
         <motion.div variants={m.fadeUp} initial="hidden" animate="show" className="bg-white rounded-3xl border border-ink-200 shadow-sm p-6 md:p-7">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input label={t("auth.email")} type="email" autoComplete="email"
+            <Input label={t("auth.email")} type="email" autoComplete="email" maxLength={255}
               {...register("email")} error={errors.email ? t(errors.email.message) : null}/>
             <div className="relative">
-              <Input label={t("auth.password")} type={showPw ? "text" : "password"} autoComplete="current-password"
+              <Input label={t("auth.password")} type={showPw ? "text" : "password"} autoComplete="current-password" maxLength={72}
                 {...register("password")} error={errors.password ? t(errors.password.message) : null}/>
               <button
                 type="button"

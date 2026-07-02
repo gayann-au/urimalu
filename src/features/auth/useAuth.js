@@ -3,7 +3,24 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
-import { USER_COLUMNS_AUTHED } from "../../lib/constants";
+import { USER_COLUMNS_AUTHED, WELCOME_FLAG_KEY } from "../../lib/constants";
+import { toast } from "../../components/ui/Toast";
+import i18n from "../../i18n";
+
+// Module level so every mounted useAuth listener shares the same state:
+// manualSignOut marks an intentional sign-out (logout button, password reset)
+// so it never shows the "session expired" message, and expiredHandled keeps
+// the expiry handling to a single run even though each useAuth instance
+// registers its own onAuthStateChange listener.
+let manualSignOut = false;
+let expiredHandled = false;
+
+// Call right before an intentional supabase.auth.signOut() that happens
+// outside useLogout, so the expiry handler does not mistake it for a
+// dropped session.
+export function markManualSignOut() {
+  manualSignOut = true;
+}
 
 // Own row, so the authenticated column grant applies — select("*") is
 // refused under the column grants from the users_select_lockdown migration.
@@ -25,6 +42,7 @@ async function fetchProfile(userId) {
 
 export function useAuth() {
   const qc = useQueryClient();
+  const nav = useNavigate();
 
   // 1) Session query (subscribes to onAuthStateChange)
   const sessionQuery = useQuery({
@@ -38,12 +56,27 @@ export function useAuth() {
   });
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       qc.setQueryData(qk.session, session);
+      if (session) {
+        // A live session means any earlier logout or expiry is history.
+        manualSignOut = false;
+        expiredHandled = false;
+      }
       if (!session) qc.removeQueries({ queryKey: ["users"], exact: false });
+      // Supabase fires SIGNED_OUT when the session's refresh token turns out
+      // to be expired, revoked, or invalid while the app is open. Sign the
+      // user out cleanly exactly once and send them to login with a clear
+      // message. Intentional sign-outs set manualSignOut first and skip this.
+      if (event === "SIGNED_OUT" && !manualSignOut && !expiredHandled) {
+        expiredHandled = true;
+        qc.clear();
+        toast({ tone: "err", text: i18n.t("auth.sessionExpired") });
+        nav("/login", { replace: true });
+      }
     });
     return () => sub.subscription.unsubscribe();
-  }, [qc]);
+  }, [qc, nav]);
 
   // 2) Profile query: runs only when session exists
   const userId = sessionQuery.data?.user?.id ?? null;
@@ -212,7 +245,12 @@ export function useSignupFarmer() {
       qc.setQueryData(qk.profile(userId), profile);
       return profile;
     },
-    onSuccess: () => nav("/", { replace: true }),
+    onSuccess: () => {
+      // One-time flag: the feed shows a single welcome toast on the first
+      // login after signup, then clears it.
+      try { sessionStorage.setItem(WELCOME_FLAG_KEY, "1"); } catch {}
+      nav("/", { replace: true });
+    },
   });
 }
 
@@ -268,7 +306,11 @@ export function useLogout() {
   const nav = useNavigate();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => { await supabase.auth.signOut(); },
+    mutationFn: async () => {
+      // Intentional sign-out: keep the expiry handler quiet.
+      manualSignOut = true;
+      await supabase.auth.signOut();
+    },
     onSuccess: () => {
       qc.clear();
       nav("/", { replace: true });

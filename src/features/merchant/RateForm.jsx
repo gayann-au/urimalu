@@ -104,6 +104,7 @@ export function RateForm({ listing, onSave, onCancel }) {
   const callForPrice  = watch("call_for_price");
   const priceVal      = watch("price");
   const cropNameVal   = watch("crop_name");
+  const notesVal      = watch("notes") || "";
   const isCustomUnit  = unitLabel === "custom";
 
   // When the unit dropdown changes, auto-fill unit_kg from the option definition.
@@ -169,6 +170,7 @@ export function RateForm({ listing, onSave, onCancel }) {
         </div>
         <Input
           placeholder="e.g. Robusta Cherry"
+          maxLength={100}
           {...register("crop_name")}
           error={errors.crop_name?.message}
         />
@@ -232,6 +234,7 @@ export function RateForm({ listing, onSave, onCancel }) {
       <Input
         label="Variety or quality notes (optional)"
         placeholder="e.g. AB grade, current season"
+        maxLength={200}
         {...register("variety_notes")}
       />
 
@@ -247,6 +250,8 @@ export function RateForm({ listing, onSave, onCancel }) {
         label="Notes (optional)"
         rows={2}
         placeholder="Any extra detail for farmers"
+        maxLength={500}
+        value={notesVal}
         {...register("notes")}
       />
 

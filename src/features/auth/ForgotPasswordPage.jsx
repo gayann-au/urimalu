@@ -61,7 +61,7 @@ export default function ForgotPasswordPage() {
             </div>
           ) : (
             <form onSubmit={onSubmit} className="space-y-4">
-              <Input label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}/>
+              <Input label="Email" type="email" autoComplete="email" maxLength={255} value={email} onChange={(e) => setEmail(e.target.value)}/>
               {error && (
                 <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold">{error}</div>
               )}

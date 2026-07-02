@@ -83,11 +83,11 @@ export default function OnboardingMerchantForm({ onBack }) {
       </motion.div>
       <motion.div variants={m.fadeUp} initial="hidden" animate="show" className="bg-white rounded-3xl border border-ink-200 shadow-sm p-6 md:p-7">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input label={t("auth.businessName")} {...register("businessName")}
+          <Input label={t("auth.businessName")} maxLength={100} {...register("businessName")}
             error={errors.businessName ? t(errors.businessName.message) : null}/>
-          <Input label={t("auth.ownerName")} {...register("ownerName")}
+          <Input label={t("auth.ownerName")} maxLength={100} {...register("ownerName")}
             error={errors.ownerName ? t(errors.ownerName.message) : null}/>
-          <Input label={t("auth.phone")} type="tel" placeholder="98XXXXXXXX" {...register("phone")}
+          <Input label={t("auth.phone")} type="tel" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
             error={errors.phone ? t(errors.phone.message) : null}/>
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -97,11 +97,11 @@ export default function OnboardingMerchantForm({ onBack }) {
                 {t("auth.sameAsPhone")}
               </label>
             </div>
-            <Input type="tel" disabled={waSame} placeholder="98XXXXXXXX" {...register("whatsapp")}
+            <Input type="tel" disabled={waSame} maxLength={10} placeholder="98XXXXXXXX" {...register("whatsapp")}
               error={errors.whatsapp && !waSame ? t(errors.whatsapp.message) : null}/>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label={t("auth.town")} {...register("town")}
+            <Input label={t("auth.town")} maxLength={100} {...register("town")}
               error={errors.town ? t(errors.town.message) : null}/>
             <Select label={t("auth.district")} {...register("district")}>
               {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}

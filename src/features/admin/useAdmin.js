@@ -1,13 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
-
-async function fetchAllLeads() {
-  const { data, error } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
-  if (error) throw error;
-  return data || [];
-}
-export function useAllLeads() { return useQuery({ queryKey: qk.leads, queryFn: fetchAllLeads }); }
 
 // RETURNING "id" instead of a bare .select(): the rows are only counted to
 // detect RLS-blocked writes, and RETURNING * is refused under the users

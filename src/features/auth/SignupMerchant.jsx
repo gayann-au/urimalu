@@ -154,9 +154,9 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
         </motion.div>
         <motion.div variants={m.fadeUp} initial="hidden" animate="show" className="bg-white rounded-3xl border border-ink-200 shadow-sm p-6 md:p-7">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input label={t("auth.businessName")} {...register("businessName")} error={errors.businessName ? t(errors.businessName.message) : null}/>
-            <Input label={t("auth.ownerName")}    {...register("ownerName")}    error={errors.ownerName ? t(errors.ownerName.message) : null}/>
-            <Input label={t("auth.phone")} type="tel" placeholder="98XXXXXXXX" {...register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
+            <Input label={t("auth.businessName")} maxLength={100} {...register("businessName")} error={errors.businessName ? t(errors.businessName.message) : null}/>
+            <Input label={t("auth.ownerName")} maxLength={100}    {...register("ownerName")}    error={errors.ownerName ? t(errors.ownerName.message) : null}/>
+            <Input label={t("auth.phone")} type="tel" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-semibold text-ink-700">{t("auth.whatsappNum")}</label>
@@ -165,11 +165,11 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
                   {t("auth.sameAsPhone")}
                 </label>
               </div>
-              <Input type="tel" disabled={waSame} placeholder="98XXXXXXXX" {...register("whatsapp")}
+              <Input type="tel" disabled={waSame} maxLength={10} placeholder="98XXXXXXXX" {...register("whatsapp")}
                 error={errors.whatsapp && !waSame ? t(errors.whatsapp.message) : null}/>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Input label={t("auth.town")} {...register("town")} error={errors.town ? t(errors.town.message) : null}/>
+              <Input label={t("auth.town")} maxLength={100} {...register("town")} error={errors.town ? t(errors.town.message) : null}/>
               <Select label={t("auth.district")} {...register("district")}>
                 {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
               </Select>
@@ -207,10 +207,10 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
 
             {!resubmitMode && (
               <>
-                <Input label={t("auth.email")} type="email" autoComplete="email"
+                <Input label={t("auth.email")} type="email" autoComplete="email" maxLength={255}
                   {...register("email")} error={errors.email ? t(errors.email.message) : null}/>
                 <div className="relative">
-                  <Input label={t("auth.password")} type={showPw ? "text" : "password"} autoComplete="new-password"
+                  <Input label={t("auth.password")} type={showPw ? "text" : "password"} autoComplete="new-password" maxLength={72}
                     {...register("password")} error={errors.password ? t(errors.password.message) : null}/>
                   <button
                     type="button"

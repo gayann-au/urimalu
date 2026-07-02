@@ -68,6 +68,10 @@ export const DEFAULT_CROP_SUGGESTIONS = [
 export const AUTO_APPROVE_HOURS = 24;
 export const AUTO_APPROVE_MS = AUTO_APPROVE_HOURS * 60 * 60 * 1000;
 
+// sessionStorage key set on farmer signup completion and consumed once by the
+// feed page to show a one-time welcome toast on the first login after signup.
+export const WELCOME_FLAG_KEY = "urimalu.welcomeFarmer";
+
 // ---------- Helpers ----------
 
 export function pendingMsLeft(merchant) {
