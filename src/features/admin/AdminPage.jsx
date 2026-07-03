@@ -172,7 +172,7 @@ function MerchantsTab() {
                       minLength={20}
                       maxLength={500}
                       placeholder={t("admin.rejectReasonPh")}
-                      className="w-full rounded-lg border border-ink-200 bg-white px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-crop-500"
+                      className="w-full rounded-xl border-2 border-ink-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-coorg-500 transition"
                     />
                     <div className="text-[11px] text-ink-500 tabular-nums">
                       {rejectReason.trim().length}/20

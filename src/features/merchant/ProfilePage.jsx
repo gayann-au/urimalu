@@ -314,7 +314,7 @@ export default function ProfilePage() {
             placeholder={t("feed.searchCrop")}
             className="w-full min-h-[46px] rounded-2xl border-2 border-ink-200 focus:border-coorg-500 outline-none px-4 text-sm bg-white"
           />
-          <div className="grid grid-cols-2 gap-2 items-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -537,19 +537,22 @@ function ListingRow({ listing, t, fadeUp, cardHover }) {
       whileHover={cardHover}
       className={`bg-white rounded-3xl border border-ink-100 shadow-sm p-5 md:p-6 ${dim}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="w-11 h-11 rounded-2xl bg-coorg-50 text-coorg-600 grid place-items-center shrink-0">
-            <BeanIcon/>
-          </span>
-          <div className="min-w-0">
-            <div className="font-display font-extrabold text-lg text-ink-900 leading-tight truncate">{listing.crop_name}</div>
-            {listing.variety_notes && (
-              <div className="text-xs text-ink-500 mt-0.5 truncate">{listing.variety_notes}</div>
-            )}
-          </div>
+      {/* The freshness pill sits on its own line under the name. Beside the
+          name (with nowrap text) it crushed long crop names to a single letter
+          at every width, because the pill refused to shrink. */}
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="w-11 h-11 rounded-2xl bg-coorg-50 text-coorg-600 grid place-items-center shrink-0">
+          <BeanIcon/>
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="font-display font-extrabold text-lg text-ink-900 leading-tight truncate">{listing.crop_name}</div>
+          {listing.variety_notes && (
+            <div className="text-xs text-ink-500 mt-0.5 truncate">{listing.variety_notes}</div>
+          )}
         </div>
-        <FreshnessBadge confirmedAt={listing.confirmed_at} className="bg-paper-2 rounded-full px-2.5 py-1 shrink-0" />
+      </div>
+      <div className="mt-2.5">
+        <FreshnessBadge confirmedAt={listing.confirmed_at} className="bg-paper-2 rounded-full px-2.5 py-1" />
       </div>
       <ListingPrice price={price} t={t} />
       {price.mode === "perkg" && price.perKg != null && (

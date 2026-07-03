@@ -49,24 +49,26 @@ export function RateCard({ item }) {
       whileHover={m.cardHover}
       className="bg-white rounded-[18px] border border-ink-200 shadow-sm hover:shadow-md hover:border-crop-200 p-6 transition-colors"
     >
-      {/* Top: crop name with icon box + freshness pill on the right */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="h-11 w-11 rounded-2xl bg-crop-50 text-crop-600 grid place-items-center shrink-0">
-            <BeanIcon/>
-          </span>
-          <div className="min-w-0">
-            <h3 className="font-display text-lg font-extrabold tracking-tight text-ink-900 leading-tight truncate">
-              {item.crop_name}
-            </h3>
-            <p className="text-sm text-ink-500 mt-0.5 truncate">
-              {merchant.business_name}
-              {merchant.town && merchant.business_name ? ", " : ""}
-              {merchant.town}
-            </p>
-          </div>
+      {/* Top: crop name with icon box, then the freshness pill on its own
+          line. Beside the name (with nowrap text) the pill crushed long crop
+          names to a single letter, because it refused to shrink. */}
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="h-11 w-11 rounded-2xl bg-crop-50 text-crop-600 grid place-items-center shrink-0">
+          <BeanIcon/>
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-lg font-extrabold tracking-tight text-ink-900 leading-tight truncate">
+            {item.crop_name}
+          </h3>
+          <p className="text-sm text-ink-500 mt-0.5 truncate">
+            {merchant.business_name}
+            {merchant.town && merchant.business_name ? ", " : ""}
+            {merchant.town}
+          </p>
         </div>
-        <FreshnessBadge confirmedAt={item.confirmed_at} className="bg-paper-2 rounded-full px-2.5 py-1 shrink-0" />
+      </div>
+      <div className="mt-2.5">
+        <FreshnessBadge confirmedAt={item.confirmed_at} className="bg-paper-2 rounded-full px-2.5 py-1" />
       </div>
 
       {/* Price */}

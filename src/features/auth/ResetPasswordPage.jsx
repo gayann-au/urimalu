@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
 import { Button } from "../../components/ui/Button";
@@ -14,6 +15,7 @@ import { useUriMotion } from "../../lib/uiMotion";
 // hash, PKCE links carry a code query param. Once a session is in place the user
 // can set a new password, after which we sign out so they log in fresh.
 export default function ResetPasswordPage() {
+  const { t } = useTranslation();
   const m = useUriMotion();
   const nav = useNavigate();
   const [phase, setPhase] = useState("checking"); // checking | ready | invalid | done
@@ -69,7 +71,7 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError(null);
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError(t("auth.pwTooShort"));
       return;
     }
     setLoading(true);
@@ -83,7 +85,7 @@ export default function ResetPasswordPage() {
       await supabase.auth.signOut();
       setPhase("done");
     } catch (err) {
-      setError(err.message || "Could not update your password. Please try again.");
+      setError(err.message || t("auth.resetError"));
     } finally {
       setLoading(false);
     }
@@ -94,19 +96,19 @@ export default function ResetPasswordPage() {
       <Header showBack/>
       <main className="w-full max-w-md px-5 py-8 flex-1">
         <motion.div variants={m.stagger} initial="hidden" animate="show" className="text-center mb-6">
-          <motion.h2 variants={m.fadeUp} className="font-display text-3xl font-extrabold tracking-tight text-chilli-700">Set a new password</motion.h2>
-          <motion.p variants={m.fadeUp} className="text-sm text-ink-500 mt-1.5">Choose a new password for your account.</motion.p>
+          <motion.h2 variants={m.fadeUp} className="font-display text-3xl font-extrabold tracking-tight text-chilli-700">{t("auth.resetTitle")}</motion.h2>
+          <motion.p variants={m.fadeUp} className="text-sm text-ink-500 mt-1.5">{t("auth.resetSub")}</motion.p>
         </motion.div>
 
         <motion.div variants={m.fadeUp} initial="hidden" animate="show" className="bg-white rounded-3xl border border-ink-200 shadow-sm p-6 md:p-7">
           {phase === "checking" && (
-            <p className="text-sm text-ink-500 text-center">Checking your reset link...</p>
+            <p className="text-sm text-ink-500 text-center">{t("auth.resetChecking")}</p>
           )}
 
           {phase === "invalid" && (
             <div className="text-center">
-              <p className="text-sm text-ink-700">This reset link is invalid or has expired.</p>
-              <Link to="/forgot-password" className="mt-4 inline-block text-sm font-semibold text-coorg-700 hover:text-coorg-800">Request a new link</Link>
+              <p className="text-sm text-ink-700">{t("auth.resetInvalid")}</p>
+              <Link to="/forgot-password" className="mt-4 inline-block text-sm font-semibold text-coorg-700 hover:text-coorg-800">{t("auth.resetRequestNew")}</Link>
             </div>
           )}
 
@@ -115,15 +117,15 @@ export default function ResetPasswordPage() {
               <div className="mx-auto h-14 w-14 rounded-full bg-crop-50 text-crop-600 grid place-items-center mb-3">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
               </div>
-              <p className="text-sm text-ink-700">Your password has been updated. You can now log in.</p>
-              <Button className="w-full mt-5" onClick={() => nav("/login")}>Go to log in</Button>
+              <p className="text-sm text-ink-700">{t("auth.resetDone")}</p>
+              <Button className="w-full mt-5" onClick={() => nav("/login")}>{t("auth.resetGoLogin")}</Button>
             </div>
           )}
 
           {phase === "ready" && (
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="relative">
-                <Input label="New password" type={showPw ? "text" : "password"} autoComplete="new-password" maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)}/>
+                <Input label={t("auth.newPassword")} type={showPw ? "text" : "password"} autoComplete="new-password" maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)}/>
                 <button
                   type="button"
                   onClick={() => setShowPw(s => !s)}
@@ -147,7 +149,7 @@ export default function ResetPasswordPage() {
                 <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold">{error}</div>
               )}
               <Button type="submit" loading={loading} className="w-full">
-                {loading ? "Updating..." : "Update password"}
+                {loading ? t("common.loading") : t("auth.updatePassword")}
               </Button>
             </form>
           )}
