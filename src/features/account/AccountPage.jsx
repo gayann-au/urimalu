@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
@@ -58,6 +59,16 @@ export default function AccountPage() {
         {isMerchant && <AccountMerchantForm profile={profile}/>}
         {!isFarmer && !isMerchant && (
           <p className="text-sm text-ink-500">{t("account.adminNote")}</p>
+        )}
+
+        {(isFarmer || isMerchant) && (
+          <motion.div variants={m.fadeUp} initial="hidden" animate="show" className="mt-6">
+            <Link to="/feature-request"
+              className="flex items-center justify-between rounded-2xl border border-ink-200 bg-white px-4 py-3.5 text-sm font-semibold text-ink-800 shadow-sm hover:border-coorg-300 transition-colors">
+              <span>{t("feature.link")}</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+            </Link>
+          </motion.div>
         )}
       </main>
     </div>

@@ -16,6 +16,7 @@ const ProfilePage     = lazy(() => import("../features/merchant/ProfilePage"));
 const AdminPage       = lazy(() => import("../features/admin/AdminPage"));
 const LandingPage     = lazy(() => import("../features/landing/LandingPage"));
 const AccountPage     = lazy(() => import("../features/account/AccountPage"));
+const FeatureRequestPage = lazy(() => import("../features/feedback/FeatureRequestPage"));
 const PrivacyPage     = lazy(() => import("../features/legal/PrivacyPage"));
 const TermsPage       = lazy(() => import("../features/legal/TermsPage"));
 const ForgotPasswordPage = lazy(() => import("../features/auth/ForgotPasswordPage"));
@@ -179,6 +180,15 @@ function AccountRoute() {
   return <AccountPage/>;
 }
 
+// Feature request page for any signed-in user with a profile. Farmers and
+// merchants reach it from their account page; logged-out visitors go to login.
+function FeatureRequestRoute() {
+  const { profile, isLoading } = useAuth();
+  if (isLoading) return <PageLoader/>;
+  if (!profile) return <Navigate to="/login" replace/>;
+  return <FeatureRequestPage/>;
+}
+
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader/>}>
@@ -190,6 +200,7 @@ export function AppRoutes() {
         <Route path="/login"             element={<GuestOnly><LoginPage/></GuestOnly>}/>
         <Route path="/onboarding"        element={<OnboardingRoute/>}/>
         <Route path="/account"           element={<AccountRoute/>}/>
+        <Route path="/feature-request"   element={<FeatureRequestRoute/>}/>
         <Route path="/signup/farmer"     element={<GuestOnly><SignupFarmer/></GuestOnly>}/>
         <Route path="/signup/merchant"   element={<GuestOnly><SignupMerchant/></GuestOnly>}/>
         <Route path="/merchant/pending"   element={<MerchantPendingGuard/>}/>

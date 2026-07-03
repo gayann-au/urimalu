@@ -43,6 +43,22 @@ export const BUSINESS_TYPES = [
 
 export const CROPS_TRADED = ["coffee", "pepper", "cardamom", "arecanut"];
 
+// Feature request categories. The value is stored in feature_requests.category
+// (and enforced by a CHECK constraint in the migration); labelKey drives the
+// translated label shown in the dropdown and admin list.
+export const FEATURE_CATEGORIES = [
+  { value: "Pricing",         labelKey: "feature.catPricing" },
+  { value: "Crops",           labelKey: "feature.catCrops" },
+  { value: "Notifications",   labelKey: "feature.catNotifications" },
+  { value: "App Experience",  labelKey: "feature.catAppExperience" },
+  { value: "Other",           labelKey: "feature.catOther" },
+];
+
+// Feature request lifecycle. Stored as these tokens in feature_requests.status
+// (enforced by a CHECK constraint); admin.requestStatus labels render them. NEW
+// is the server-side default for a fresh request.
+export const FEATURE_STATUSES = ["NEW", "UNDER_REVIEW", "PLANNED", "REJECTED", "DONE"];
+
 // Unit options for the listing form. kg is the weight in kg for one unit.
 // null kg means the merchant enters a custom weight.
 export const UNIT_OPTIONS = [

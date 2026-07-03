@@ -5,13 +5,16 @@ import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
 import { Button } from "../../components/ui/Button";
 import { useUsers, useReviews } from "../feed/useFeed";
-import { useSetMerchantStatus, useRemoveUser, useRemoveReview } from "./useAdmin";
+import { useSetMerchantStatus, useRemoveUser, useRemoveReview, useAllListings, useAdminUpdateListing, useAdminDeleteListing } from "./useAdmin";
 import { useReports, useUpdateReportStatus, useToggleMerchantDisabled } from "./useReports";
+import { useAllFeatureRequests, useUpdateFeatureRequestStatus } from "../feedback/useFeatureRequests";
+import { RateForm } from "../merchant/RateForm";
 import { toast } from "../../components/ui/Toast";
 import { LoadError } from "../../components/ui/LoadError";
 import { useUriMotion } from "../../lib/uiMotion";
+import { formatINR, FEATURE_STATUSES } from "../../lib/constants";
 
-const TABS = ["merchants", "farmers", "reviews", "reports"];
+const TABS = ["merchants", "farmers", "listings", "reviews", "reports", "requests"];
 
 export default function AdminPage() {
   const { t } = useTranslation();
@@ -54,8 +57,10 @@ export default function AdminPage() {
       <main className="py-5">
         {tab === "merchants" && <MerchantsTab/>}
         {tab === "farmers"   && <FarmersTab/>}
+        {tab === "listings"  && <ListingsTab/>}
         {tab === "reviews"   && <ReviewsTab/>}
         {tab === "reports"   && <ReportsTab/>}
+        {tab === "requests"  && <RequestsTab/>}
       </main>
     </div>
   );
@@ -407,6 +412,191 @@ function ReportsTab() {
         </motion.ul>
       )}
     </>
+  );
+}
+
+// Admin crop price management. Lists every merchant's listings, with search by
+// merchant or crop, and lets the admin correct a listing (reusing the merchant
+// RateForm) or remove it. Writes go through the admin listings hooks, which the
+// listings_admin_all RLS policy authorises.
+function ListingsTab() {
+  const { t } = useTranslation();
+  const m = useUriMotion();
+  const listingsQ = useAllListings();
+  const usersQ = useUsers();
+  const updateListing = useAdminUpdateListing();
+  const deleteListing = useAdminDeleteListing();
+  const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  const usersById = useMemo(
+    () => new Map((usersQ.data || []).map(u => [u.id, u])),
+    [usersQ.data]
+  );
+
+  const list = useMemo(() => {
+    const rows = listingsQ.data || [];
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(l => {
+      const name = (usersById.get(l.merchant_id)?.business_name || "").toLowerCase();
+      return (l.crop_name || "").toLowerCase().includes(q) || name.includes(q);
+    });
+  }, [listingsQ.data, usersById, search]);
+
+  if (listingsQ.isError || usersQ.isError) {
+    return <LoadError onRetry={() => { listingsQ.refetch(); usersQ.refetch(); }}/>;
+  }
+
+  async function handleSave(payload) {
+    try {
+      await updateListing.mutateAsync(payload);
+      toast({ tone: "ok", text: t("admin.listingUpdated") });
+      setEditing(null);
+    } catch (e) {
+      toast({ tone: "err", text: e.message || "Error" });
+    }
+  }
+
+  async function handleDelete(listing) {
+    if (!confirm(t("admin.confirmRemoveListing"))) return;
+    setBusyId(listing.id);
+    try {
+      await deleteListing.mutateAsync(listing.id);
+      toast({ tone: "ok", text: t("admin.listingRemoved") });
+    } catch (e) {
+      toast({ tone: "err", text: e.message || "Error" });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <>
+      <input
+        type="search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder={t("admin.listingSearchPh")}
+        className="w-full min-h-[46px] rounded-2xl border-2 border-ink-200 focus:border-coorg-500 outline-none px-4 text-sm bg-white mb-4"
+      />
+      {listingsQ.isLoading ? (
+        <div className="bg-white rounded-2xl border border-ink-200 shadow-sm p-4 animate-pulse h-24"/>
+      ) : list.length === 0 ? (
+        <Empty text={t("admin.noListings")}/>
+      ) : (
+        <motion.ul variants={m.stagger} initial="hidden" animate="show"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {list.map(l => {
+            const merchant = usersById.get(l.merchant_id);
+            const inflight = busyId === l.id;
+            const priceLine = l.call_for_price
+              ? t("card.callForPrice")
+              : l.price != null
+                ? t("card.priceUnit", { price: formatINR(l.price), unit: l.unit_label })
+                : "-";
+            return (
+              <motion.li key={l.id} variants={m.fadeUp} className={CARD}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-display text-lg font-extrabold tracking-tight text-ink-900 truncate">{l.crop_name}</div>
+                    <div className="text-xs text-ink-500 mt-0.5 truncate">{merchant?.business_name || "(unknown merchant)"}</div>
+                    <div className="text-base font-extrabold text-coorg-700 mt-1.5 tabular-nums">{priceLine}</div>
+                  </div>
+                  {!l.is_active && <Tag tone="neutral">{t("card.notBuyingToday")}</Tag>}
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setEditing(l)}>{t("common.edit")}</Button>
+                  <Button size="sm" variant="dangerSoft" loading={inflight} onClick={() => handleDelete(l)}>{t("admin.remove")}</Button>
+                </div>
+              </motion.li>
+            );
+          })}
+        </motion.ul>
+      )}
+
+      {editing && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={() => setEditing(null)}>
+          <div className="w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-white rounded-t-3xl sm:rounded-3xl shadow-xl p-5 md:p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-lg font-extrabold tracking-tight text-ink-900">{t("admin.editListing")}</h2>
+              <button type="button" onClick={() => setEditing(null)} className="min-h-[44px] px-2 -mr-2 text-sm text-ink-500 underline">{t("common.cancel")}</button>
+            </div>
+            <RateForm listing={editing} onSave={handleSave} onCancel={() => setEditing(null)}/>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// Admin review panel for feature requests. Lists every request newest first,
+// showing category, title, description, submitter role, and current status, and
+// lets the admin move a request between the lifecycle states. The status write
+// is an UPDATE guarded by the feature_requests_admin_update RLS policy.
+function RequestsTab() {
+  const { t } = useTranslation();
+  const m = useUriMotion();
+  const requestsQ = useAllFeatureRequests();
+  const updateStatus = useUpdateFeatureRequestStatus();
+  const [busyId, setBusyId] = useState(null);
+
+  const requests = requestsQ.data || [];
+
+  if (requestsQ.isError) return <LoadError onRetry={() => requestsQ.refetch()}/>;
+
+  async function changeStatus(req, status) {
+    if (status === req.status) return;
+    setBusyId(req.id);
+    try {
+      await updateStatus.mutateAsync({ id: req.id, status });
+      toast({ tone: "ok", text: t("admin.statusUpdated") });
+    } catch (e) {
+      toast({ tone: "err", text: e.message || "Error" });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (requestsQ.isLoading) {
+    return <div className="bg-white rounded-2xl border border-ink-200 shadow-sm p-4 animate-pulse h-24"/>;
+  }
+  if (requests.length === 0) return <Empty text={t("admin.noRequests")}/>;
+
+  return (
+    <motion.ul variants={m.stagger} initial="hidden" animate="show"
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {requests.map(r => {
+        const inflight = busyId === r.id;
+        return (
+          <motion.li key={r.id} variants={m.fadeUp} className={CARD}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[11px] font-bold uppercase tracking-wide text-coorg-700">{r.category}</div>
+                <div className="font-display text-base font-extrabold tracking-tight text-ink-900 mt-0.5 break-words">{r.title}</div>
+              </div>
+              <Tag tone="neutral">{r.role}</Tag>
+            </div>
+            <p className="mt-2 text-sm text-ink-700 whitespace-pre-wrap break-words">{r.description}</p>
+            <div className="text-[11px] text-ink-400 mt-2">{format(new Date(r.created_at), "d MMM yyyy, h:mm a")}</div>
+            <div className="mt-3">
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-ink-500 mb-1.5">{t("admin.requestStatus")}</label>
+              <select
+                value={r.status}
+                disabled={inflight}
+                onChange={(e) => changeStatus(r, e.target.value)}
+                className="w-full rounded-xl border-2 border-ink-200 focus:border-coorg-500 outline-none px-3 py-2 text-sm bg-white"
+              >
+                {FEATURE_STATUSES.map(s => (
+                  <option key={s} value={s}>{t(`feature.status${s}`, s)}</option>
+                ))}
+              </select>
+            </div>
+          </motion.li>
+        );
+      })}
+    </motion.ul>
   );
 }
 
