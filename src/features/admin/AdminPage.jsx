@@ -575,6 +575,16 @@ function RequestsTab() {
               <div className="min-w-0">
                 <div className="text-[11px] font-bold uppercase tracking-wide text-coorg-700">{r.category}</div>
                 <div className="font-display text-base font-extrabold tracking-tight text-ink-900 mt-0.5 break-words">{r.title}</div>
+                {/* Submitter name is read straight from the row (saved at submit
+                    time), not joined from users, so it still shows after the
+                    account is gone. A null user_id means the account was
+                    deleted: note it quietly, not alarmingly. */}
+                <div className="text-xs text-ink-500 mt-0.5 break-words">
+                  {r.submitter_name || "-"}
+                  {r.user_id === null && (
+                    <span className="text-ink-400 font-medium"> ({t("admin.deletedUser")})</span>
+                  )}
+                </div>
               </div>
               <Tag tone="neutral">{r.role}</Tag>
             </div>

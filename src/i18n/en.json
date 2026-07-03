@@ -381,7 +381,8 @@
     "confirmRemoveListing": "Remove this listing? This cannot be undone.",
     "noRequests": "No feature requests yet",
     "requestStatus": "Status",
-    "statusUpdated": "Status updated"
+    "statusUpdated": "Status updated",
+    "deletedUser": "deleted user"
   },
   "feature": {
     "title": "Feature request",

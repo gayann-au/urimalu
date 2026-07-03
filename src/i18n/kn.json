@@ -298,7 +298,8 @@
     "confirmRemoveListing": "ಈ ಪಟ್ಟಿ ತೆಗೆದುಹಾಕುವುದೇ? ಇದನ್ನು ಹಿಂಪಡೆಯಲಾಗದು.",
     "noRequests": "ಇನ್ನೂ ಯಾವುದೇ ವಿನಂತಿ ಇಲ್ಲ",
     "requestStatus": "ಸ್ಥಿತಿ",
-    "statusUpdated": "ಸ್ಥಿತಿ ಅಪ್‌ಡೇಟ್ ಆಗಿದೆ"
+    "statusUpdated": "ಸ್ಥಿತಿ ಅಪ್‌ಡೇಟ್ ಆಗಿದೆ",
+    "deletedUser": "ಅಳಿಸಲಾದ ಬಳಕೆದಾರ"
   },
   "feature": {
     "title": "ವೈಶಿಷ್ಟ್ಯ ವಿನಂತಿ",

@@ -16,11 +16,17 @@ export function useSubmitFeatureRequest() {
   return useMutation({
     mutationFn: async ({ category, title, description }) => {
       if (!profile) throw new Error("feature.loginRequired");
+      // Persist the submitter's display name on the row itself so it survives
+      // even if the account is later deleted. Merchants are known by their
+      // business name, farmers by their full name.
+      const submitterName =
+        (profile.role === "MERCHANT" ? profile.business_name : profile.full_name) || "";
       const { data, error } = await supabase
         .from("feature_requests")
         .insert({
           user_id: profile.id,
           role: profile.role,
+          submitter_name: submitterName,
           category,
           title: title.trim(),
           description: description.trim(),

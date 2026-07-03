@@ -11,8 +11,13 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS feature_requests (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id     uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  -- user_id is nullable and set to NULL (not cascade-deleted) when the account
+  -- is removed, so the request itself survives. submitter_name is captured at
+  -- submission time and kept on the row, so the admin panel can still show who
+  -- asked even after the account is gone.
+  user_id     uuid        REFERENCES users(id) ON DELETE SET NULL,
   role        text        NOT NULL,
+  submitter_name text     NOT NULL,
   category    text        NOT NULL,
   title       text        NOT NULL,
   description text        NOT NULL,
