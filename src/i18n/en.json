@@ -138,7 +138,7 @@
   "pending": {
     "title": "Registration submitted",
     "sub": "Your account is under review",
-    "timeline": "Approval typically takes 1 to 2 business days. You will be able to access your dashboard once approved.",
+    "timeline": "If an admin has not reviewed your account within 24 hours, it is approved automatically. You will be able to access your dashboard once approved.",
     "autoApprove": "Auto-approved in",
     "rejected": "Account rejected",
     "rejectedBody": "Your account was not approved.",
