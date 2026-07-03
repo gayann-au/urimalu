@@ -25,7 +25,6 @@ export const qk = {
   reviewsByMerchant: (id) => ["reviews", "merchant", id],
   leads:          ["leads", "all"],
   leadsByMerchant: (id) => ["leads", "merchant", id],
-  listingsAdminAll: ["listings", "admin", "all"],
   featureRequests:      ["feature_requests", "all"],
   featureRequestsMine: (id) => ["feature_requests", "mine", id],
 };
