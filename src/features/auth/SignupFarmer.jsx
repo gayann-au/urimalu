@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,10 +8,11 @@ import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
+import { DistrictPicker } from "./DistrictPicker";
 import { useSignupFarmer } from "./useAuth";
 import LegalConsent from "../legal/LegalConsent";
 import { useUriMotion } from "../../lib/uiMotion";
-import { DISTRICTS, phoneRegex } from "../../lib/constants";
+import { phoneRegex } from "../../lib/constants";
 
 const schema = z.object({
   fullName: z.string().min(2, "auth.fullName"),
@@ -25,35 +26,36 @@ export default function SignupFarmer() {
   const m = useUriMotion();
   const signup = useSignupFarmer();
   const [stage, setStage] = useState("form"); // form -> district
-  const [profile, setProfile] = useState(null);
-  const [district, setDistrict] = useState(null);
+  const [formValues, setFormValues] = useState(null);
   const [topError, setTopError] = useState(null);
-  const [districtError, setDistrictError] = useState(false);
   const [showPw, setShowPw] = useState(false);
-  const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(schema) });
 
-  async function onSubmit(values) {
+  // Stage 1: the details form only advances to the district step. The account
+  // is deliberately NOT created here. Previously onSubmit created the account,
+  // and useSignupFarmer's onSuccess navigated straight to the feed, so the
+  // district step never had a chance to render. Holding the values and creating
+  // the account only after a district is picked guarantees the farmer is asked
+  // for their district as part of signup, before landing on the feed.
+  function onSubmit(values) {
     setTopError(null);
-    try {
-      const p = await signup.mutateAsync({ ...values });
-      setProfile(p);
-      setStage("district");
-    } catch (e) { setTopError(e?.code || "auth.loginError"); }
+    setFormValues(values);
+    setStage("district");
   }
 
+  // Stage 2: create the account with the chosen district in a single write.
+  // On success useSignupFarmer navigates to the feed. On failure (for example
+  // an email already registered) the message belongs on the details form, so
+  // return there with the error rather than stranding the farmer on the
+  // district step.
   async function pickDistrict(d) {
-    setDistrict(d);
-    setDistrictError(false);
-    // Save the district, then go to the feed. A failed write used to be
-    // swallowed silently; now it surfaces a message so the user can retry.
-    const { supabase } = await import("../../lib/supabase");
-    const { error } = await supabase.from("users").update({ district: d }).eq("id", profile.id);
-    if (error) {
-      setDistrictError(true);
-      return;
+    setTopError(null);
+    try {
+      await signup.mutateAsync({ ...formValues, district: d });
+    } catch (e) {
+      setTopError(e?.code || "auth.loginError");
+      setStage("form");
     }
-    navigate("/");
   }
 
   return (
@@ -92,7 +94,7 @@ export default function SignupFarmer() {
                   </button>
                 </div>
                 {topError && <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold">{t(topError)}</div>}
-                <Button type="submit" loading={signup.isPending} className="w-full">{signup.isPending ? t("common.loading") : t("nav.signup")}</Button>
+                <Button type="submit" className="w-full">{t("nav.signup")}</Button>
                 <LegalConsent action="signing up" />
                 <Link to="/login" className="block text-center text-sm text-coorg-700 font-semibold py-2">{t("nav.login")}</Link>
               </form>
@@ -101,27 +103,7 @@ export default function SignupFarmer() {
         )}
 
         {stage === "district" && (
-          <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center">
-            <div className="w-full max-w-[430px] bg-white rounded-t-3xl sm:rounded-3xl shadow-xl p-6 sm:m-4">
-              <div className="text-center">
-                <h3 className="font-display text-xl font-extrabold tracking-tight text-ink-900">Where are you from?</h3>
-                <p className="text-sm text-ink-500 mt-1">Pick your district to see local rates</p>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                {DISTRICTS.map(d => (
-                  <button key={d} onClick={() => pickDistrict(d)}
-                    className="rounded-[14px] border-2 border-coorg-200 hover:border-coorg-600 hover:bg-coorg-50 py-3 font-bold text-coorg-800 transition-colors">
-                    {d}
-                  </button>
-                ))}
-              </div>
-              {districtError && (
-                <div className="mt-4 rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold text-center">
-                  {t("auth.districtError")}
-                </div>
-              )}
-            </div>
-          </div>
+          <DistrictPicker onPick={pickDistrict} busy={signup.isPending} />
         )}
       </main>
     </div>

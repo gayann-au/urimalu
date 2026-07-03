@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/useAuth";
+import FarmerDistrictGate from "../features/auth/FarmerDistrictGate";
 
 const FeedPage        = lazy(() => import("../features/feed/FeedPage"));
 const LoginPage       = lazy(() => import("../features/auth/LoginPage"));
@@ -143,6 +144,20 @@ function RequireOnboarding({ children }) {
   return children;
 }
 
+// A logged-in farmer whose district was never recorded (an older account, or a
+// row where the column is null) is asked for it once, at app load, before
+// anything else in the app. Merchants and admins are never affected, and a
+// farmer who already has a district passes straight through. Saving a district
+// refreshes the profile, which clears this gate for good, so the farmer is
+// never asked again.
+function RequireFarmerDistrict({ children }) {
+  const { profile } = useAuth();
+  if (profile && profile.role === "FARMER" && !profile.district) {
+    return <FarmerDistrictGate/>;
+  }
+  return children;
+}
+
 // The onboarding screen itself. Only a signed-in account with no profile row
 // belongs here: logged-out visitors go to login, already-onboarded users are
 // bounced to their normal landing spot.
@@ -168,6 +183,7 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader/>}>
       <RequireOnboarding>
+      <RequireFarmerDistrict>
       <Routes>
         <Route path="/"     element={<HomeRoute/>}/>
         <Route path="/feed" element={<FeedGuard/>}/>
@@ -187,6 +203,7 @@ export function AppRoutes() {
         <Route path="/reset-password"     element={<ResetPasswordPage/>}/>
         <Route path="*" element={<NotFoundPage/>}/>
       </Routes>
+      </RequireFarmerDistrict>
       </RequireOnboarding>
     </Suspense>
   );

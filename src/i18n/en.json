@@ -79,6 +79,8 @@
     "onboardingNoSession": "Your session has expired. Please sign in again",
     "profileLoadError": "We couldn't load your account. Please check your connection and try again.",
     "districtError": "Could not save your district. Please try again.",
+    "districtTitle": "Where are you from?",
+    "districtSubtitle": "Pick your district to see local rates",
     "googleUnavailable": "Google sign-in is not available right now. Please use email and password.",
     "sessionExpired": "Your session has expired. Please log in again."
   },
