@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
+import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { RateCard } from "./RateCard";
 import { useAuth } from "../auth/useAuth";
 import { useListings, uniqueCropsInFeed, groupFeedByMerchant } from "./useFeed";
@@ -77,7 +78,8 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 pb-12 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
+    <div className="flex flex-col flex-1 pb-12 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8 isolate">
+      <GlowBackdrop/>
       <Header/>
 
       {/* Real time "new rates" banner. Floats below the header and only shows

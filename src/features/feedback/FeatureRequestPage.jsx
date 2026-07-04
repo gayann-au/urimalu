@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
+import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { Button } from "../../components/ui/Button";
 import { Input, Textarea, Select } from "../../components/ui/Input";
 import { toast } from "../../components/ui/Toast";
@@ -49,7 +50,8 @@ export default function FeatureRequestPage() {
   const requests = myRequests.data || [];
 
   return (
-    <div className="flex flex-col flex-1 items-center">
+    <div className="flex flex-col flex-1 items-center isolate">
+      <GlowBackdrop/>
       <Header showBack title={t("feature.title")}/>
       <main className="w-full max-w-md px-5 py-8 flex-1">
         <motion.div variants={m.stagger} initial="hidden" animate="show" className="mb-6">

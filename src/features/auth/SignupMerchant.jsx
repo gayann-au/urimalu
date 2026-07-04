@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
+import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { Button } from "../../components/ui/Button";
 import { Input, Textarea, Select } from "../../components/ui/Input";
 import { useSignupMerchant } from "./useAuth";
@@ -141,7 +142,8 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
   const submitting = resubmitMode ? resubmitting : signup.isPending;
 
   return (
-    <div className="flex flex-col flex-1 pb-8 items-center">
+    <div className="flex flex-col flex-1 pb-8 items-center isolate">
+      <GlowBackdrop/>
       <Header showBack/>
       <main className="w-full max-w-md px-5 py-8 flex-1">
         <motion.div variants={m.stagger} initial="hidden" animate="show" className="text-center mb-6">

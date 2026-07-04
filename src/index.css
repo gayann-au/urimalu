@@ -58,3 +58,20 @@ body {
 /* Scroll snap for crop filter row */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Soft warm brand glow shared by app screens, cloned from the landing hero
+   glow (.uri-landing .hero::before in LandingPage.css). Same ember-500 and
+   chilli-600 tones at the same low alpha, fixed to the top right corner so
+   every screen shares one consistent light source that fades into the cream
+   paper background. The negative z-index plus an isolate page root keeps it
+   behind every card, form, and text block. Rendered via GlowBackdrop.jsx. */
+.page-glow {
+  position: fixed;
+  top: -180px;
+  right: -140px;
+  width: 620px;
+  height: 620px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(255,106,26,.20), rgba(214,38,58,.13) 40%, transparent 66%);
+}

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Header } from "../components/layout/Header";
+import { GlowBackdrop } from "../components/ui/GlowBackdrop";
 import { Button } from "../components/ui/Button";
 import { useUriMotion } from "../lib/uiMotion";
 
@@ -11,7 +12,8 @@ export default function NotFoundPage() {
   const { t } = useTranslation();
   const m = useUriMotion();
   return (
-    <div className="flex flex-col flex-1 items-center">
+    <div className="flex flex-col flex-1 items-center isolate">
+      <GlowBackdrop/>
       <Header/>
       <main className="w-full max-w-md px-5 py-16 flex-1 flex flex-col items-center text-center">
         <motion.div variants={m.stagger} initial="hidden" animate="show" className="flex flex-col items-center">

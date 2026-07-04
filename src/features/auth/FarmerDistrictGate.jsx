@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Header } from "../../components/layout/Header";
+import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
 import { useAuth } from "./useAuth";
@@ -38,7 +39,8 @@ export default function FarmerDistrictGate() {
   }
 
   return (
-    <div className="flex flex-col flex-1 items-center">
+    <div className="flex flex-col flex-1 items-center isolate">
+      <GlowBackdrop/>
       <Header/>
       <main className="w-full max-w-md px-5 py-8 flex-1">
         <DistrictPicker onPick={pickDistrict} busy={busy} error={error} />

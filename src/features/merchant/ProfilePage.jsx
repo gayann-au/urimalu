@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Header } from "../../components/layout/Header";
+import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { Stars } from "../../components/icons/Stars";
 import { Toggle } from "../../components/ui/Toggle";
 import { useAuth } from "../auth/useAuth";
@@ -225,7 +226,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 pb-14 w-full mx-auto max-w-5xl px-4 md:px-6">
+    <div className="flex flex-col flex-1 pb-14 w-full mx-auto max-w-5xl px-4 md:px-6 isolate">
+      <GlowBackdrop/>
       <Header showBack title={t("profile.title")}/>
 
       {/* Identity */}

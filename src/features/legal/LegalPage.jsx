@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Header } from "../../components/layout/Header";
+import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 
 // Shared shell for the public legal pages (Privacy, Terms). Uses the same
 // brand header, warm paper surface, and chilli display title as the rest of
@@ -7,7 +8,8 @@ import { Header } from "../../components/layout/Header";
 // stays a readable text column with a footer that cross links the two pages.
 export default function LegalPage({ title, lastUpdated, children }) {
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 isolate">
+      <GlowBackdrop/>
       <Header showBack/>
 
       <main className="mx-auto w-full max-w-3xl px-5 py-8 flex-1">

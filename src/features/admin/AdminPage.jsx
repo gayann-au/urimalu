@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
+import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { Button } from "../../components/ui/Button";
 import { useUsers, useReviews } from "../feed/useFeed";
 import { useSetMerchantStatus, useRemoveUser, useRemoveReview } from "./useAdmin";
@@ -28,7 +29,8 @@ export default function AdminPage() {
   const pendingCount = users.filter(u => u.role === "MERCHANT" && u.status === "PENDING").length;
   const tabCount = { merchants: pendingCount, reports: openCount };
   return (
-    <div className="flex flex-col flex-1 pb-10 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8">
+    <div className="flex flex-col flex-1 pb-10 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8 isolate">
+      <GlowBackdrop/>
       <Header title={t("admin.title")}/>
       <nav className="bg-white border-b border-ink-100 sticky top-[64px] z-20">
         <div className="flex overflow-x-auto no-scrollbar">

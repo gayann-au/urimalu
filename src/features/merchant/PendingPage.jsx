@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
+import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { Button } from "../../components/ui/Button";
 import { CheckIcon } from "../../components/icons/Sprite";
 import { useAuth, useLogout } from "../auth/useAuth";
@@ -92,7 +93,8 @@ export default function PendingPage() {
   const ms = pendingMsLeft(profile);
 
   return (
-    <div className="flex flex-col flex-1 items-center">
+    <div className="flex flex-col flex-1 items-center isolate">
+      <GlowBackdrop/>
       <Header/>
       <motion.main
         variants={m.stagger}

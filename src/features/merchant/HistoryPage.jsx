@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
+import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { useAuth } from "../auth/useAuth";
 import { useMyPriceHistory, groupHistoryByDate } from "./useMerchant";
 import { LoadError } from "../../components/ui/LoadError";
@@ -29,7 +30,8 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 pb-10 w-full mx-auto max-w-3xl px-4 md:px-6">
+    <div className="flex flex-col flex-1 pb-10 w-full mx-auto max-w-3xl px-4 md:px-6 isolate">
+      <GlowBackdrop/>
       <Header showBack title={t("dashboard.priceHistory")}/>
 
       <main className="py-6">

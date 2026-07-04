@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
+import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { useAuth, useLogout } from "./useAuth";
 import OnboardingFarmerForm from "./OnboardingFarmerForm";
 import OnboardingMerchantForm from "./OnboardingMerchantForm";
@@ -58,7 +59,8 @@ export default function OnboardingPage() {
   const backToRole = () => setStage("role");
 
   return (
-    <div className="flex flex-col flex-1 items-center">
+    <div className="flex flex-col flex-1 items-center isolate">
+      <GlowBackdrop/>
       <Header/>
       <main className="w-full max-w-md px-5 py-8 flex-1">
         {stage === "role" && (
