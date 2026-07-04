@@ -51,3 +51,12 @@ if (isSupabaseConfigured) {
     </React.StrictMode>
   );
 }
+
+// PWA: register the app-shell service worker. Production builds only, because
+// under the dev server it would interfere with Vite module serving. A failed
+// registration is non-fatal: the app simply runs without install support.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}

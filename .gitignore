@@ -12,3 +12,6 @@ src/scripts/
 *.png
 *.jpg
 *.jpeg
+# PWA icons must ship with the app; re-include them past the *.png rule above.
+!public/icons/icon-192.png
+!public/icons/icon-512.png
