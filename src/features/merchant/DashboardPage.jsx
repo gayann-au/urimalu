@@ -137,6 +137,14 @@ export default function DashboardPage() {
         >
           {t("dashboard.priceHistory")}
         </motion.button>
+        <motion.button
+          variants={m.fadeUp}
+          type="button"
+          onClick={() => nav("/merchant/crops")}
+          className="mt-2 ml-5 text-sm text-coorg-700 font-semibold underline"
+        >
+          {t("dashboard.browseCrops")}
+        </motion.button>
       </motion.section>
 
       {/* Confirm today's prices. Most prominent action on the screen.

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { useLeadTracking } from "../../hooks/useLeadTracking";
 import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
+import { FollowCropButton } from "../alerts/FollowCropButton";
 import { useUriMotion } from "../../lib/uiMotion";
 import { BAG_WEIGHTS, formatINR, listingPriceView, formatValidTill } from "../../lib/constants";
 
@@ -66,6 +67,7 @@ export function RateCard({ item }) {
             {merchant.town}
           </p>
         </div>
+        <FollowCropButton cropName={item.crop_name}/>
       </div>
       <div className="mt-2.5">
         <FreshnessBadge confirmedAt={item.confirmed_at} className="bg-paper-2 rounded-full px-2.5 py-1" />

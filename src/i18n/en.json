@@ -37,7 +37,8 @@
     "dashboard": "Dashboard",
     "admin": "Admin",
     "profile": "Profile",
-    "account": "My account"
+    "account": "My account",
+    "notifications": "Notifications"
   },
   "auth": {
     "loginTitle": "Welcome back",
@@ -350,6 +351,7 @@
     "cropCountOne": "1 crop",
     "cropCountN": "{{count}} crops",
     "priceHistory": "Price history",
+    "browseCrops": "Browse crops",
     "confirmTodaysPrices": "Confirm today's prices",
     "confirmedToday": "Confirmed today",
     "lastConfirmedOn": "Last confirmed: {{date}}",
@@ -429,6 +431,37 @@
     "statusPLANNED": "Planned",
     "statusREJECTED": "Rejected",
     "statusDONE": "Done"
+  },
+  "alerts": {
+    "buttonLabel": "Price alerts for {{crop}}",
+    "sheetTitle": "Price alerts for {{crop}}",
+    "anyChange": "Any price change",
+    "threshold": "Only when price crosses a limit",
+    "thresholdLabel": "Limit (₹ per kg)",
+    "thresholdHelp": "You will be alerted when the price crosses this value.",
+    "thresholdRequired": "Enter a limit value greater than zero",
+    "saveError": "Could not save. Please try again.",
+    "followed": "Alerts on for {{crop}}",
+    "unfollowed": "Alerts off for {{crop}}",
+    "stopAlerts": "Stop alerts"
+  },
+  "cropsBrowse": {
+    "title": "All crops",
+    "sub": "Crops merchants are buying today, with current prices",
+    "merchantsOne": "1 merchant buying",
+    "merchantsN": "{{count}} merchants buying",
+    "single": "{{price}} per kg",
+    "range": "{{min}} to {{max}} per kg",
+    "none": "No crops are listed right now."
+  },
+  "notif": {
+    "title": "Notifications",
+    "empty": "No notifications yet.",
+    "hint": "Follow a crop to get price alerts here.",
+    "aMerchant": "a merchant",
+    "priceSet": "{{crop}}: {{price}} per kg at {{merchant}}",
+    "priceChanged": "{{crop}}: {{price}} per kg at {{merchant}} (was {{old}})",
+    "priceUpdated": "{{crop}}: price updated at {{merchant}}"
   },
   "report": {
     "link": "Report",

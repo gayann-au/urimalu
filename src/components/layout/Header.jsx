@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useUiStore } from "../../hooks/useUiStore";
 import { useAuth, useLogout } from "../../features/auth/useAuth";
+import { useUnreadNotificationCount } from "../../features/alerts/useNotifications";
 import { BackIcon } from "../icons/Sprite";
 
 // Shared app header, restyled to match the landing page .hdr: a warm cream,
@@ -33,6 +34,7 @@ export function Header({ showBack = false, title }) {
   const { profile } = useAuth();
   const logout = useLogout();
   const nav = useNavigate();
+  const unreadCount = useUnreadNotificationCount();
 
   // Hairline bottom border appears once the page is scrolled past the top,
   // exactly like the landing header.
@@ -85,6 +87,20 @@ export function Header({ showBack = false, title }) {
             {lang === "kn" ? "ಕ·EN" : "EN·ಕ"}
           </button>
           {actionLink}
+          {profile && (
+            <Link to="/notifications" aria-label={t("nav.notifications")}
+              className="relative rounded-full h-11 w-11 text-ink-700 hover:text-crop-700 hover:bg-crop-50 transition-colors inline-flex items-center justify-center shrink-0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-chilli-600 text-white text-[10px] font-bold leading-none inline-flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Link>
+          )}
           {profile && (
             <Link to="/account" aria-label={t("nav.account")}
               className="rounded-full h-11 w-11 text-ink-700 hover:text-crop-700 hover:bg-crop-50 transition-colors inline-flex items-center justify-center shrink-0">

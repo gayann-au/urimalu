@@ -16,6 +16,7 @@ import { useAddReview } from "../reviews/useReviews";
 import { ReviewForm } from "../reviews/ReviewForm";
 import { supabase } from "../../lib/supabase";
 import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
+import { FollowCropButton } from "../alerts/FollowCropButton";
 import { formatINR, dayKey, lastNDays, listingPriceView, BAG_WEIGHTS, formatValidTill } from "../../lib/constants";
 
 // Shared easing, matches the landing page --ease-out token.
@@ -552,6 +553,7 @@ function ListingRow({ listing, t, fadeUp, cardHover }) {
             <div className="text-xs text-ink-500 mt-0.5 truncate">{listing.variety_notes}</div>
           )}
         </div>
+        <FollowCropButton cropName={listing.crop_name}/>
       </div>
       <div className="mt-2.5">
         <FreshnessBadge confirmedAt={listing.confirmed_at} className="bg-paper-2 rounded-full px-2.5 py-1" />
