@@ -13,7 +13,7 @@
     "loadError": "ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
     "retry": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
   },
-  "nav": { "feed": "ಫೀಡ್", "login": "ಲಾಗಿನ್", "logout": "ಲಾಗ್‌ಔಟ್", "signup": "ನೋಂದಣಿ", "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", "admin": "ನಿರ್ವಾಹಕ", "profile": "ಪ್ರೊಫೈಲ್", "account": "ನನ್ನ ಖಾತೆ" },
+  "nav": { "feed": "ಫೀಡ್", "login": "ಲಾಗಿನ್", "logout": "ಲಾಗ್‌ಔಟ್", "signup": "ನೋಂದಣಿ", "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್", "admin": "ನಿರ್ವಾಹಕ", "profile": "ಪ್ರೊಫೈಲ್", "account": "ನನ್ನ ಖಾತೆ", "notifications": "ಅಧಿಸೂಚನೆಗಳು" },
   "auth": {
     "loginTitle": "ಮರಳಿ ಸ್ವಾಗತ",
     "loginSub": "ಲಾಗಿನ್ ಮಾಡಿ ದರಗಳನ್ನು ನೋಡಿ",
@@ -274,6 +274,7 @@
     "cropCountOne": "1 ಬೆಳೆ",
     "cropCountN": "{{count}} ಬೆಳೆಗಳು",
     "priceHistory": "ಬೆಲೆ ಇತಿಹಾಸ",
+    "browseCrops": "ಬೆಳೆಗಳನ್ನು ನೋಡಿ",
     "confirmTodaysPrices": "ಇಂದಿನ ಬೆಲೆಗಳನ್ನು ಖಚಿತಪಡಿಸಿ",
     "confirmedToday": "ಇಂದು ಖಚಿತಪಡಿಸಲಾಗಿದೆ",
     "lastConfirmedOn": "ಕೊನೆಯ ಖಚಿತತೆ: {{date}}",
@@ -346,6 +347,37 @@
     "statusPLANNED": "ಯೋಜಿತ",
     "statusREJECTED": "ತಿರಸ್ಕೃತ",
     "statusDONE": "ಪೂರ್ಣಗೊಂಡಿದೆ"
+  },
+  "alerts": {
+    "buttonLabel": "{{crop}} ಬೆಲೆ ಎಚ್ಚರಿಕೆಗಳು",
+    "sheetTitle": "{{crop}} ಬೆಲೆ ಎಚ್ಚರಿಕೆಗಳು",
+    "anyChange": "ಯಾವುದೇ ಬೆಲೆ ಬದಲಾವಣೆ",
+    "threshold": "ಬೆಲೆ ಮಿತಿ ದಾಟಿದಾಗ ಮಾತ್ರ",
+    "thresholdLabel": "ಮಿತಿ (₹ ಪ್ರತಿ ಕೆ.ಜಿ)",
+    "thresholdHelp": "ಬೆಲೆ ಈ ಮೌಲ್ಯ ದಾಟಿದಾಗ ನಿಮಗೆ ಎಚ್ಚರಿಕೆ ಬರುತ್ತದೆ.",
+    "thresholdRequired": "ಶೂನ್ಯಕ್ಕಿಂತ ಹೆಚ್ಚಿನ ಮಿತಿ ನಮೂದಿಸಿ",
+    "saveError": "ಉಳಿಸಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    "followed": "{{crop}} ಎಚ್ಚರಿಕೆಗಳು ಆನ್",
+    "unfollowed": "{{crop}} ಎಚ್ಚರಿಕೆಗಳು ಆಫ್",
+    "stopAlerts": "ಎಚ್ಚರಿಕೆ ನಿಲ್ಲಿಸಿ"
+  },
+  "cropsBrowse": {
+    "title": "ಎಲ್ಲಾ ಬೆಳೆಗಳು",
+    "sub": "ಇಂದು ವ್ಯಾಪಾರಿಗಳು ಖರೀದಿಸುತ್ತಿರುವ ಬೆಳೆಗಳು ಮತ್ತು ಪ್ರಸ್ತುತ ಬೆಲೆಗಳು",
+    "merchantsOne": "1 ವ್ಯಾಪಾರಿ ಖರೀದಿಸುತ್ತಿದ್ದಾರೆ",
+    "merchantsN": "{{count}} ವ್ಯಾಪಾರಿಗಳು ಖರೀದಿಸುತ್ತಿದ್ದಾರೆ",
+    "single": "{{price}} ಪ್ರತಿ ಕೆ.ಜಿ",
+    "range": "{{min}} ರಿಂದ {{max}} ಪ್ರತಿ ಕೆ.ಜಿ",
+    "none": "ಸದ್ಯ ಯಾವುದೇ ಬೆಳೆ ಪಟ್ಟಿ ಇಲ್ಲ."
+  },
+  "notif": {
+    "title": "ಅಧಿಸೂಚನೆಗಳು",
+    "empty": "ಇನ್ನೂ ಯಾವುದೇ ಅಧಿಸೂಚನೆ ಇಲ್ಲ.",
+    "hint": "ಬೆಲೆ ಎಚ್ಚರಿಕೆಗಳನ್ನು ಪಡೆಯಲು ಬೆಳೆಯನ್ನು ಅನುಸರಿಸಿ.",
+    "aMerchant": "ಒಬ್ಬ ವ್ಯಾಪಾರಿ",
+    "priceSet": "{{crop}}: {{merchant}} ಬಳಿ ಪ್ರತಿ ಕೆ.ಜಿ.ಗೆ {{price}}",
+    "priceChanged": "{{crop}}: {{merchant}} ಬಳಿ ಪ್ರತಿ ಕೆ.ಜಿ.ಗೆ {{price}} (ಮೊದಲು {{old}})",
+    "priceUpdated": "{{crop}}: {{merchant}} ಬಳಿ ಬೆಲೆ ನವೀಕರಿಸಲಾಗಿದೆ"
   },
   "report": {
     "link": "ದೂರು",

@@ -27,4 +27,6 @@ export const qk = {
   leadsByMerchant: (id) => ["leads", "merchant", id],
   featureRequests:      ["feature_requests", "all"],
   featureRequestsMine: (id) => ["feature_requests", "mine", id],
+  cropFollows: (id) => ["crop_follows", "mine", id],
+  notifications: (id) => ["notifications", "mine", id],
 };
