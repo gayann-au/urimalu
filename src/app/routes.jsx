@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/useAuth";
 import FarmerDistrictGate from "../features/auth/FarmerDistrictGate";
+import { useRealtimeNotifications } from "../features/alerts/useNotifications";
 
 const FeedPage        = lazy(() => import("../features/feed/FeedPage"));
 const LoginPage       = lazy(() => import("../features/auth/LoginPage"));
@@ -210,11 +211,22 @@ function NotificationsRoute() {
   return <NotificationsPage/>;
 }
 
+// Keeps the header bell and the notification list current in real time for
+// the whole signed-in session. Renders nothing; mounted once alongside the
+// route tree so it survives navigation between pages and only tears down on
+// logout or when the app itself unmounts, unlike a per-page hook that would
+// resubscribe on every route change.
+function NotificationsRealtimeMount() {
+  useRealtimeNotifications();
+  return null;
+}
+
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader/>}>
       <RequireOnboarding>
       <RequireFarmerDistrict>
+      <NotificationsRealtimeMount/>
       <Routes>
         <Route path="/"     element={<HomeRoute/>}/>
         <Route path="/feed" element={<FeedGuard/>}/>

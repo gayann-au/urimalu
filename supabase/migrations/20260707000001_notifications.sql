@@ -50,6 +50,12 @@ CREATE POLICY "notifications_update_own" ON notifications
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
+-- Required for the frontend realtime subscription (useRealtimeNotifications)
+-- to receive postgres_changes events at all. Supabase only broadcasts changes
+-- for tables added to this publication; RLS still applies on top, so a client
+-- only ever receives events for its own rows.
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+
 
 -- ============================================
 -- TRIGGER: fan a price_history insert out to followers

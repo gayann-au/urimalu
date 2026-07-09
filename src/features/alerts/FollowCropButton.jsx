@@ -5,6 +5,7 @@ import { Input } from "../../components/ui/Input";
 import { toast } from "../../components/ui/Toast";
 import { useAuth } from "../auth/useAuth";
 import { useMyCropFollows, useFollowCrop, useUnfollowCrop } from "./useCropFollows";
+import { usePushRegistration } from "./usePushRegistration";
 
 // Star button shown on crop cards and crop rows. Tapping it opens an inline
 // bottom sheet where the user picks the alert type (any price change, or only
@@ -18,6 +19,7 @@ export function FollowCropButton({ cropName }) {
   const followsQ = useMyCropFollows();
   const followCrop = useFollowCrop();
   const unfollowCrop = useUnfollowCrop();
+  const { promptAfterFollow } = usePushRegistration();
   const [open, setOpen] = useState(false);
   const [alertType, setAlertType] = useState("any_change");
   const [threshold, setThreshold] = useState("");
@@ -50,6 +52,9 @@ export function FollowCropButton({ cropName }) {
       });
       toast({ tone: "ok", text: t("alerts.followed", { crop: cropName }) });
       setOpen(false);
+      // Right after a follow saves, offer push (asks the browser once, ever).
+      // Fire and forget: it never throws, and a denial leaves in-app alerts on.
+      promptAfterFollow();
     } catch {
       setError("alerts.saveError");
     }
