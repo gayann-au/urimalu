@@ -324,7 +324,10 @@
   },
   "alerts": {
     "buttonLabel": "Price alerts for {{crop}}",
+    "watchCta": "Price Watch",
+    "watchingCta": "Watching",
     "sheetTitle": "Price alerts for {{crop}}",
+    "sheetIntro": "Get an alert whenever this crop's price changes",
     "anyChange": "Any price change",
     "threshold": "Only when price crosses a limit",
     "thresholdLabel": "Limit (₹ per kg)",
