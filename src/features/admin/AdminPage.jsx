@@ -125,6 +125,7 @@ function MerchantsTab() {
   }
 
   if (usersQ.isError) return <LoadError onRetry={() => usersQ.refetch()}/>;
+  if (usersQ.isLoading) return <LoadingCard/>;
 
   return (
     <>
@@ -238,6 +239,7 @@ function FarmersTab() {
   const users = usersQ.data || [];
   const removeUser = useRemoveUser();
   if (usersQ.isError) return <LoadError onRetry={() => usersQ.refetch()}/>;
+  if (usersQ.isLoading) return <LoadingCard/>;
   const farmers = users.filter(u => u.role === "FARMER").sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
   if (farmers.length === 0) return <Empty text={t("admin.noFarmers")}/>;
   return (
@@ -272,6 +274,7 @@ function ReviewsTab() {
   const removeReview = useRemoveReview();
   const byId = useMemo(() => new Map(users.map(u => [u.id, u])), [users]);
   if (usersQ.isError || reviewsQ.isError) return <LoadError onRetry={() => { usersQ.refetch(); reviewsQ.refetch(); }}/>;
+  if (usersQ.isLoading || reviewsQ.isLoading) return <LoadingCard/>;
   if (reviews.length === 0) return <Empty text={t("admin.noReviews")}/>;
   return (
     <motion.ul variants={m.stagger} initial="hidden" animate="show"
@@ -361,7 +364,7 @@ function ReportsTab() {
       ) : isLoading ? (
         <div className="bg-white rounded-2xl border border-ink-200 shadow-sm p-4 animate-pulse h-24"/>
       ) : reports.length === 0 ? (
-        <Empty text="-"/>
+        <Empty text={t("report.noOpenReports")}/>
       ) : (
         <motion.ul variants={m.stagger} initial="hidden" animate="show"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -390,7 +393,7 @@ function ReportsTab() {
 
       <div className="text-xs font-bold uppercase tracking-wide text-ink-500 mt-8 mb-3">{t("report.disabledMerchants")}</div>
       {disabledMerchants.length === 0 ? (
-        <Empty text="-"/>
+        <Empty text={t("report.noDisabledMerchants")}/>
       ) : (
         <motion.ul variants={m.stagger} initial="hidden" animate="show"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -496,4 +499,10 @@ function RequestsTab() {
 
 function Empty({ text }) {
   return <div className="bg-white rounded-2xl border border-ink-200 shadow-sm p-8 text-center text-ink-500">{text}</div>;
+}
+
+// Loading placeholder card, matching the animate-pulse skeleton the Reports and
+// Requests tabs already use, so every admin tab shows the same waiting state.
+function LoadingCard() {
+  return <div className="bg-white rounded-2xl border border-ink-200 shadow-sm p-4 animate-pulse h-24"/>;
 }

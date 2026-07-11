@@ -364,7 +364,9 @@
     "disableMerchant": "ವ್ಯಾಪಾರಿಯನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಿ",
     "reenable": "ಮತ್ತೆ ಸಕ್ರಿಯಗೊಳಿಸಿ",
     "disabledMerchants": "ನಿಷ್ಕ್ರಿಯ ವ್ಯಾಪಾರಿಗಳು",
-    "openReports": "ದೂರುಗಳು"
+    "openReports": "ದೂರುಗಳು",
+    "noOpenReports": "ಸದ್ಯ ಯಾವುದೇ ದೂರುಗಳಿಲ್ಲ.",
+    "noDisabledMerchants": "ಯಾವುದೇ ವ್ಯಾಪಾರಿ ನಿಷ್ಕ್ರಿಯಗೊಂಡಿಲ್ಲ."
   },
   "profile": {
     "title": "ವ್ಯಾಪಾರಿ ಪ್ರೊಫೈಲ್",

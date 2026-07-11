@@ -9,6 +9,7 @@ import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { Button } from "../../components/ui/Button";
 import { Input, Textarea, Select } from "../../components/ui/Input";
 import { toast } from "../../components/ui/Toast";
+import { LoadError } from "../../components/ui/LoadError";
 import { useUriMotion } from "../../lib/uiMotion";
 import { FEATURE_CATEGORIES } from "../../lib/constants";
 import { useSubmitFeatureRequest, useMyFeatureRequests } from "./useFeatureRequests";
@@ -78,7 +79,9 @@ export default function FeatureRequestPage() {
 
         <section className="mt-8">
           <h3 className="font-display text-lg font-extrabold tracking-tight text-ink-900 mb-3">{t("feature.myRequests")}</h3>
-          {myRequests.isLoading ? (
+          {myRequests.isError ? (
+            <LoadError onRetry={() => myRequests.refetch()}/>
+          ) : myRequests.isLoading ? (
             <div className="bg-white rounded-2xl border border-ink-200 shadow-sm p-4 animate-pulse h-16"/>
           ) : requests.length === 0 ? (
             <p className="text-sm text-ink-500">{t("feature.noneYet")}</p>

@@ -364,7 +364,9 @@
     "disableMerchant": "Disable Merchant",
     "reenable": "Re-enable",
     "disabledMerchants": "Disabled Merchants",
-    "openReports": "Reports"
+    "openReports": "Reports",
+    "noOpenReports": "No open reports right now.",
+    "noDisabledMerchants": "No merchants are disabled."
   },
   "profile": {
     "title": "Merchant Profile",
