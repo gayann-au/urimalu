@@ -7,14 +7,16 @@ import { useAuth } from "../auth/useAuth";
 import { useMyCropFollows, useFollowCrop, useUnfollowCrop } from "./useCropFollows";
 import { usePushRegistration } from "./usePushRegistration";
 
-// Star button shown on crop cards and crop rows. Tapping it opens an inline
-// bottom sheet where the user picks the alert type (any price change, or only
-// when the price crosses a limit in rupees per kg) and saves. A filled amber
-// star means the crop is followed; tapping again reopens the sheet to change
-// settings or stop alerts. Hidden entirely for logged-out visitors: following
-// requires an account for the alerts to belong to.
+// Price Watch button shown on crop cards and crop rows: a star icon plus a
+// "Price Watch" / "Watching" label. Tapping it opens an inline bottom sheet
+// where the user picks the alert type (any price change, or only when the price
+// crosses a limit in rupees per kg) and saves. A filled amber star with the
+// "Watching" label means the crop is followed; tapping again reopens the sheet
+// to change settings or stop alerts. Hidden entirely for logged-out visitors:
+// following requires an account for the alerts to belong to.
 export function FollowCropButton({ cropName }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const knCls = i18n.language === "kn" ? "kn" : "";
   const { profile } = useAuth();
   const followsQ = useMyCropFollows();
   const followCrop = useFollowCrop();
@@ -80,13 +82,16 @@ export function FollowCropButton({ cropName }) {
         onClick={openSheet}
         aria-label={t("alerts.buttonLabel", { crop: cropName })}
         aria-pressed={isFollowed}
-        className={`shrink-0 h-11 w-11 grid place-items-center rounded-2xl border-2 transition-colors ${
+        className={`shrink-0 inline-flex items-center gap-1.5 h-11 px-3 rounded-2xl border-2 text-sm font-bold whitespace-nowrap transition-colors ${
           isFollowed
-            ? "border-amber-200 bg-amber-50 text-amber-500"
-            : "border-ink-200 bg-white text-ink-400 hover:border-amber-300 hover:text-amber-500"
+            ? "border-amber-200 bg-amber-50 text-amber-600"
+            : "border-ink-200 bg-white text-ink-500 hover:border-amber-300 hover:text-amber-500"
         }`}
       >
         <StarIcon filled={isFollowed}/>
+        <span className={knCls}>
+          {isFollowed ? t("alerts.watchingCta") : t("alerts.watchCta")}
+        </span>
       </button>
 
       {open && (
@@ -98,6 +103,9 @@ export function FollowCropButton({ cropName }) {
             <h3 className="font-display text-xl font-extrabold tracking-tight text-ink-900 text-center">
               {t("alerts.sheetTitle", { crop: cropName })}
             </h3>
+            <p className={`mt-1.5 text-sm text-ink-500 text-center ${knCls}`}>
+              {t("alerts.sheetIntro")}
+            </p>
 
             <div className="mt-4 space-y-2">
               <OptionRow

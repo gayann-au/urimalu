@@ -70,16 +70,48 @@ export const UNIT_OPTIONS = [
   { label: "custom",    kg: null },
 ];
 
-// Common crop names shown as autocomplete hints and quick-filter chips.
-// Any free-text name is also accepted.
-export const DEFAULT_CROP_SUGGESTIONS = [
-  "Robusta Cherry",
-  "Arabica Cherry",
-  "Robusta Parchment",
-  "Arabica Parchment",
-  "Pepper",
-  "Cardamom",
+// Canonical crop catalogue for the Add Crop autocomplete. `en` is the value
+// always saved to the database, so alerts keep matching on a single spelling.
+// `kn` is the label shown when the app is in Kannada. `codes` are the local
+// trade shorthands merchants type (rc, ap, rp, ac ...), matched case
+// insensitively. Any free-text name is still accepted; this list only powers
+// the suggestions. The EP variants share the base code with their parent so
+// typing "rc" surfaces both Robusta Cherry and Robusta Cherry EP.
+export const CROP_CATALOG = [
+  { en: "Robusta Cherry",       kn: "ರೊಬಸ್ಟಾ ಚೆರಿ",          codes: ["rc"] },
+  { en: "Robusta Cherry EP",    kn: "ರೊಬಸ್ಟಾ ಚೆರಿ ಇಪಿ",       codes: ["rc"] },
+  { en: "Robusta Parchment",    kn: "ರೊಬಸ್ಟಾ ಪಾರ್ಚ್‌ಮೆಂಟ್",  codes: ["rp"] },
+  { en: "Arabica Cherry",       kn: "ಅರೇಬಿಕಾ ಚೆರಿ",          codes: ["ac"] },
+  { en: "Arabica Cherry EP",    kn: "ಅರೇಬಿಕಾ ಚೆರಿ ಇಪಿ",       codes: ["ac"] },
+  { en: "Arabica Parchment",    kn: "ಅರೇಬಿಕಾ ಪಾರ್ಚ್‌ಮೆಂಟ್",  codes: ["ap"] },
+  { en: "Black Pepper Grade 1", kn: "ಕರಿಮೆಣಸು ಗ್ರೇಡ್ 1",      codes: ["bp1"] },
+  { en: "Black Pepper Grade 2", kn: "ಕರಿಮೆಣಸು ಗ್ರೇಡ್ 2",      codes: ["bp2"] },
+  { en: "Light Berries",        kn: "ಲೈಟ್ ಬೆರಿ",             codes: ["lb"] },
+  { en: "Cardamom",             kn: "ಏಲಕ್ಕಿ",                codes: ["cd"] },
+  { en: "Arecanut",             kn: "ಅಡಿಕೆ",                 codes: ["an"] },
 ];
+
+// Filtered crop suggestions for the Add Crop autocomplete. `lang` selects the
+// display label ("kn" for Kannada, English otherwise) while `value` stays the
+// canonical English spelling. Matching is case insensitive: names match on a
+// word prefix (so "rc" never matches the "rc" buried inside "paRChment") and
+// trade codes match on a prefix. An empty query returns the whole catalogue so
+// focusing the field reveals every option.
+export function cropSuggestions(query, lang = "en") {
+  const q = String(query || "").trim().toLowerCase();
+  const toItem = (c) => ({ value: c.en, label: lang === "kn" ? c.kn : c.en });
+  if (!q) return CROP_CATALOG.map(toItem);
+  const nameMatches = (name) => {
+    const n = name.toLowerCase();
+    return n.startsWith(q) || n.split(" ").some((w) => w.startsWith(q));
+  };
+  return CROP_CATALOG.filter(
+    (c) =>
+      nameMatches(c.en) ||
+      nameMatches(c.kn) ||
+      c.codes.some((code) => code.startsWith(q))
+  ).map(toItem);
+}
 
 export const AUTO_APPROVE_HOURS = 24;
 export const AUTO_APPROVE_MS = AUTO_APPROVE_HOURS * 60 * 60 * 1000;
@@ -233,11 +265,18 @@ export function formatValidTill(value) {
   return `${dd}/${mm}/${String(d.getFullYear())}`;
 }
 
+// Crop grade suffixes that are always written fully uppercase in the trade
+// (e.g. "Robusta Cherry EP", "Arabica Cherry OT"). Title-casing them like a
+// normal word would corrupt the canonical spelling, which alerts match on
+// exactly, so they are forced back to uppercase.
+const UPPERCASE_CROP_WORDS = new Set(["ep", "ot"]);
+
 // Normalise a crop name to a consistent Title Case so the same crop typed with
 // different capitalisation is never stored as separate crops. Trims the ends,
 // collapses any run of inner whitespace to a single space, lowercases, then
-// capitalises the first letter of each word. Returns an empty string for empty
-// or null input. Simple and dependency free.
+// capitalises the first letter of each word. Grade suffixes like EP and OT stay
+// fully uppercase, and numeric words like the "1" in "Grade 1" pass through
+// unchanged. Returns an empty string for empty or null input. Dependency free.
 export function toTitleCaseCrop(name) {
   if (!name) return "";
   return String(name)
@@ -245,7 +284,11 @@ export function toTitleCaseCrop(name) {
     .replace(/\s+/g, " ")
     .toLowerCase()
     .split(" ")
-    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+    .map((w) => {
+      if (!w) return w;
+      if (UPPERCASE_CROP_WORDS.has(w)) return w.toUpperCase();
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
     .join(" ");
 }
 

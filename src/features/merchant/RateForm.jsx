@@ -4,11 +4,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input, Textarea, Select } from "../../components/ui/Input";
+import { Autocomplete } from "../../components/ui/Autocomplete";
 import { Toggle } from "../../components/ui/Toggle";
 import { Button } from "../../components/ui/Button";
 import {
   UNIT_OPTIONS,
-  DEFAULT_CROP_SUGGESTIONS,
+  cropSuggestions,
   computePricePerKg,
   formatINR,
   toTitleCaseCrop,
@@ -152,27 +153,16 @@ export function RateForm({ listing, onSave, onCancel }) {
         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
           Crop name
         </label>
-        <div className="flex flex-wrap gap-2 mb-2">
-          {DEFAULT_CROP_SUGGESTIONS.map((name) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => setValue("crop_name", name, { shouldValidate: true, shouldDirty: true })}
-              className={`rounded-full px-3 py-1 text-xs font-semibold border-2 transition ${knCls} ${
-                cropNameVal === name
-                  ? "bg-coorg-600 text-white border-coorg-600"
-                  : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-        <Input
+        <Autocomplete
           placeholder="e.g. Robusta Cherry"
           maxLength={100}
-          {...register("crop_name")}
+          value={cropNameVal}
+          onChange={(v) =>
+            setValue("crop_name", v, { shouldValidate: true, shouldDirty: true })
+          }
+          getSuggestions={(q) => cropSuggestions(q, i18n.language)}
           error={errors.crop_name?.message}
+          optionClassName={knCls}
         />
       </div>
 
