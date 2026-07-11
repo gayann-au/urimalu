@@ -34,6 +34,8 @@
     "loginSub": "Log in to see full rates and contact merchants",
     "email": "Email",
     "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "loginError": "Invalid email or password",
     "loginEmailNotConfirmed": "Please confirm your email first",
     "loginRowMissing": "Account record missing. Please sign up again",
