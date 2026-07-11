@@ -244,11 +244,14 @@ export function lastNDays(n = 7) {
   return out;
 }
 
-// Format a valid_till value as DD/MM/YYYY with zero padding, built explicitly
-// from the date parts so the output never varies by device locale. Date only
-// strings and ISO timestamps both reuse their leading YYYY-MM-DD, which avoids
-// any timezone shift. Returns "" for empty or unparseable values. Shared by the
-// merchant profile and the feed card so both render valid_till identically.
+const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Format a valid_till value in the app's standard "5 Jul 2026" style, built
+// explicitly from the date parts so the output never varies by device locale
+// and matches the day-month-year format used across the rest of the app. Date
+// only strings and ISO timestamps both reuse their leading YYYY-MM-DD, which
+// avoids any timezone shift. Returns "" for empty or unparseable values. Shared
+// by the merchant profile and the feed card so both render valid_till identically.
 export function formatValidTill(value) {
   if (!value) return "";
   const s = String(value).trim();
@@ -256,13 +259,18 @@ export function formatValidTill(value) {
   const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (iso) {
     const [, yyyy, mm, dd] = iso;
-    return `${dd}/${mm}/${yyyy}`;
+    return formatDayMonthYear(Number(dd), Number(mm), Number(yyyy));
   }
   const d = new Date(s);
   if (isNaN(d.getTime())) return "";
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  return `${dd}/${mm}/${String(d.getFullYear())}`;
+  return formatDayMonthYear(d.getDate(), d.getMonth() + 1, d.getFullYear());
+}
+
+// "5 Jul 2026" from numeric day/month/year. Month is 1-based.
+function formatDayMonthYear(day, month, year) {
+  const label = MONTHS_SHORT[month - 1];
+  if (!label) return "";
+  return `${day} ${label} ${year}`;
 }
 
 // Crop grade suffixes that are always written fully uppercase in the trade

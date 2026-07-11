@@ -458,6 +458,6 @@ function freshnessLabel(confirmedAt, t, lang) {
     d.getDate() === today.getDate();
   if (sameDay) return t("feed.updatedToday");
   const locale = lang === "kn" ? "kn-IN" : "en-IN";
-  const date = d.toLocaleDateString(locale, { day: "numeric", month: "short" });
+  const date = d.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
   return t("feed.updatedOn", { date });
 }

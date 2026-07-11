@@ -88,7 +88,7 @@ export default function NotificationsPage() {
                       <span className="inline-flex items-center rounded-full bg-paper-2 border border-ink-100 px-2 py-0.5 font-bold">{n.crop_name}</span>
                       <span>
                         {new Date(n.created_at).toLocaleDateString(locale, {
-                          day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                          day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
                         })}
                       </span>
                     </div>
