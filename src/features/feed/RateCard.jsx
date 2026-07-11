@@ -175,7 +175,7 @@ function BagTotals({ perKg, t }) {
               key={w}
               type="button"
               onClick={() => setWeight(w)}
-              className={`min-h-[36px] rounded-full px-3.5 text-xs font-bold border-2 transition-colors ${
+              className={`min-h-[40px] rounded-full px-3.5 text-xs font-bold border-2 transition-colors ${
                 active
                   ? "bg-coorg-600 text-white border-coorg-600"
                   : "bg-white text-ink-700 border-ink-200 hover:border-coorg-300"

@@ -132,7 +132,7 @@ function MerchantsTab() {
       <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
         {["all", "pending", "approved", "rejected"].map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold border-2 min-h-[36px] transition-colors ${
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold border-2 min-h-[40px] transition-colors ${
               filter === f ? "bg-coorg-600 text-white border-coorg-600" : "bg-white text-ink-700 border-ink-200 hover:border-coorg-300"
             }`}>
             {t(`admin.filter.${f}`)}

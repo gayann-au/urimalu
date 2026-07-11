@@ -192,7 +192,7 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
                   const active = cropsTraded.includes(c);
                   return (
                     <button type="button" key={c} onClick={() => toggleCrop(c)}
-                      className={`rounded-full px-3.5 py-1.5 text-xs font-bold border-2 min-h-[36px] transition-colors ${
+                      className={`rounded-full px-3.5 py-1.5 text-xs font-bold border-2 min-h-[40px] transition-colors ${
                         active ? "bg-coorg-600 text-white border-coorg-600" : "bg-white text-ink-700 border-ink-200 hover:border-coorg-300"
                       }`}>
                       {t(`crops.${c}`)}
