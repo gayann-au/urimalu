@@ -85,7 +85,7 @@ export default function SignupFarmer() {
         )}
 
         {stage === "district" && (
-          <DistrictPicker onPick={pickDistrict} busy={signup.isPending} />
+          <DistrictPicker onPick={pickDistrict} busy={signup.isPending} onBack={() => setStage("form")} />
         )}
       </main>
     </div>

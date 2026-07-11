@@ -7,7 +7,7 @@ import { DISTRICTS } from "../../lib/constants";
 // through onPick. The caller decides what saving a district means, passes a
 // busy flag while its save runs, and passes an i18n error key to show on a
 // failed save.
-export function DistrictPicker({ onPick, busy = false, error = null }) {
+export function DistrictPicker({ onPick, busy = false, error = null, onBack = null }) {
   const { t } = useTranslation();
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center">
@@ -28,6 +28,16 @@ export function DistrictPicker({ onPick, busy = false, error = null }) {
           <div className="mt-4 rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold text-center">
             {t(error)}
           </div>
+        )}
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            disabled={busy}
+            className="mt-3 block w-full text-center text-sm font-semibold text-ink-600 py-2 disabled:opacity-60"
+          >
+            {t("common.back")}
+          </button>
         )}
       </div>
     </div>

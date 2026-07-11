@@ -339,7 +339,7 @@ function ListingRow({ listing, onToggle, onEdit, onDelete, t, fadeUp, cardHover 
         <Button size="sm" variant="outline" onClick={onEdit}>
           {t("common.edit")}
         </Button>
-        <Button size="sm" variant="subtle" onClick={onDelete}>
+        <Button size="sm" variant="dangerSoft" onClick={onDelete}>
           {t("common.delete")}
         </Button>
       </div>
