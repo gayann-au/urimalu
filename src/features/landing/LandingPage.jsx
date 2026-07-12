@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { useUiStore } from "../../hooks/useUiStore";
 import "./LandingPage.css";
 
 // Urimalu marketing landing page, redesigned as a bilingual "market morning"
@@ -115,8 +114,6 @@ export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const reduce = useReducedMotion();
   const { t } = useTranslation();
-  const lang = useUiStore((s) => s.lang);
-  const setLang = useUiStore((s) => s.setLang);
 
   // Sticky header gains a hairline border once the page is scrolled past the top.
   useEffect(() => {
@@ -235,16 +232,6 @@ export default function LandingPage() {
         <section className="hero">
           <div className="wrap">
             <motion.div className="hero-copy" variants={stagger} initial="hidden" animate="show">
-              <motion.div className="lang-row" variants={fadeUp}>
-                <div className="lang-pill" role="group" aria-label={t("landing.lang.label")}>
-                  <button type="button" className={lang === "kn" ? "on" : ""} onClick={() => setLang("kn")}>
-                    {t("landing.lang.kn")}
-                  </button>
-                  <button type="button" className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>
-                    {t("landing.lang.en")}
-                  </button>
-                </div>
-              </motion.div>
               <motion.span className="eyebrow pill" variants={fadeUp}>
                 <ChilliMark className="dot" />
                 {t("landing.hero.eyebrow")}
@@ -281,7 +268,6 @@ export default function LandingPage() {
                     <span className="tick" key={crop}>
                       <ChilliMark className="tick-mark" />
                       {t(`landing.ticker.${crop}`)}
-                      <em>{t("landing.ticker.region")}</em>
                     </span>
                   ))}
                 </div>

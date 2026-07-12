@@ -404,16 +404,11 @@
     "backToDashboard": "Back to dashboard"
   },
   "landing": {
-    "lang": {
-      "label": "Language",
-      "en": "English",
-      "kn": "ಕನ್ನಡ"
-    },
     "hero": {
-      "eyebrow": "Kodagu's crop marketplace",
+      "eyebrow": "Crop Price Marketplace",
       "titleA": "Every morning,",
       "titleB": "the real price.",
-      "sub": "Verified merchants across Kodagu post their buying prices for coffee, pepper, cardamom and arecanut every day. Farmers compare, call, and sell on their own terms.",
+      "sub": "Verified merchants post their buying prices for coffee, pepper, cardamom and arecanut every day. Farmers compare, call, and sell on their own terms.",
       "trust": "Every merchant is verified before their first price goes live.",
       "ctaFarmer": "Start as a farmer",
       "ctaMerchant": "Post prices as a merchant"
@@ -424,8 +419,7 @@
       "arabica": "Arabica Parchment",
       "pepper": "Black Pepper",
       "cardamom": "Cardamom",
-      "arecanut": "Arecanut",
-      "region": "Kodagu"
+      "arecanut": "Arecanut"
     },
     "how": {
       "eyebrow": "How it works",
