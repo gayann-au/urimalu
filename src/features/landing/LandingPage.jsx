@@ -159,12 +159,7 @@ export default function LandingPage() {
       >
         <div className="wrap hdr-in">
           <Link className="brand" to="/" aria-label="Urimalu home">
-            <svg className="mark" viewBox="0 0 40 48" fill="none" aria-hidden="true">
-              <path d="M26.8 12.5c1-3 .2-5.6-2.4-6.9" stroke="var(--crop-600)" strokeWidth="3.6" strokeLinecap="round" />
-              <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="var(--chilli-600)" />
-              <path d="M14.5 22c1.6 4 4.2 6.4 8 7.2" stroke="var(--chilli-200)" strokeWidth="2.4" strokeLinecap="round" opacity=".7" />
-            </svg>
-            <span className="brand-name">Urimalu</span>
+            <img src="/icons/logo-urimalu.png" alt="Urimalu" style={{ height: "36px", width: "auto" }} />
           </Link>
           <div className="hdr-right">
             <Link className="login-link" to="/login">
@@ -381,11 +376,7 @@ export default function LandingPage() {
         <div className="wrap ft-in">
           <div>
             <div className="ft-brand">
-              <svg className="mark" viewBox="0 0 40 48" fill="none" aria-hidden="true">
-                <path d="M26.8 12.5c1-3 .2-5.6-2.4-6.9" stroke="var(--crop-600)" strokeWidth="3.6" strokeLinecap="round" />
-                <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="var(--chilli-600)" />
-              </svg>
-              <span className="ft-name">Urimalu</span>
+              <img src="/icons/logo-urimalu.png" alt="Urimalu" style={{ height: "31px", width: "auto" }} />
             </div>
             <p className="ft-tag">Real daily crop prices, shared between the people who grow and the people who buy.</p>
           </div>

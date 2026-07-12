@@ -4,10 +4,10 @@
 // no API data is ever cached. Bump the version to invalidate old caches when
 // the caching strategy changes (Vite asset filenames already carry hashes, so
 // day-to-day deploys do not need a bump).
-const CACHE_NAME = "urimalu-shell-v1";
+const CACHE_NAME = "urimalu-shell-v3";
 
 // The core shell: the HTML entry, the manifest, and the install icons.
-const SHELL_URLS = ["/", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
+const SHELL_URLS = ["/", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-maskable-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
