@@ -16,17 +16,6 @@ import { BackIcon } from "../icons/Sprite";
 const NAV_LINK =
   "rounded-[11px] px-2 sm:px-3 min-h-[44px] text-sm font-semibold text-ink-700 hover:text-crop-700 hover:bg-crop-50 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 shrink-0";
 
-// Chilli mark from the landing logo, drawn with the brand token hex values.
-function BrandMark() {
-  return (
-    <svg width="28" height="32" viewBox="0 0 40 48" fill="none" aria-hidden="true" className="shrink-0">
-      <path d="M26.8 12.5c1-3 .2-5.6-2.4-6.9" stroke="#1F7D44" strokeWidth="3.6" strokeLinecap="round" />
-      <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="#D6263A" />
-      <path d="M14.5 22c1.6 4 4.2 6.4 8 7.2" stroke="#FFC7CB" strokeWidth="2.4" strokeLinecap="round" opacity=".7" />
-    </svg>
-  );
-}
-
 export function Header({ showBack = false, title }) {
   const { t } = useTranslation();
   const lang = useUiStore(s => s.lang);
@@ -71,9 +60,8 @@ export function Header({ showBack = false, title }) {
             </button>
           ) : (
             <Link to="/" className="flex items-center gap-2.5 min-w-0 min-h-[44px]">
-              <BrandMark/>
               <div className="leading-tight min-w-0">
-                <div className={`font-display font-extrabold text-lg tracking-tight text-ink-900 truncate ${lang === "kn" ? "kn" : ""}`}>{t("app.name")}</div>
+                <img src="/icons/logo-urimalu.png" alt="Urimalu" style={{ height: "36px", width: "auto" }} />
                 <div className={`text-[11px] text-ink-500 truncate ${lang === "kn" ? "kn" : ""}`}>{t("app.tagline")}</div>
               </div>
             </Link>
