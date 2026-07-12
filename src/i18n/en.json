@@ -402,5 +402,90 @@
     "cropConfirmedOne": "1 crop confirmed",
     "cropConfirmedN": "{{count}} crops confirmed",
     "backToDashboard": "Back to dashboard"
+  },
+  "landing": {
+    "lang": {
+      "label": "Language",
+      "en": "English",
+      "kn": "ಕನ್ನಡ"
+    },
+    "hero": {
+      "eyebrow": "Kodagu's crop marketplace",
+      "titleA": "Every morning,",
+      "titleB": "the real price.",
+      "sub": "Verified merchants across Kodagu post their buying prices for coffee, pepper, cardamom and arecanut every day. Farmers compare, call, and sell on their own terms.",
+      "trust": "Every merchant is verified before their first price goes live.",
+      "ctaFarmer": "Start as a farmer",
+      "ctaMerchant": "Post prices as a merchant"
+    },
+    "ticker": {
+      "ariaLabel": "Crops traded on Urimalu",
+      "robusta": "Robusta Cherry",
+      "arabica": "Arabica Parchment",
+      "pepper": "Black Pepper",
+      "cardamom": "Cardamom",
+      "arecanut": "Arecanut",
+      "region": "Kodagu"
+    },
+    "how": {
+      "eyebrow": "How it works",
+      "title": "Three steps. One honest price.",
+      "s1t": "Merchants post",
+      "s1d": "Verified merchants publish their buying prices each morning.",
+      "s2t": "Farmers compare",
+      "s2d": "Every rate side by side, freshest first, crop by crop.",
+      "s3t": "You call, you deal",
+      "s3d": "Talk directly and settle on your own terms. The price you saw is the price you discuss."
+    },
+    "alerts": {
+      "eyebrow": "Price alerts",
+      "title": "Name your price. We watch the market.",
+      "body": "Follow a crop, set the number you want, and the moment a verified merchant posts above it a notification lands on your phone.",
+      "b1": "Alerts for every crop you follow",
+      "b2": "Your threshold, your rules",
+      "b3": "Push notifications in Kannada or English",
+      "targetLabel": "Your target",
+      "chartCaption": "When a posted price crosses your target, your phone knows first.",
+      "notifApp": "Urimalu",
+      "notifTime": "now",
+      "notifTitle": "Arabica Parchment crossed your target",
+      "notifBody": "A verified merchant just posted above your alert price. Open to compare and call.",
+      "cta": "Create your first alert"
+    },
+    "sides": {
+      "eyebrow": "Built for both sides",
+      "title": "Two sides. One market.",
+      "farmerTag": "For farmers",
+      "farmerTitle": "Walk into every deal knowing the price.",
+      "farmerLede": "Stop guessing at the gate. See what merchants are paying today and choose who to call.",
+      "f1": "Compare today's rates across merchants",
+      "f2": "Call merchants directly from the app",
+      "f3": "Set price alerts for your target rate",
+      "farmerCta": "Sign up as a farmer",
+      "merchantTag": "For merchants",
+      "merchantTitle": "Your price, in every farmer's pocket.",
+      "merchantLede": "Post once each morning and reach farmers who are ready to sell today.",
+      "m1": "Publish your rates in under a minute",
+      "m2": "A verified badge that earns trust",
+      "m3": "Farmers ready to sell call you directly",
+      "merchantCta": "Sign up as a merchant"
+    },
+    "trust": {
+      "eyebrow": "Why Urimalu",
+      "title": "Built on trust, not talk.",
+      "t1t": "Verified merchants",
+      "t1d": "Every merchant is reviewed by our team before their first price goes live.",
+      "t2t": "Direct dealing",
+      "t2d": "Farmers and merchants talk to each other. Nobody stands in between.",
+      "t3t": "Kannada and English",
+      "t3d": "Every screen, every alert, in the language you think in."
+    },
+    "cta": {
+      "eyebrow": "Get started",
+      "title": "Tomorrow morning, know the price first.",
+      "body": "Join Urimalu today and start every market day with the answer in your hand.",
+      "ctaFarmer": "Sign up as a farmer",
+      "ctaMerchant": "Sign up as a merchant"
+    }
   }
 }

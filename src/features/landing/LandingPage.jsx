@@ -1,20 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion, useReducedMotion } from "framer-motion";
-import { supabase, isSupabaseConfigured } from "../../lib/supabase";
-import { formatINR, dayKey } from "../../lib/constants";
+import { motion, useInView, useReducedMotion } from "framer-motion";
+import { useTranslation } from "react-i18next";
+import { useUiStore } from "../../hooks/useUiStore";
 import "./LandingPage.css";
 
-// Urimalu marketing landing page, recreated from the Claude Design handoff.
-// Static marketing content only. All colours and type are the design tokens,
-// scoped under .uri-landing so they never touch the rest of the app. Internal
-// links use react-router so navigation stays a single page transition.
-// The hero rate card is illustrative and uses sample numbers, not live data.
+// Urimalu marketing landing page, redesigned as a bilingual "market morning"
+// poster. Static marketing content only, no live data anywhere: the page sells
+// the product without ever showing a price that could go stale. Every visible
+// string flows through i18next so Kannada and English stay in lockstep.
 //
-// Motion is handled with framer-motion: hero content plays a staggered load
-// reveal, every other block fades and rises into view on scroll, and buttons
-// and cards lift on hover with spring physics. All of it collapses to a plain
-// fade (or nothing) when the visitor prefers reduced motion.
+// Structure: typographic hero, tilted crop ticker band, three step walkthrough,
+// a dark price alerts stage with an animated threshold crossing demo, farmer
+// and merchant split panels, trust pillars, and the closing chilli CTA. The
+// header and footer are unchanged from the previous version. All motion
+// collapses to plain fades when the visitor prefers reduced motion.
 
 // Links rendered as motion components so buttons can lift and press.
 const MotionLink = motion.create(Link);
@@ -22,10 +22,101 @@ const MotionLink = motion.create(Link);
 // Shared easing, matches the --ease-out token used across the stylesheet.
 const EASE = [0.22, 0.61, 0.36, 1];
 
+const TICKER_CROPS = ["robusta", "arabica", "pepper", "cardamom", "arecanut"];
+
+const arrow = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+  </svg>
+);
+const check = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+const bell = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+  </svg>
+);
+
+// The brand chilli glyph, reused as eyebrow dot and ticker separator.
+function ChilliMark({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 40 48" fill="none" aria-hidden="true">
+      <path d="M26.8 12.5c1-3 .2-5.6-2.4-6.9" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" />
+      <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+// Animated price alerts demo. An abstract posted-price line climbs across a
+// dashed target threshold, and the moment it crosses, a push notification
+// card springs into the phone frame. Purely illustrative and free of numbers,
+// so nothing on it can ever look stale. Decorative, hidden from readers.
+function AlertPhone({ t, reduce }) {
+  const ref = useRef(null);
+  const show = useInView(ref, { once: true, amount: 0.4 });
+  const line = {
+    hidden: { pathLength: 0 },
+    show: { pathLength: 1, transition: { duration: reduce ? 0 : 1.5, ease: EASE, delay: reduce ? 0 : 0.25 } },
+  };
+  const cross = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { duration: 0.3, delay: reduce ? 0 : 1.05 } },
+  };
+  const notif = {
+    hidden: { opacity: 0, y: reduce ? 0 : 22, scale: reduce ? 1 : 0.95 },
+    show: {
+      opacity: 1, y: 0, scale: 1,
+      transition: reduce
+        ? { duration: 0.4, delay: 0.1 }
+        : { type: "spring", stiffness: 250, damping: 21, delay: 1.35 },
+    },
+  };
+  return (
+    <div className="phone-stage" ref={ref} aria-hidden="true">
+      <motion.div className="phone" initial="hidden" animate={show ? "show" : "hidden"}>
+        <div className="phone-notch" />
+        <div className="phone-chart">
+          <svg viewBox="0 0 340 168" fill="none" preserveAspectRatio="none">
+            <line x1="10" y1="64" x2="330" y2="64" className="target-line" strokeWidth="2" strokeDasharray="7 7" strokeLinecap="round" />
+            <motion.path
+              className="price-line"
+              d="M12 142 C 52 132, 84 138, 116 120 C 150 101, 178 106, 208 86 C 236 67, 262 52, 292 40 C 306 34, 318 30, 328 27"
+              strokeWidth="3.5" strokeLinecap="round"
+              variants={line}
+            />
+            <motion.g variants={cross}>
+              <circle className="cross-ring" cx="224" cy="64" r="7" />
+              <circle className="cross-dot" cx="224" cy="64" r="5.5" />
+            </motion.g>
+          </svg>
+          <span className="target-chip">{t("landing.alerts.targetLabel")}</span>
+        </div>
+        <motion.div className="notif" variants={notif}>
+          <span className="notif-ic">{bell}</span>
+          <span className="notif-body">
+            <span className="notif-top">
+              <b>{t("landing.alerts.notifApp")}</b>
+              <i>{t("landing.alerts.notifTime")}</i>
+            </span>
+            <span className="notif-title">{t("landing.alerts.notifTitle")}</span>
+            <span className="notif-text">{t("landing.alerts.notifBody")}</span>
+          </span>
+        </motion.div>
+        <p className="phone-caption">{t("landing.alerts.chartCaption")}</p>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
-  const [liveRate, setLiveRate] = useState(null);
   const reduce = useReducedMotion();
+  const { t } = useTranslation();
+  const lang = useUiStore((s) => s.lang);
+  const setLang = useUiStore((s) => s.setLang);
 
   // Sticky header gains a hairline border once the page is scrolled past the top.
   useEffect(() => {
@@ -33,65 +124,6 @@ export default function LandingPage() {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  // Live hero rate. The landing is otherwise static, so this is the only
-  // Supabase call here and it is guarded by isSupabaseConfigured. It reads the
-  // most recently confirmed active listing for the crop name and price, then
-  // the same crop's price_history for the day-over-day change. Any failure or
-  // missing data leaves the illustrative placeholder values untouched.
-  useEffect(() => {
-    if (!isSupabaseConfigured) return;
-    let active = true;
-    (async () => {
-      try {
-        const { data: listings, error } = await supabase
-          .from("listings")
-          .select("crop_name, price, unit_label, price_per_kg, call_for_price, merchant_id, confirmed_at")
-          .eq("is_active", true)
-          .order("confirmed_at", { ascending: false, nullsFirst: false })
-          .limit(1);
-        if (error) throw error;
-        const l = listings && listings[0];
-        if (!l) return;
-
-        const hero = l.price != null ? Number(l.price)
-          : l.price_per_kg != null ? Number(l.price_per_kg)
-          : null;
-        if (hero == null || Number.isNaN(hero)) return;
-        const unit = l.price != null && l.unit_label ? l.unit_label : "kg";
-
-        // Day-over-day change from the same crop and merchant's price history.
-        let deltaPct = null;
-        const { data: hist } = await supabase
-          .from("price_history")
-          .select("price_per_kg, recorded_at")
-          .eq("merchant_id", l.merchant_id)
-          .eq("crop_name", l.crop_name)
-          .order("recorded_at", { ascending: false })
-          .limit(20);
-        if (hist && hist.length) {
-          const perDay = [];
-          const seen = new Set();
-          for (const r of hist) {
-            if (r.price_per_kg == null) continue;
-            const d = dayKey(r.recorded_at);
-            if (seen.has(d)) continue;
-            seen.add(d);
-            perDay.push(Number(r.price_per_kg));
-            if (perDay.length >= 2) break;
-          }
-          if (perDay.length >= 2 && perDay[1] > 0) {
-            deltaPct = ((perDay[0] - perDay[1]) / perDay[1]) * 100;
-          }
-        }
-
-        if (active) setLiveRate({ cropName: l.crop_name, hero, unit, deltaPct });
-      } catch {
-        // Keep the placeholder on any error.
-      }
-    })();
-    return () => { active = false; };
   }, []);
 
   // Motion variants. When reduced motion is requested we drop the travel and
@@ -104,15 +136,6 @@ export default function LandingPage() {
     hidden: {},
     show: {
       transition: { staggerChildren: reduce ? 0 : 0.09, delayChildren: 0.05 },
-    },
-  };
-  const slideInRight = {
-    hidden: { opacity: 0, x: reduce ? 0 : 48, scale: reduce ? 1 : 0.97 },
-    show: {
-      opacity: 1,
-      x: 0,
-      scale: 1,
-      transition: { duration: 0.75, ease: EASE, delay: reduce ? 0 : 0.12 },
     },
   };
   const popIn = {
@@ -129,24 +152,58 @@ export default function LandingPage() {
     : { y: -2, transition: { type: "spring", stiffness: 420, damping: 18 } };
   const btnTap = reduce ? undefined : { scale: 0.97 };
 
-  // Slow idle drift for the hero card, layered under its entrance animation.
-  const idleFloat = reduce
-    ? undefined
-    : { y: [0, -8, 0], transition: { duration: 6, ease: "easeInOut", repeat: Infinity } };
-
   // Viewport config so each block animates once, when comfortably in view.
   const inView = { once: true, amount: 0.2 };
 
-  const arrow = (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
-    </svg>
-  );
-  const check = (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
+  const steps = [
+    {
+      key: "s1",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M7.5 3.5h6.7a2 2 0 0 1 1.4.6l5.3 5.3a2 2 0 0 1 0 2.8l-6.5 6.5a2 2 0 0 1-2.8 0l-5.3-5.3a2 2 0 0 1-.6-1.4V5.5a2 2 0 0 1 2-2Z" /><circle cx="10" cy="8" r="1.4" />
+        </svg>
+      ),
+    },
+    {
+      key: "s2",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <line x1="6" y1="20" x2="6" y2="13" /><line x1="12" y1="20" x2="12" y2="8" /><line x1="18" y1="20" x2="18" y2="4" />
+        </svg>
+      ),
+    },
+    {
+      key: "s3",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L19 18l1 3a2 2 0 0 1-2 2 16 16 0 0 1-16-16 2 2 0 0 1 2-2Z" />
+        </svg>
+      ),
+    },
+  ];
+
+  const trustCards = [
+    {
+      key: "t1",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 2 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-4Z" /><path d="m9 12 2 2 4-4" />
+        </svg>
+      ),
+    },
+    {
+      key: "t2",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L19 18l1 3a2 2 0 0 1-2 2 16 16 0 0 1-16-16 2 2 0 0 1 2-2Z" />
+        </svg>
+      ),
+    },
+    {
+      key: "t3",
+      icon: <span className="ab-glyph" aria-hidden="true">ಅ<i>A</i></span>,
+    },
+  ];
 
   return (
     <div className="uri-landing">
@@ -173,121 +230,109 @@ export default function LandingPage() {
       </motion.header>
 
       <main>
-        {/* Hero */}
+        {/* Hero, pure typography on the paper stage. No price card here: any
+            hardcoded number would read wrong the day it goes stale. */}
         <section className="hero">
-          <div className="wrap hero-grid">
+          <div className="wrap">
             <motion.div className="hero-copy" variants={stagger} initial="hidden" animate="show">
+              <motion.div className="lang-row" variants={fadeUp}>
+                <div className="lang-pill" role="group" aria-label={t("landing.lang.label")}>
+                  <button type="button" className={lang === "kn" ? "on" : ""} onClick={() => setLang("kn")}>
+                    {t("landing.lang.kn")}
+                  </button>
+                  <button type="button" className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>
+                    {t("landing.lang.en")}
+                  </button>
+                </div>
+              </motion.div>
               <motion.span className="eyebrow pill" variants={fadeUp}>
-                <svg className="dot" viewBox="0 0 40 48" fill="none" aria-hidden="true">
-                  <path d="M26.8 12.5c1-3 .2-5.6-2.4-6.9" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" />
-                  <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="currentColor" />
-                </svg>
-                Daily crop prices
+                <ChilliMark className="dot" />
+                {t("landing.hero.eyebrow")}
               </motion.span>
-              <motion.h1 variants={fadeUp}>Real crop prices,<br /><span className="fire">with bite.</span></motion.h1>
-              <motion.p className="hero-sub" variants={fadeUp}>Urimalu puts farmers and merchants on the same daily rates. Small platform, fierce honesty. Know the real price before you deal.</motion.p>
+              <motion.h1 variants={fadeUp}>
+                {t("landing.hero.titleA")}<br />
+                <span className="fire">{t("landing.hero.titleB")}</span>
+              </motion.h1>
+              <motion.p className="hero-sub" variants={fadeUp}>{t("landing.hero.sub")}</motion.p>
+              <motion.div className="btn-row hero-btns" variants={fadeUp}>
+                <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>
+                  {t("landing.hero.ctaFarmer")}{arrow}
+                </MotionLink>
+                <MotionLink className="btn btn-ink" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>
+                  {t("landing.hero.ctaMerchant")}{arrow}
+                </MotionLink>
+              </motion.div>
               <motion.div className="hero-trust" variants={fadeUp}>
                 <span className="tc">{check}</span>
-                Free to join. Every merchant verified before they post.
-              </motion.div>
-              <motion.div className="btn-row" variants={fadeUp}>
-                <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>Sign up as a Farmer{arrow}</MotionLink>
-                <MotionLink className="btn btn-ink" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>Sign up as a Merchant{arrow}</MotionLink>
-              </motion.div>
-            </motion.div>
-
-            {/* Hero visual, illustrative live rate card */}
-            <motion.div className="hero-visual" aria-hidden="true" variants={slideInRight} initial="hidden" animate="show">
-              <motion.div className="hero-visual-float" animate={idleFloat}>
-                <div className="pulse-card">
-                  <div className="pulse-head">
-                    <span className="pulse-label">Today's rate</span>
-                    <span className="pulse-live"><i></i>Live</span>
-                  </div>
-                  <div className="pulse-crop">
-                    <span className="bean">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <ellipse cx="12" cy="12" rx="6.5" ry="9" /><path d="M12 3.5c-2.4 3-2.4 14 0 17" />
-                      </svg>
-                    </span>
-                    {liveRate ? liveRate.cropName : "Robusta Cherry, per 50kg bag"}
-                  </div>
-                  <div className="pulse-price">{liveRate ? formatINR(liveRate.hero) : "₹9,840"} <span className="unit">{liveRate ? `/${liveRate.unit}` : "/bag"}</span></div>
-                  {(!liveRate || liveRate.deltaPct != null) && (
-                    <span className="pulse-delta">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M7 17 17 7" /><path d="M9 7h8v8" />
-                      </svg>
-                      {liveRate ? `${liveRate.deltaPct >= 0 ? "+" : ""}${liveRate.deltaPct.toFixed(1)}% vs yesterday` : "4.2% vs yesterday"}
-                    </span>
-                  )}
-                  <svg className="pulse-svg" viewBox="0 0 380 92" fill="none" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0" stopColor="#2F9B58" stopOpacity=".18" /><stop offset="1" stopColor="#2F9B58" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path d="M4 72 L56 64 L106 74 L156 50 L206 58 L256 36 L306 42 L376 14 L376 92 L4 92 Z" fill="url(#pg)" />
-                    <path className="pulse-path" d="M4 72 L56 64 L106 74 L156 50 L206 58 L256 36 L306 42 L376 14" stroke="#1F7D44" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                    <circle className="pulse-glow" cx="376" cy="14" r="6" fill="#2F9B58" opacity=".35" />
-                    <circle className="pulse-dot" cx="376" cy="14" r="5" fill="#1F7D44" stroke="#fff" strokeWidth="2" />
-                  </svg>
-                  <div className="pulse-foot">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M3 12a9 9 0 1 0 9-9" /><polyline points="3 4 3 9 8 9" />
-                    </svg>
-                    Refreshes daily. Yesterday's price is yesterday's news.
-                  </div>
-                </div>
-                <div className="float-chip">
-                  <span className="vic">{check}</span>
-                  <span>Verified merchant<small>Checked before posting</small></span>
-                </div>
+                {t("landing.hero.trust")}
               </motion.div>
             </motion.div>
           </div>
         </section>
 
+        {/* Crop ticker, a slowly drifting band of what trades here. Names only,
+            never prices. The second set is a duplicate for the seamless loop. */}
+        <section className="ticker" aria-label={t("landing.ticker.ariaLabel")}>
+          <div className="ticker-tilt">
+            <div className="ticker-move">
+              {[0, 1].map((dup) => (
+                <div className="ticker-set" key={dup} aria-hidden={dup === 1 ? "true" : undefined}>
+                  {TICKER_CROPS.map((crop) => (
+                    <span className="tick" key={crop}>
+                      <ChilliMark className="tick-mark" />
+                      {t(`landing.ticker.${crop}`)}
+                      <em>{t("landing.ticker.region")}</em>
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* How it works */}
-        <section className="sec-pad" style={{ background: "var(--paper-2)" }}>
+        <section className="sec-pad how">
           <div className="wrap">
             <motion.div className="sec-head" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
-              <motion.span className="eyebrow" variants={fadeUp}>How it works</motion.span>
-              <motion.h2 variants={fadeUp}>Four steps. No middle layer.</motion.h2>
+              <motion.span className="eyebrow" variants={fadeUp}>{t("landing.how.eyebrow")}</motion.span>
+              <motion.h2 variants={fadeUp}>{t("landing.how.title")}</motion.h2>
             </motion.div>
             <motion.div className="steps" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
-              <motion.div className="step" variants={fadeUp} whileHover={cardHover}>
-                <div className="step-ic">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M7.5 3.5h6.7a2 2 0 0 1 1.4.6l5.3 5.3a2 2 0 0 1 0 2.8l-6.5 6.5a2 2 0 0 1-2.8 0l-5.3-5.3a2 2 0 0 1-.6-1.4V5.5a2 2 0 0 1 2-2Z" /><circle cx="10" cy="8" r="1.4" />
-                  </svg>
-                </div>
-                <div className="step-n">STEP 01</div><div className="step-t">Merchants post their daily crop prices.</div>
+              {steps.map((step, i) => (
+                <motion.div className="step" key={step.key} variants={fadeUp} whileHover={cardHover}>
+                  <span className="step-ghost" aria-hidden="true">{`0${i + 1}`}</span>
+                  <div className="step-ic">{step.icon}</div>
+                  <div className="step-t">{t(`landing.how.${step.key}t`)}</div>
+                  <p className="step-d">{t(`landing.how.${step.key}d`)}</p>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Price alerts, the differentiator, on a dark stage of its own. */}
+        <section className="alerts-stage">
+          <div className="wrap alerts-grid">
+            <motion.div className="alerts-copy" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
+              <motion.span className="eyebrow on-ink" variants={fadeUp}>
+                <ChilliMark className="dot" />
+                {t("landing.alerts.eyebrow")}
+              </motion.span>
+              <motion.h2 variants={fadeUp}>{t("landing.alerts.title")}</motion.h2>
+              <motion.p className="alerts-body" variants={fadeUp}>{t("landing.alerts.body")}</motion.p>
+              <motion.ul className="alerts-list" variants={fadeUp}>
+                {["b1", "b2", "b3"].map((b) => (
+                  <li key={b}><span className="chk">{check}</span>{t(`landing.alerts.${b}`)}</li>
+                ))}
+              </motion.ul>
+              <motion.div className="btn-row" variants={fadeUp}>
+                <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>
+                  {t("landing.alerts.cta")}{arrow}
+                </MotionLink>
               </motion.div>
-              <motion.div className="step" variants={fadeUp} whileHover={cardHover}>
-                <div className="step-ic">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="6" y1="20" x2="6" y2="13" /><line x1="12" y1="20" x2="12" y2="8" /><line x1="18" y1="20" x2="18" y2="4" />
-                  </svg>
-                </div>
-                <div className="step-n">STEP 02</div><div className="step-t">Farmers see and compare the real rates.</div>
-              </motion.div>
-              <motion.div className="step" variants={fadeUp} whileHover={cardHover}>
-                <div className="step-ic">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L19 18l1 3a2 2 0 0 1-2 2 16 16 0 0 1-16-16 2 2 0 0 1 2-2Z" />
-                  </svg>
-                </div>
-                <div className="step-n">STEP 03</div><div className="step-t">They contact each other directly. No commission.</div>
-              </motion.div>
-              <motion.div className="step" variants={fadeUp} whileHover={cardHover}>
-                <div className="step-ic">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" />
-                  </svg>
-                </div>
-                <div className="step-n">STEP 04</div><div className="step-t">Prices update daily, so every deal is current.</div>
-              </motion.div>
+            </motion.div>
+            <motion.div variants={popIn} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.25 }}>
+              <AlertPhone t={t} reduce={reduce} />
             </motion.div>
           </div>
         </section>
@@ -296,56 +341,75 @@ export default function LandingPage() {
         <section className="sec-pad">
           <div className="wrap">
             <motion.div className="sec-head" style={{ marginBottom: "46px" }} variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
-              <motion.span className="eyebrow" variants={fadeUp}>Built for both sides</motion.span>
-              <motion.h2 variants={fadeUp}>One price. Two clear wins.</motion.h2>
+              <motion.span className="eyebrow" variants={fadeUp}>{t("landing.sides.eyebrow")}</motion.span>
+              <motion.h2 variants={fadeUp}>{t("landing.sides.title")}</motion.h2>
             </motion.div>
             <motion.div className="split" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
               {/* Farmers */}
               <motion.div className="panel panel-farmer" variants={popIn} whileHover={cardHover}>
-                <svg className="panel-chilli-bg" viewBox="0 0 40 48" fill="none" aria-hidden="true">
-                  <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="currentColor" />
-                </svg>
+                <ChilliMark className="panel-chilli-bg" />
                 <span className="panel-tag">
                   <span className="pic">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M12 2 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-4Z" />
                     </svg>
-                  </span>For farmers
+                  </span>{t("landing.sides.farmerTag")}
                 </span>
-                <h3>Know the real price before you sell.</h3>
-                <p className="lede">No more guessing at the gate. See what merchants are actually paying today, then deal from a place of strength.</p>
+                <h3>{t("landing.sides.farmerTitle")}</h3>
+                <p className="lede">{t("landing.sides.farmerLede")}</p>
                 <ul>
-                  <li><span className="chk">{check}</span>Compare today's rates across merchants</li>
-                  <li><span className="chk">{check}</span>Contact merchants directly, no middleman</li>
-                  <li><span className="chk">{check}</span>Free, forever, on any phone</li>
+                  {["f1", "f2", "f3"].map((f) => (
+                    <li key={f}><span className="chk">{check}</span>{t(`landing.sides.${f}`)}</li>
+                  ))}
                 </ul>
                 <div className="panel-foot">
-                  <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>Sign up as a Farmer{arrow}</MotionLink>
+                  <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>
+                    {t("landing.sides.farmerCta")}{arrow}
+                  </MotionLink>
                 </div>
               </motion.div>
               {/* Merchants */}
               <motion.div className="panel panel-merchant" variants={popIn} whileHover={cardHover}>
-                <svg className="panel-chilli-bg" viewBox="0 0 40 48" fill="none" aria-hidden="true">
-                  <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="currentColor" />
-                </svg>
+                <ChilliMark className="panel-chilli-bg" />
                 <span className="panel-tag">
                   <span className="pic">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M3 9 5 4h14l2 5" /><path d="M4 9h16v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9Z" /><path d="M9 9v3a3 3 0 0 0 6 0V9" />
                     </svg>
-                  </span>For merchants
+                  </span>{t("landing.sides.merchantTag")}
                 </span>
-                <h3>Reach more farmers. Show your daily rates.</h3>
-                <p className="lede">Post once each morning and put your prices in front of farmers looking to sell right now.</p>
+                <h3>{t("landing.sides.merchantTitle")}</h3>
+                <p className="lede">{t("landing.sides.merchantLede")}</p>
                 <ul>
-                  <li><span className="chk">{check}</span>Publish your rates in under a minute</li>
-                  <li><span className="chk">{check}</span>Get found by serious, ready farmers</li>
-                  <li><span className="chk">{check}</span>A verified badge that builds trust</li>
+                  {["m1", "m2", "m3"].map((m) => (
+                    <li key={m}><span className="chk">{check}</span>{t(`landing.sides.${m}`)}</li>
+                  ))}
                 </ul>
                 <div className="panel-foot">
-                  <MotionLink className="btn btn-light" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>Sign up as a Merchant{arrow}</MotionLink>
+                  <MotionLink className="btn btn-light" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>
+                    {t("landing.sides.merchantCta")}{arrow}
+                  </MotionLink>
                 </div>
               </motion.div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Trust pillars */}
+        <section className="sec-pad trust">
+          <div className="wrap">
+            <motion.div className="sec-head center" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
+              <motion.span className="eyebrow" variants={fadeUp}>{t("landing.trust.eyebrow")}</motion.span>
+              <motion.h2 variants={fadeUp}>{t("landing.trust.title")}</motion.h2>
+            </motion.div>
+            <motion.div className="trust-grid" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
+              {trustCards.map((card) => (
+                <motion.div className="trust-card" key={card.key} variants={fadeUp} whileHover={cardHover}>
+                  <div className="trust-ic">{card.icon}</div>
+                  <h3>{t(`landing.trust.${card.key}t`)}</h3>
+                  <p>{t(`landing.trust.${card.key}d`)}</p>
+                </motion.div>
+              ))}
             </motion.div>
           </div>
         </section>
@@ -355,16 +419,18 @@ export default function LandingPage() {
           <motion.div className="cta" variants={popIn} initial="hidden" whileInView="show" viewport={inView}>
             <motion.div className="cta-in" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
               <motion.span className="eyebrow on-ink" variants={fadeUp}>
-                <svg className="dot" viewBox="0 0 40 48" fill="none" aria-hidden="true">
-                  <path d="M22.5 12C12 12.6 6.5 20.5 8 30c1.2 7.6 7 13.4 12.8 12.4 4.3-.74 7.2-6.6 5.2-14.3C24.4 21.5 30 13 22.5 12Z" fill="currentColor" />
-                </svg>
-                Small platform, big honesty
+                <ChilliMark className="dot" />
+                {t("landing.cta.eyebrow")}
               </motion.span>
-              <motion.h2 variants={fadeUp}>Today's price is waiting. Go and take it.</motion.h2>
-              <motion.p variants={fadeUp}>Join Urimalu free and deal on real daily rates from your first morning.</motion.p>
+              <motion.h2 variants={fadeUp}>{t("landing.cta.title")}</motion.h2>
+              <motion.p variants={fadeUp}>{t("landing.cta.body")}</motion.p>
               <motion.div className="btn-row" variants={fadeUp}>
-                <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>Sign up as a Farmer{arrow}</MotionLink>
-                <MotionLink className="btn btn-outline-light" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>Sign up as a Merchant{arrow}</MotionLink>
+                <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>
+                  {t("landing.cta.ctaFarmer")}{arrow}
+                </MotionLink>
+                <MotionLink className="btn btn-outline-light" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>
+                  {t("landing.cta.ctaMerchant")}{arrow}
+                </MotionLink>
               </motion.div>
             </motion.div>
           </motion.div>
