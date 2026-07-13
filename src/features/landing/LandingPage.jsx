@@ -4,24 +4,27 @@ import { motion, useInView, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import "./LandingPage.css";
 
-// Urimalu marketing landing page, redesigned as a bilingual "market morning"
-// poster. Static marketing content only, no live data anywhere: the page sells
-// the product without ever showing a price that could go stale. Every visible
-// string flows through i18next so Kannada and English stay in lockstep.
+// Urimalu marketing landing page. One narrative, told in order: within five
+// seconds the farmer feels what not knowing the price costs, within fifteen
+// they understand exactly what the app does, within thirty they want in.
 //
-// Structure: typographic hero, tilted crop ticker band, three step walkthrough,
-// a dark price alerts stage with an animated threshold crossing demo, farmer
-// and merchant split panels, trust pillars, and the closing chilli CTA. The
-// header and footer are unchanged from the previous version. All motion
-// collapses to plain fades when the visitor prefers reduced motion.
+// Sections, each with one job:
+//   Hero          the power shift in one read, farmer CTA first
+//   Two mornings  the same day with and without the app, the 15 second explainer
+//   Price alerts  the centrepiece: the phone lights up before you leave home
+//   Merchants     one rate posted, every grower of that crop reached
+//   Closing       the ask, with a quiet line about the app being free and
+//                 growing around the people who use it
+//
+// No live data anywhere, so nothing can ever look stale. All visible strings
+// flow through i18next. Header and footer are unchanged. Every animation
+// collapses to a plain fade when the visitor prefers reduced motion.
 
 // Links rendered as motion components so buttons can lift and press.
 const MotionLink = motion.create(Link);
 
 // Shared easing, matches the --ease-out token used across the stylesheet.
 const EASE = [0.22, 0.61, 0.36, 1];
-
-const TICKER_CROPS = ["robusta", "arabica", "pepper", "cardamom", "arecanut"];
 
 const arrow = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -33,13 +36,18 @@ const check = (
     <path d="M20 6 9 17l-5-5" />
   </svg>
 );
+const cross = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+  </svg>
+);
 const bell = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
   </svg>
 );
 
-// The brand chilli glyph, reused as eyebrow dot and ticker separator.
+// The brand chilli glyph, used as the eyebrow dot.
 function ChilliMark({ className }) {
   return (
     <svg className={className} viewBox="0 0 40 48" fill="none" aria-hidden="true">
@@ -49,29 +57,34 @@ function ChilliMark({ className }) {
   );
 }
 
-// Animated price alerts demo. An abstract posted-price line climbs across a
-// dashed target threshold, and the moment it crosses, a push notification
-// card springs into the phone frame. Purely illustrative and free of numbers,
-// so nothing on it can ever look stale. Decorative, hidden from readers.
+// The price alert moment, staged like the morning it describes. The dashed
+// line is the price the farmer named. The green line is the market climbing.
+// The instant they cross, the notification lands, and the kicker under the
+// phone makes the point: all of this happened before the first coffee.
+// Purely illustrative, no numbers, decorative and hidden from readers.
 function AlertPhone({ t, reduce }) {
   const ref = useRef(null);
-  const show = useInView(ref, { once: true, amount: 0.4 });
+  const show = useInView(ref, { once: true, amount: 0.45 });
   const line = {
     hidden: { pathLength: 0 },
-    show: { pathLength: 1, transition: { duration: reduce ? 0 : 1.5, ease: EASE, delay: reduce ? 0 : 0.25 } },
+    show: { pathLength: 1, transition: { duration: reduce ? 0 : 1.5, ease: EASE, delay: reduce ? 0 : 0.3 } },
   };
-  const cross = {
+  const crossPop = {
     hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { duration: 0.3, delay: reduce ? 0 : 1.05 } },
+    show: { opacity: 1, transition: { duration: 0.3, delay: reduce ? 0 : 1.15 } },
   };
   const notif = {
-    hidden: { opacity: 0, y: reduce ? 0 : 22, scale: reduce ? 1 : 0.95 },
+    hidden: { opacity: 0, y: reduce ? 0 : 24, scale: reduce ? 1 : 0.94 },
     show: {
       opacity: 1, y: 0, scale: 1,
       transition: reduce
         ? { duration: 0.4, delay: 0.1 }
-        : { type: "spring", stiffness: 250, damping: 21, delay: 1.35 },
+        : { type: "spring", stiffness: 240, damping: 20, delay: 1.5 },
     },
+  };
+  const kicker = {
+    hidden: { opacity: 0, y: reduce ? 0 : 10 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE, delay: reduce ? 0.2 : 2.3 } },
   };
   return (
     <div className="phone-stage" ref={ref} aria-hidden="true">
@@ -86,7 +99,7 @@ function AlertPhone({ t, reduce }) {
               strokeWidth="3.5" strokeLinecap="round"
               variants={line}
             />
-            <motion.g variants={cross}>
+            <motion.g variants={crossPop}>
               <circle className="cross-ring" cx="224" cy="64" r="7" />
               <circle className="cross-dot" cx="224" cy="64" r="5.5" />
             </motion.g>
@@ -104,9 +117,56 @@ function AlertPhone({ t, reduce }) {
             <span className="notif-text">{t("landing.alerts.notifBody")}</span>
           </span>
         </motion.div>
-        <p className="phone-caption">{t("landing.alerts.chartCaption")}</p>
       </motion.div>
+      <motion.p className="after-line" variants={kicker} initial="hidden" animate={show ? "show" : "hidden"}>
+        {t("landing.alerts.after")}
+      </motion.p>
     </div>
+  );
+}
+
+// One post radiating out to every grower of that crop. The rate leaves the
+// centre once and the dots, the farmers, light up in waves. Decorative.
+function ReachMap({ reduce }) {
+  const rings = [48, 84, 120];
+  const dots = [
+    [218, 96], [128, 158],
+    [170, 36], [86, 120], [248, 176],
+    [66, 58], [286, 86], [152, 226],
+  ];
+  const ring = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { duration: 0.8, ease: EASE } },
+  };
+  const dot = {
+    hidden: { r: 0, opacity: 0 },
+    show: { r: 5.5, opacity: 1, transition: { duration: reduce ? 0.3 : 0.45, ease: EASE } },
+  };
+  const wave = {
+    hidden: {},
+    show: { transition: { staggerChildren: reduce ? 0 : 0.14, delayChildren: reduce ? 0 : 0.5 } },
+  };
+  return (
+    <motion.svg
+      className="reach-svg" viewBox="0 0 340 240" fill="none" aria-hidden="true"
+      initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.4 }}
+    >
+      {rings.map((r) => (
+        <motion.circle key={r} className="reach-ring" cx="170" cy="120" r={r} variants={ring} />
+      ))}
+      <motion.g variants={wave}>
+        {dots.map(([x, y], i) => (
+          <motion.circle key={i} className={`reach-dot${i % 3 === 2 ? " warm" : ""}`} cx={x} cy={y} variants={dot} />
+        ))}
+      </motion.g>
+      <motion.g variants={ring}>
+        <circle className="reach-core" cx="170" cy="120" r="26" />
+        <g transform="translate(158.5,108.5)" className="reach-tag">
+          <path d="M7.2 3.4h6.3a1.9 1.9 0 0 1 1.3.55l5 5a1.9 1.9 0 0 1 0 2.65l-6.1 6.1a1.9 1.9 0 0 1-2.65 0l-5-5a1.9 1.9 0 0 1-.55-1.3V5.3a1.9 1.9 0 0 1 1.9-1.9Z" />
+          <circle cx="9.6" cy="7.7" r="1.3" />
+        </g>
+      </motion.g>
+    </motion.svg>
   );
 }
 
@@ -123,84 +183,29 @@ export default function LandingPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Motion variants. When reduced motion is requested we drop the travel and
-  // keep only a gentle opacity change so nothing slides around.
+  // Motion variants. Reduced motion drops the travel and blur and keeps only
+  // a gentle opacity change so nothing slides around.
   const fadeUp = {
     hidden: { opacity: 0, y: reduce ? 0 : 22 },
     show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
   };
+  const headline = {
+    hidden: { opacity: 0, y: reduce ? 0 : 30, filter: reduce ? "blur(0px)" : "blur(8px)" },
+    show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.75, ease: EASE } },
+  };
   const stagger = {
     hidden: {},
-    show: {
-      transition: { staggerChildren: reduce ? 0 : 0.09, delayChildren: 0.05 },
-    },
+    show: { transition: { staggerChildren: reduce ? 0 : 0.1, delayChildren: 0.05 } },
   };
-  const popIn = {
-    hidden: { opacity: 0, y: reduce ? 0 : 30, scale: reduce ? 1 : 0.98 },
-    show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.7, ease: EASE } },
+  const cardIn = {
+    hidden: { opacity: 0, y: reduce ? 0 : 28, scale: reduce ? 1 : 0.985 },
+    show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.65, ease: EASE } },
   };
-
-  // Hover and tap reactions. Spring physics give them the springy SaaS feel.
-  const cardHover = reduce
-    ? undefined
-    : { y: -6, transition: { type: "spring", stiffness: 320, damping: 22 } };
   const btnHover = reduce
     ? undefined
     : { y: -2, transition: { type: "spring", stiffness: 420, damping: 18 } };
   const btnTap = reduce ? undefined : { scale: 0.97 };
-
-  // Viewport config so each block animates once, when comfortably in view.
-  const inView = { once: true, amount: 0.2 };
-
-  const steps = [
-    {
-      key: "s1",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M7.5 3.5h6.7a2 2 0 0 1 1.4.6l5.3 5.3a2 2 0 0 1 0 2.8l-6.5 6.5a2 2 0 0 1-2.8 0l-5.3-5.3a2 2 0 0 1-.6-1.4V5.5a2 2 0 0 1 2-2Z" /><circle cx="10" cy="8" r="1.4" />
-        </svg>
-      ),
-    },
-    {
-      key: "s2",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <line x1="6" y1="20" x2="6" y2="13" /><line x1="12" y1="20" x2="12" y2="8" /><line x1="18" y1="20" x2="18" y2="4" />
-        </svg>
-      ),
-    },
-    {
-      key: "s3",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L19 18l1 3a2 2 0 0 1-2 2 16 16 0 0 1-16-16 2 2 0 0 1 2-2Z" />
-        </svg>
-      ),
-    },
-  ];
-
-  const trustCards = [
-    {
-      key: "t1",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M12 2 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-4Z" /><path d="m9 12 2 2 4-4" />
-        </svg>
-      ),
-    },
-    {
-      key: "t2",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M5 4h3l2 5-2.5 1.5a11 11 0 0 0 5 5L19 18l1 3a2 2 0 0 1-2 2 16 16 0 0 1-16-16 2 2 0 0 1 2-2Z" />
-        </svg>
-      ),
-    },
-    {
-      key: "t3",
-      icon: <span className="ab-glyph" aria-hidden="true">ಅ<i>A</i></span>,
-    },
-  ];
+  const inView = { once: true, amount: 0.25 };
 
   return (
     <div className="uri-landing">
@@ -227,8 +232,9 @@ export default function LandingPage() {
       </motion.header>
 
       <main>
-        {/* Hero, pure typography on the paper stage. No price card here: any
-            hardcoded number would read wrong the day it goes stale. */}
+        {/* Hero. The five second job: the merchant has the number, now so do
+            you. Farmer CTA carries the weight, the merchant path is a quiet
+            link so the hierarchy stays honest. */}
         <section className="hero">
           <div className="wrap">
             <motion.div className="hero-copy" variants={stagger} initial="hidden" animate="show">
@@ -236,18 +242,21 @@ export default function LandingPage() {
                 <ChilliMark className="dot" />
                 {t("landing.hero.eyebrow")}
               </motion.span>
-              <motion.h1 variants={fadeUp}>
-                {t("landing.hero.titleA")}<br />
-                <span className="fire">{t("landing.hero.titleB")}</span>
-              </motion.h1>
+              <h1>
+                <motion.span className="h-line" variants={headline}>{t("landing.hero.titleA")}</motion.span>
+                <motion.span className="h-line fire" variants={headline}>{t("landing.hero.titleB")}</motion.span>
+              </h1>
               <motion.p className="hero-sub" variants={fadeUp}>{t("landing.hero.sub")}</motion.p>
-              <motion.div className="btn-row hero-btns" variants={fadeUp}>
+              <motion.div className="hero-actions" variants={fadeUp}>
                 <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>
                   {t("landing.hero.ctaFarmer")}{arrow}
                 </MotionLink>
-                <MotionLink className="btn btn-ink" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>
-                  {t("landing.hero.ctaMerchant")}{arrow}
-                </MotionLink>
+                <Link className="link-quiet" to="/signup/merchant">
+                  {t("landing.hero.ctaMerchant")}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+                  </svg>
+                </Link>
               </motion.div>
               <motion.div className="hero-trust" variants={fadeUp}>
                 <span className="tc">{check}</span>
@@ -257,46 +266,46 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Crop ticker, a slowly drifting band of what trades here. Names only,
-            never prices. The second set is a duplicate for the seamless loop. */}
-        <section className="ticker" aria-label={t("landing.ticker.ariaLabel")}>
-          <div className="ticker-tilt">
-            <div className="ticker-move">
-              {[0, 1].map((dup) => (
-                <div className="ticker-set" key={dup} aria-hidden={dup === 1 ? "true" : undefined}>
-                  {TICKER_CROPS.map((crop) => (
-                    <span className="tick" key={crop}>
-                      <ChilliMark className="tick-mark" />
-                      {t(`landing.ticker.${crop}`)}
-                    </span>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* How it works */}
-        <section className="sec-pad how">
+        {/* Two mornings. The fifteen second job: the same day, side by side.
+            The muted card is the morning everyone knows. The bright one is
+            the morning this app makes, and it arrives second on purpose. */}
+        <section className="sec-pad mornings">
           <div className="wrap">
-            <motion.div className="sec-head" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
-              <motion.span className="eyebrow" variants={fadeUp}>{t("landing.how.eyebrow")}</motion.span>
-              <motion.h2 variants={fadeUp}>{t("landing.how.title")}</motion.h2>
+            <motion.div className="sec-head center" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
+              <motion.span className="eyebrow" variants={fadeUp}>{t("landing.mornings.eyebrow")}</motion.span>
+              <motion.h2 variants={fadeUp}>{t("landing.mornings.title")}</motion.h2>
             </motion.div>
-            <motion.div className="steps" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
-              {steps.map((step, i) => (
-                <motion.div className="step" key={step.key} variants={fadeUp} whileHover={cardHover}>
-                  <span className="step-ghost" aria-hidden="true">{`0${i + 1}`}</span>
-                  <div className="step-ic">{step.icon}</div>
-                  <div className="step-t">{t(`landing.how.${step.key}t`)}</div>
-                  <p className="step-d">{t(`landing.how.${step.key}d`)}</p>
-                </motion.div>
-              ))}
+            <motion.div className="mornings-grid" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
+              <motion.div className="m-card m-without" variants={cardIn}>
+                <span className="m-tag">{t("landing.mornings.withoutTag")}</span>
+                <h3>{t("landing.mornings.withoutTitle")}</h3>
+                <motion.ul variants={stagger}>
+                  {["w1", "w2", "w3"].map((k) => (
+                    <motion.li key={k} variants={fadeUp}>
+                      <span className="mk mk-x">{cross}</span>{t(`landing.mornings.${k}`)}
+                    </motion.li>
+                  ))}
+                </motion.ul>
+              </motion.div>
+              <motion.div className="m-card m-with" variants={cardIn}>
+                <span className="m-tag">{t("landing.mornings.withTag")}</span>
+                <h3>{t("landing.mornings.withTitle")}</h3>
+                <motion.ul variants={stagger}>
+                  {["g1", "g2", "g3"].map((k) => (
+                    <motion.li key={k} variants={fadeUp}>
+                      <span className="mk mk-c">{check}</span>{t(`landing.mornings.${k}`)}
+                    </motion.li>
+                  ))}
+                </motion.ul>
+              </motion.div>
             </motion.div>
+            <motion.p className="m-shift" variants={fadeUp} initial="hidden" whileInView="show" viewport={inView}>
+              {t("landing.mornings.shift")}
+            </motion.p>
           </div>
         </section>
 
-        {/* Price alerts, the differentiator, on a dark stage of its own. */}
+        {/* Price alerts, the centrepiece, on a dark stage of its own. */}
         <section className="alerts-stage">
           <div className="wrap alerts-grid">
             <motion.div className="alerts-copy" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
@@ -306,120 +315,65 @@ export default function LandingPage() {
               </motion.span>
               <motion.h2 variants={fadeUp}>{t("landing.alerts.title")}</motion.h2>
               <motion.p className="alerts-body" variants={fadeUp}>{t("landing.alerts.body")}</motion.p>
-              <motion.ul className="alerts-list" variants={fadeUp}>
-                {["b1", "b2", "b3"].map((b) => (
-                  <li key={b}><span className="chk">{check}</span>{t(`landing.alerts.${b}`)}</li>
-                ))}
-              </motion.ul>
               <motion.div className="btn-row" variants={fadeUp}>
                 <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>
                   {t("landing.alerts.cta")}{arrow}
                 </MotionLink>
               </motion.div>
             </motion.div>
-            <motion.div variants={popIn} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.25 }}>
+            <motion.div variants={cardIn} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.25 }}>
               <AlertPhone t={t} reduce={reduce} />
             </motion.div>
           </div>
         </section>
 
-        {/* For farmers and merchants */}
-        <section className="sec-pad">
-          <div className="wrap">
-            <motion.div className="sec-head" style={{ marginBottom: "46px" }} variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
-              <motion.span className="eyebrow" variants={fadeUp}>{t("landing.sides.eyebrow")}</motion.span>
-              <motion.h2 variants={fadeUp}>{t("landing.sides.title")}</motion.h2>
-            </motion.div>
-            <motion.div className="split" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
-              {/* Farmers */}
-              <motion.div className="panel panel-farmer" variants={popIn} whileHover={cardHover}>
-                <ChilliMark className="panel-chilli-bg" />
-                <span className="panel-tag">
-                  <span className="pic">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M12 2 4 6v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-4Z" />
-                    </svg>
-                  </span>{t("landing.sides.farmerTag")}
-                </span>
-                <h3>{t("landing.sides.farmerTitle")}</h3>
-                <p className="lede">{t("landing.sides.farmerLede")}</p>
-                <ul>
-                  {["f1", "f2", "f3"].map((f) => (
-                    <li key={f}><span className="chk">{check}</span>{t(`landing.sides.${f}`)}</li>
-                  ))}
-                </ul>
-                <div className="panel-foot">
-                  <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>
-                    {t("landing.sides.farmerCta")}{arrow}
-                  </MotionLink>
-                </div>
-              </motion.div>
-              {/* Merchants */}
-              <motion.div className="panel panel-merchant" variants={popIn} whileHover={cardHover}>
-                <ChilliMark className="panel-chilli-bg" />
-                <span className="panel-tag">
-                  <span className="pic">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M3 9 5 4h14l2 5" /><path d="M4 9h16v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9Z" /><path d="M9 9v3a3 3 0 0 0 6 0V9" />
-                    </svg>
-                  </span>{t("landing.sides.merchantTag")}
-                </span>
-                <h3>{t("landing.sides.merchantTitle")}</h3>
-                <p className="lede">{t("landing.sides.merchantLede")}</p>
-                <ul>
-                  {["m1", "m2", "m3"].map((m) => (
-                    <li key={m}><span className="chk">{check}</span>{t(`landing.sides.${m}`)}</li>
-                  ))}
-                </ul>
-                <div className="panel-foot">
-                  <MotionLink className="btn btn-light" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>
-                    {t("landing.sides.merchantCta")}{arrow}
-                  </MotionLink>
-                </div>
+        {/* Merchants. One job: convey reach. One rate, every grower. */}
+        <section className="sec-pad reach">
+          <div className="wrap reach-grid">
+            <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
+              <motion.span className="eyebrow" variants={fadeUp}>{t("landing.merchants.eyebrow")}</motion.span>
+              <motion.h2 className="reach-title" variants={fadeUp}>{t("landing.merchants.title")}</motion.h2>
+              <motion.p className="reach-body" variants={fadeUp}>{t("landing.merchants.body")}</motion.p>
+              <motion.ul className="reach-list" variants={stagger}>
+                {["m1", "m2", "m3"].map((k) => (
+                  <motion.li key={k} variants={fadeUp}>
+                    <span className="mk mk-c">{check}</span>{t(`landing.merchants.${k}`)}
+                  </motion.li>
+                ))}
+              </motion.ul>
+              <motion.div className="btn-row" variants={fadeUp}>
+                <MotionLink className="btn btn-ink" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>
+                  {t("landing.merchants.cta")}{arrow}
+                </MotionLink>
               </motion.div>
             </motion.div>
+            <ReachMap reduce={reduce} />
           </div>
         </section>
 
-        {/* Trust pillars */}
-        <section className="sec-pad trust">
-          <div className="wrap">
-            <motion.div className="sec-head center" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
-              <motion.span className="eyebrow" variants={fadeUp}>{t("landing.trust.eyebrow")}</motion.span>
-              <motion.h2 variants={fadeUp}>{t("landing.trust.title")}</motion.h2>
-            </motion.div>
-            <motion.div className="trust-grid" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
-              {trustCards.map((card) => (
-                <motion.div className="trust-card" key={card.key} variants={fadeUp} whileHover={cardHover}>
-                  <div className="trust-ic">{card.icon}</div>
-                  <h3>{t(`landing.trust.${card.key}t`)}</h3>
-                  <p>{t(`landing.trust.${card.key}d`)}</p>
-                </motion.div>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Closing CTA */}
-        <section className="wrap" style={{ paddingBottom: "clamp(64px,9vw,112px)" }}>
-          <motion.div className="cta" variants={popIn} initial="hidden" whileInView="show" viewport={inView}>
+        {/* Closing. The ask, then the quiet fact underneath it. */}
+        <section className="wrap closing">
+          <motion.div className="cta" variants={cardIn} initial="hidden" whileInView="show" viewport={inView}>
             <motion.div className="cta-in" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
               <motion.span className="eyebrow on-ink" variants={fadeUp}>
                 <ChilliMark className="dot" />
-                {t("landing.cta.eyebrow")}
+                {t("landing.closing.eyebrow")}
               </motion.span>
-              <motion.h2 variants={fadeUp}>{t("landing.cta.title")}</motion.h2>
-              <motion.p variants={fadeUp}>{t("landing.cta.body")}</motion.p>
+              <motion.h2 variants={fadeUp}>{t("landing.closing.title")}</motion.h2>
+              <motion.p variants={fadeUp}>{t("landing.closing.body")}</motion.p>
               <motion.div className="btn-row" variants={fadeUp}>
                 <MotionLink className="btn btn-action" to="/signup/farmer" whileHover={btnHover} whileTap={btnTap}>
-                  {t("landing.cta.ctaFarmer")}{arrow}
+                  {t("landing.closing.ctaFarmer")}{arrow}
                 </MotionLink>
                 <MotionLink className="btn btn-outline-light" to="/signup/merchant" whileHover={btnHover} whileTap={btnTap}>
-                  {t("landing.cta.ctaMerchant")}{arrow}
+                  {t("landing.closing.ctaMerchant")}{arrow}
                 </MotionLink>
               </motion.div>
             </motion.div>
           </motion.div>
+          <motion.p className="quiet" variants={fadeUp} initial="hidden" whileInView="show" viewport={inView}>
+            {t("landing.quiet.line")}
+          </motion.p>
         </section>
       </main>
 

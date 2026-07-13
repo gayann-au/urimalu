@@ -406,80 +406,58 @@
   "landing": {
     "hero": {
       "eyebrow": "Crop Price Marketplace",
-      "titleA": "Every morning,",
-      "titleB": "the real price.",
-      "sub": "Verified merchants post their buying prices for coffee, pepper, cardamom and arecanut every day. Farmers compare, call, and sell on their own terms.",
-      "trust": "Every merchant is verified before their first price goes live.",
-      "ctaFarmer": "Start as a farmer",
-      "ctaMerchant": "Post prices as a merchant"
+      "titleA": "The merchant already knows today's price.",
+      "titleB": "Now you do too.",
+      "sub": "Verified merchants post their buying prices for coffee, pepper, cardamom and arecanut every morning. See every rate, compare, and call the buyer you choose, before you load the jeep.",
+      "trust": "Every merchant is verified before their first rate goes live.",
+      "ctaFarmer": "See today's rates",
+      "ctaMerchant": "Post your rates"
     },
-    "ticker": {
-      "ariaLabel": "Crops traded on Urimalu",
-      "robusta": "Robusta Cherry",
-      "arabica": "Arabica Parchment",
-      "pepper": "Black Pepper",
-      "cardamom": "Cardamom",
-      "arecanut": "Arecanut"
-    },
-    "how": {
-      "eyebrow": "How it works",
-      "title": "Three steps. One honest price.",
-      "s1t": "Merchants post",
-      "s1d": "Verified merchants publish their buying prices each morning.",
-      "s2t": "Farmers compare",
-      "s2d": "Every rate side by side, freshest first, crop by crop.",
-      "s3t": "You call, you deal",
-      "s3d": "Talk directly and settle on your own terms. The price you saw is the price you discuss."
+    "mornings": {
+      "eyebrow": "Two mornings",
+      "title": "Same crop. Same day. Different money.",
+      "withoutTag": "Without Urimalu",
+      "withoutTitle": "You find out the price at the gate.",
+      "w1": "Load up and drive, hoping the rate held.",
+      "w2": "Hear the number standing in the merchant's yard.",
+      "w3": "Take it, or haul the full load home.",
+      "withTag": "With Urimalu",
+      "withTitle": "You know before you leave home.",
+      "g1": "Open the app. Every merchant's rate, this morning.",
+      "g2": "Compare buyers and call the best one first.",
+      "g3": "Agree on the number before you start the engine.",
+      "shift": "That is the difference between asking and deciding."
     },
     "alerts": {
       "eyebrow": "Price alerts",
-      "title": "Name your price. We watch the market.",
-      "body": "Follow a crop, set the number you want, and the moment a verified merchant posts above it a notification lands on your phone.",
-      "b1": "Alerts for every crop you follow",
-      "b2": "Your threshold, your rules",
-      "b3": "Push notifications in Kannada or English",
-      "targetLabel": "Your target",
-      "chartCaption": "When a posted price crosses your target, your phone knows first.",
+      "title": "Your phone knows before you leave home.",
+      "body": "Follow a crop and name your price. The moment a verified merchant posts above it, the alert finds you, wherever the morning does.",
+      "targetLabel": "Your price",
       "notifApp": "Urimalu",
-      "notifTime": "now",
-      "notifTitle": "Arabica Parchment crossed your target",
-      "notifBody": "A verified merchant just posted above your alert price. Open to compare and call.",
-      "cta": "Create your first alert"
+      "notifTime": "6:47 AM",
+      "notifTitle": "Pepper crossed your price",
+      "notifBody": "A verified merchant is buying above your target this morning. Open to see the rate and call.",
+      "after": "You have not even had your coffee yet.",
+      "cta": "Set your first alert"
     },
-    "sides": {
-      "eyebrow": "Built for both sides",
-      "title": "Two sides. One market.",
-      "farmerTag": "For farmers",
-      "farmerTitle": "Walk into every deal knowing the price.",
-      "farmerLede": "Stop guessing at the gate. See what merchants are paying today and choose who to call.",
-      "f1": "Compare today's rates across merchants",
-      "f2": "Call merchants directly from the app",
-      "f3": "Set price alerts for your target rate",
-      "farmerCta": "Sign up as a farmer",
-      "merchantTag": "For merchants",
-      "merchantTitle": "Your price, in every farmer's pocket.",
-      "merchantLede": "Post once each morning and reach farmers who are ready to sell today.",
-      "m1": "Publish your rates in under a minute",
-      "m2": "A verified badge that earns trust",
-      "m3": "Farmers ready to sell call you directly",
-      "merchantCta": "Sign up as a merchant"
+    "merchants": {
+      "eyebrow": "For merchants",
+      "title": "Post one rate. Reach every grower.",
+      "body": "Publish your buying price once each morning, and every farmer on Urimalu who grows that crop can see it, compare it, and call you first.",
+      "m1": "Your rate in front of ready sellers",
+      "m2": "A verified badge that carries weight",
+      "m3": "Calls come straight to you",
+      "cta": "Sign up as a merchant"
     },
-    "trust": {
-      "eyebrow": "Why Urimalu",
-      "title": "Built on trust, not talk.",
-      "t1t": "Verified merchants",
-      "t1d": "Every merchant is reviewed by our team before their first price goes live.",
-      "t2t": "Direct dealing",
-      "t2d": "Farmers and merchants talk to each other. Nobody stands in between.",
-      "t3t": "Kannada and English",
-      "t3d": "Every screen, every alert, in the language you think in."
-    },
-    "cta": {
-      "eyebrow": "Get started",
-      "title": "Tomorrow morning, know the price first.",
-      "body": "Join Urimalu today and start every market day with the answer in your hand.",
+    "closing": {
+      "eyebrow": "Start now",
+      "title": "Next market morning, walk in knowing.",
+      "body": "Join now and start every deal with the number already in your pocket.",
       "ctaFarmer": "Sign up as a farmer",
       "ctaMerchant": "Sign up as a merchant"
+    },
+    "quiet": {
+      "line": "Urimalu is free to use, and it grows around the people who use it. Farmers send in ideas from inside the app, and the best ones get built."
     }
   }
 }
