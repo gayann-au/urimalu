@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
@@ -140,7 +141,13 @@ function MobileDrawer({ open, onClose, profile, lang, onToggleLang, onLogout, t 
   const displayName = profile?.business_name || profile?.full_name || profile?.email || "";
   const links = drawerNavLinks(profile, t);
 
-  return (
+  // Portalled to document.body. The header carries backdrop-blur (a
+  // backdrop-filter), which establishes a new containing block for any
+  // position:fixed descendant. Left in place, the overlay and this panel
+  // would size and position themselves against the header's own small box
+  // instead of the viewport, clipping everything below the close button.
+  // Rendering outside the header sidesteps that entirely.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -222,7 +229,8 @@ function MobileDrawer({ open, onClose, profile, lang, onToggleLang, onLogout, t 
           </motion.aside>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
