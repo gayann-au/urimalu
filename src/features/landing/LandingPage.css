@@ -59,6 +59,10 @@
   display:inline-flex;align-items:center;gap:7px;transition:color .2s,background .2s}
 .uri-landing .login-link:hover{color:var(--crop-700);background:var(--crop-50)}
 .uri-landing .login-link svg{width:16px;height:16px;opacity:.7}
+.uri-landing .lang-toggle{font-weight:700;font-size:.82rem;letter-spacing:.02em;color:var(--ink-700);
+  padding:9px 13px;border-radius:11px;border:1.5px solid var(--ink-200);background:transparent;cursor:pointer;
+  white-space:nowrap;transition:color .2s,border-color .2s,background .2s}
+.uri-landing .lang-toggle:hover{color:var(--crop-700);border-color:var(--crop-300);background:var(--crop-50)}
 
 /* Buttons */
 .uri-landing .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { useUiStore } from "../../hooks/useUiStore";
 import "./LandingPage.css";
 
 // Urimalu marketing landing page. One narrative, told in order: within five
@@ -179,6 +180,8 @@ export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const reduce = useReducedMotion();
   const { t } = useTranslation();
+  const lang = useUiStore(s => s.lang);
+  const toggleLang = useUiStore(s => s.toggleLang);
 
   // Sticky header gains a hairline border once the page is scrolled past the top.
   useEffect(() => {
@@ -226,6 +229,9 @@ export default function LandingPage() {
             <img src="/icons/logo-urimalu.png" alt="Urimalu" style={{ height: "36px", width: "auto" }} />
           </Link>
           <div className="hdr-right">
+            <button className="lang-toggle" onClick={toggleLang} aria-label="Toggle language">
+              {lang === "kn" ? "ಕ·EN" : "EN·ಕ"}
+            </button>
             <Link className="login-link" to="/login">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" />

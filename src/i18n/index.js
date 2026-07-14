@@ -10,7 +10,7 @@ import kn from "./kn.json";
 //   never changes the language on its own; it changes only when the user
 //   explicitly switches it, which saves the choice in setLanguage below.
 const LANG_KEY = "coorgrate.lang";
-const DEFAULT_LANG = "kn";
+const DEFAULT_LANG = "en";
 const SUPPORTED = ["kn", "en"];
 
 function readStoredLang() {
