@@ -13,6 +13,7 @@ import { useUiStore } from "../../hooks/useUiStore";
 import { toast } from "../../components/ui/Toast";
 import { useUriMotion } from "../../lib/uiMotion";
 import { WELCOME_FLAG_KEY } from "../../lib/constants";
+import { ReadyToSellCard } from "../sellerLeads/ReadyToSellCard";
 
 // Storefront glyph, the soft icon that anchors each merchant card the way the
 // landing step cards are anchored by their icon boxes.
@@ -97,6 +98,9 @@ export default function FeedPage() {
           </button>
         </div>
       )}
+
+      {/* Ready to Sell: farmers only. */}
+      {profile?.role === "FARMER" && <ReadyToSellCard profile={profile}/>}
 
       {/* Tabs */}
       <div className="bg-white border-b border-ink-100 sticky top-[64px] z-20">

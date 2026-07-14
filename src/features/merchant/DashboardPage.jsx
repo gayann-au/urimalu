@@ -7,6 +7,7 @@ import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { Button } from "../../components/ui/Button";
 import { Toggle } from "../../components/ui/Toggle";
 import { RateForm } from "./RateForm";
+import { SellerLeadsTab } from "./SellerLeadsTab";
 import { useAuth } from "../auth/useAuth";
 import {
   useMyListings,
@@ -15,6 +16,7 @@ import {
   useDeleteListing,
   useConfirmTodaysPrices,
 } from "./useMerchant";
+import { useSellerLeadsUnreadCount } from "../sellerLeads/useSellerLeads";
 import { toast } from "../../components/ui/Toast";
 import { LoadError } from "../../components/ui/LoadError";
 import { useUriMotion } from "../../lib/uiMotion";
@@ -31,11 +33,13 @@ export default function DashboardPage() {
   const toggleActive  = useToggleListingActive();
   const deleteOne     = useDeleteListing();
   const confirmPrices = useConfirmTodaysPrices();
+  const leadsUnread   = useSellerLeadsUnreadCount(profile?.id);
 
   // formMode: null when closed, "new" when adding, the listing object when editing.
   // Single state guarantees only one form open at a time, and closing fully unmounts
   // the form so the next "Add crop" gets a clean slate.
   const [formMode, setFormMode] = useState(null);
+  const [dashTab, setDashTab] = useState("crops");
 
   if (!profile) return null;
 
@@ -118,6 +122,18 @@ export default function DashboardPage() {
       <GlowBackdrop/>
       <Header/>
 
+      {/* Dashboard tabs: My Crops (default) and Seller Leads, with an unread badge. */}
+      <div className="flex border-b border-ink-100 mt-2">
+        <DashTabButton active={dashTab === "crops"} onClick={() => setDashTab("crops")}>
+          {t("dashboard.cropsTab")}
+        </DashTabButton>
+        <DashTabButton active={dashTab === "leads"} onClick={() => setDashTab("leads")} badge={leadsUnread}>
+          {t("dashboard.sellerLeadsTab")}
+        </DashTabButton>
+      </div>
+
+      {dashTab === "crops" && (
+      <>
       {/* Top: identity and crop count */}
       <motion.section variants={m.stagger} initial="hidden" animate="show" className="py-6 border-b border-ink-100">
         <motion.h1 variants={m.fadeUp} className="font-display text-2xl md:text-3xl font-extrabold tracking-tight text-chilli-700 leading-tight break-words">
@@ -249,7 +265,39 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+      </>
+      )}
+
+      {dashTab === "leads" && (
+        <section className="pt-6">
+          <SellerLeadsTab merchantId={profile.id}/>
+        </section>
+      )}
     </div>
+  );
+}
+
+// Tab button for the dashboard's My Crops / Seller Leads switch, matching
+// the underline-on-active styling used by the feed page tabs. An optional
+// numeric badge (unread seller leads) renders as a small pill next to the label.
+function DashTabButton({ active, onClick, badge, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 min-h-[48px] px-3 text-sm font-bold border-b-2 transition-colors inline-flex items-center justify-center gap-1.5 ${
+        active
+          ? "border-coorg-600 text-coorg-700"
+          : "border-transparent text-ink-500 hover:text-ink-700"
+      }`}
+    >
+      {children}
+      {badge > 0 && (
+        <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-chilli-600 text-white text-[10px] font-bold leading-none inline-flex items-center justify-center">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      )}
+    </button>
   );
 }
 

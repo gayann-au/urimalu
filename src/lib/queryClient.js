@@ -29,4 +29,7 @@ export const qk = {
   featureRequestsMine: (id) => ["feature_requests", "mine", id],
   cropFollows: (id) => ["crop_follows", "mine", id],
   notifications: (id) => ["notifications", "mine", id],
+  sellerLeadsMine: (farmerId) => ["seller_leads", "mine", farmerId],
+  sellerLeadsActive: ["seller_leads", "active"],
+  sellerLeadReads: (merchantId) => ["seller_lead_reads", "mine", merchantId],
 };

@@ -78,8 +78,15 @@ export function useRealtimeNotifications() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-        () => {
+        (payload) => {
           qc.invalidateQueries({ queryKey: qk.notifications(userId) });
+          // A seller lead notification means a new row exists in seller_leads
+          // and this merchant has no read receipt for it yet: refresh both so
+          // the dashboard's Seller Leads tab and its badge update live.
+          if (payload?.new?.type === "seller_lead") {
+            qc.invalidateQueries({ queryKey: qk.sellerLeadsActive });
+            qc.invalidateQueries({ queryKey: qk.sellerLeadReads(userId) });
+          }
         }
       )
       .subscribe();
