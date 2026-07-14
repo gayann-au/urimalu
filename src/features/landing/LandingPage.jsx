@@ -140,7 +140,7 @@ function ReachMap({ reduce }) {
   };
   const dot = {
     hidden: { r: 0, opacity: 0 },
-    show: { r: 5.5, opacity: 1, transition: { duration: reduce ? 0.3 : 0.45, ease: EASE } },
+    show: { r: 7, opacity: 1, transition: { duration: reduce ? 0.3 : 0.45, ease: EASE } },
   };
   const wave = {
     hidden: {},
