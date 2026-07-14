@@ -27,7 +27,11 @@
     "dashboard": "Dashboard",
     "admin": "Admin",
     "account": "My account",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "feed": "Feed",
+    "priceAlerts": "Price Alerts",
+    "openMenu": "Menu",
+    "closeMenu": "Close menu"
   },
   "auth": {
     "loginTitle": "Welcome back",
