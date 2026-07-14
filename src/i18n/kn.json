@@ -27,7 +27,11 @@
     "dashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
     "admin": "ನಿರ್ವಾಹಕ",
     "account": "ನನ್ನ ಖಾತೆ",
-    "notifications": "ಅಧಿಸೂಚನೆಗಳು"
+    "notifications": "ಅಧಿಸೂಚನೆಗಳು",
+    "feed": "ಫೀಡ್",
+    "priceAlerts": "ಬೆಲೆ ಎಚ್ಚರಿಕೆಗಳು",
+    "openMenu": "ಮೆನು",
+    "closeMenu": "ಮೆನು ಮುಚ್ಚಿ"
   },
   "auth": {
     "loginTitle": "ಮರಳಿ ಸ್ವಾಗತ",
