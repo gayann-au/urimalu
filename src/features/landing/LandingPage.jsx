@@ -46,6 +46,11 @@ const bell = (
     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
   </svg>
 );
+const bullhorn = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 11v2a2 2 0 0 0 2 2h1l3 5v-9" /><path d="M6 11 18 5v14L6 13" /><path d="M21 9v6" />
+  </svg>
+);
 
 // The brand chilli glyph, used as the eyebrow dot.
 function ChilliMark({ className }) {
@@ -302,6 +307,14 @@ export default function LandingPage() {
             <motion.p className="m-shift" variants={fadeUp} initial="hidden" whileInView="show" viewport={inView}>
               {t("landing.mornings.shift")}
             </motion.p>
+            <motion.div className="reverse-strip" variants={cardIn} initial="hidden" whileInView="show" viewport={inView}>
+              <span className="reverse-ic">{bullhorn}</span>
+              <div className="reverse-copy">
+                <span className="reverse-kicker">{t("landing.mornings.reverseKicker")}</span>
+                <p className="reverse-title">{t("landing.mornings.reverseTitle")}</p>
+                <p className="reverse-body">{t("landing.mornings.reverseBody")}</p>
+              </div>
+            </motion.div>
           </div>
         </section>
 
