@@ -8,9 +8,14 @@ import { useUriMotion } from "../../lib/uiMotion";
 import { formatINR } from "../../lib/constants";
 
 // Build the sentence for one notification from its raw facts, in the reader's
-// current language. Three shapes: a first price (no old value), a change (old
-// and new), and a move to call-for-price (no new value).
+// current language. Price alerts have three shapes: a first price (no old
+// value), a change (old and new), and a move to call-for-price (no new
+// value). A seller lead notification is a single fixed sentence naming the
+// farmer.
 function notificationText(n, t) {
+  if (n.type === "seller_lead") {
+    return t("notif.sellerLeadReady", { farmer: n.farmer_name || t("notif.aFarmer") });
+  }
   const merchant = n.merchant_name || t("notif.aMerchant");
   if (n.new_price == null) {
     return t("notif.priceUpdated", { crop: n.crop_name, merchant });

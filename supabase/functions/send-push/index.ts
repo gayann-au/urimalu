@@ -38,8 +38,18 @@ const rupees = (v: number | null) =>
   v == null ? null : "₹" + Math.round(Number(v));
 
 // English push copy, matching the in-app sentence shapes. Title is the crop,
-// body carries the price movement.
+// body carries the price movement. A seller_lead row has no crop_name; it
+// carries farmer_name instead, and gets its own fixed copy.
 function buildText(record: Record<string, unknown>) {
+  if (record.type === "seller_lead") {
+    const farmer = String(record.farmer_name ?? "A farmer");
+    return {
+      title: "Ready to sell",
+      body: `${farmer} is ready to sell. Tap to see details.`,
+      url: "/merchant/dashboard",
+    };
+  }
+
   const crop = String(record.crop_name ?? "Crop");
   const merchant = String(record.merchant_name ?? "a merchant");
   const oldP = record.old_price as number | null;

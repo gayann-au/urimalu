@@ -238,6 +238,8 @@
     "submitError": "Couldn't submit your review. Please try again."
   },
   "dashboard": {
+    "cropsTab": "My Crops",
+    "sellerLeadsTab": "Seller Leads",
     "deleted": "Rate deleted",
     "yourDailyPrices": "Your daily prices",
     "cropCountOne": "1 crop",
@@ -340,6 +342,27 @@
     "unfollowed": "Alerts off for {{crop}}",
     "stopAlerts": "Stop alerts"
   },
+  "sellerLeads": {
+    "cta": "Ready to Sell",
+    "ctaSub": "Tell every merchant you are ready to sell today",
+    "nameLabel": "Name",
+    "phoneLabel": "Phone",
+    "descriptionLabel": "Description",
+    "descriptionPh": "e.g. 40kg Robusta Cherry ready, near Gonikoppal",
+    "descriptionRequired": "Please describe what you are ready to sell",
+    "submit": "Post",
+    "posted": "Posted. Merchants will be notified.",
+    "postError": "Could not post. Please try again.",
+    "limitReached": "You already have {{max}} active leads. Delete one before posting again.",
+    "yourLeadsHeading": "Your active leads ({{count}}/{{max}})",
+    "confirmDelete": "Delete this lead?",
+    "deletedToast": "Lead deleted",
+    "deleteError": "Could not delete. Please try again.",
+    "emptyHeading": "No seller leads yet.",
+    "emptyBody": "Farmers who are ready to sell will show up here.",
+    "unread": "Unread",
+    "waMessage": "Namaste {{name}}, I saw you are ready to sell on Urimalu."
+  },
   "cropsBrowse": {
     "title": "All crops",
     "sub": "Crops merchants are buying today, with current prices",
@@ -354,9 +377,11 @@
     "empty": "No notifications yet.",
     "hint": "Follow a crop to get price alerts here.",
     "aMerchant": "a merchant",
+    "aFarmer": "A farmer",
     "priceSet": "{{crop}}: {{price}} per kg at {{merchant}}",
     "priceChanged": "{{crop}}: {{price}} per kg at {{merchant}} (was {{old}})",
-    "priceUpdated": "{{crop}}: price updated at {{merchant}}"
+    "priceUpdated": "{{crop}}: price updated at {{merchant}}",
+    "sellerLeadReady": "{{farmer}} is ready to sell. Tap to see details."
   },
   "report": {
     "loginRequired": "Login to report a merchant",
