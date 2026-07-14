@@ -455,7 +455,10 @@
       "g1": "Open the app. Every merchant's rate, this morning.",
       "g2": "Compare buyers and call the best one first.",
       "g3": "Agree on the number before you start the engine.",
-      "shift": "That is the difference between asking and deciding."
+      "shift": "That is the difference between asking and deciding.",
+      "reverseKicker": "One more shift",
+      "reverseTitle": "You are not only watching the market anymore. You can call it.",
+      "reverseBody": "Post Ready to Sell from inside the app, and every verified merchant buying that crop sees your notice and can call you first."
     },
     "alerts": {
       "eyebrow": "Price alerts",
