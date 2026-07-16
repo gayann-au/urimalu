@@ -244,6 +244,8 @@
   "dashboard": {
     "cropsTab": "My Crops",
     "sellerLeadsTab": "Seller Leads",
+    "welcomeHeading": "Welcome to Urimalu!",
+    "welcomePushCta": "Get alerts when farmers are ready to sell",
     "deleted": "Rate deleted",
     "yourDailyPrices": "Your daily prices",
     "cropCountOne": "1 crop",

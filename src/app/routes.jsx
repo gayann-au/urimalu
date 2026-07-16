@@ -76,7 +76,7 @@ function MerchantPendingGuard() {
   const { profile, isLoading } = useAuth();
   if (isLoading) return <PageLoader/>;
   if (!profile || profile.role !== "MERCHANT") return nonMerchantRedirect(profile);
-  if (profile.status === "APPROVED") return <Navigate to="/merchant/dashboard" replace/>;
+  if (profile.status === "APPROVED") return <Navigate to="/merchant/dashboard" replace state={{ welcome: true }}/>;
   return <PendingPage/>;
 }
 

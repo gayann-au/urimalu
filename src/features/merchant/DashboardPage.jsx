@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
@@ -17,6 +17,7 @@ import {
   useConfirmTodaysPrices,
 } from "./useMerchant";
 import { useSellerLeadsUnreadCount } from "../sellerLeads/useSellerLeads";
+import { usePushRegistration } from "../alerts/usePushRegistration";
 import { toast } from "../../components/ui/Toast";
 import { LoadError } from "../../components/ui/LoadError";
 import { useUriMotion } from "../../lib/uiMotion";
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const { t, i18n } = useTranslation();
   const m = useUriMotion();
   const nav = useNavigate();
+  const location = useLocation();
   const { profile } = useAuth();
 
   const listingsQ     = useMyListings(profile?.id);
@@ -34,12 +36,23 @@ export default function DashboardPage() {
   const deleteOne     = useDeleteListing();
   const confirmPrices = useConfirmTodaysPrices();
   const leadsUnread   = useSellerLeadsUnreadCount(profile?.id);
+  const { promptAfterFollow } = usePushRegistration();
 
   // formMode: null when closed, "new" when adding, the listing object when editing.
   // Single state guarantees only one form open at a time, and closing fully unmounts
   // the form so the next "Add crop" gets a clean slate.
   const [formMode, setFormMode] = useState(null);
   const [dashTab, setDashTab] = useState("crops");
+  // MerchantPendingGuard redirects here with state.welcome set the moment a
+  // merchant is approved. The card below offers push at that point, from a
+  // real tap: the browser only shows the permission prompt in response to a
+  // user gesture, and promptAfterFollow burns its one-shot flag whether or not
+  // a prompt appeared.
+  // Route state persists across a refresh (React Router keeps it in
+  // window.history.state), so this card can reappear if the merchant refreshes
+  // before dismissing it. Low harm: tapping the button just re-runs
+  // promptAfterFollow, which safely no-ops if permission was already decided.
+  const [welcomeDone, setWelcomeDone] = useState(false);
 
   if (!profile) return null;
 
@@ -48,10 +61,19 @@ export default function DashboardPage() {
   const editingListing  = formMode && formMode !== "new" ? formMode : null;
   const formOpen        = formMode !== null;
   const lastConfirmed   = lastConfirmedLabel(activeListings, t, i18n.language);
+  const showWelcome     = !!location.state?.welcome && !welcomeDone;
 
   function openAdd()         { setFormMode("new"); }
   function openEdit(listing) { setFormMode(listing); }
   function closeForm()       { setFormMode(null); }
+
+  // promptAfterFollow runs synchronously up to requestPermission on the path
+  // that matters, so calling it first keeps the browser's user gesture intact.
+  // It never throws, so the card closes the same way whatever the answer is.
+  function enableAlerts() {
+    promptAfterFollow();
+    setWelcomeDone(true);
+  }
 
   async function handleSave(payload) {
     // Duplicate crop_name guard. Only applies when ADDING (no payload.id).
@@ -121,6 +143,22 @@ export default function DashboardPage() {
     <div className="flex flex-col flex-1 pb-10 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8 isolate">
       <GlowBackdrop/>
       <Header/>
+
+      {showWelcome && (
+        <motion.section
+          variants={m.fadeUp}
+          initial="hidden"
+          animate="show"
+          className="mt-4 rounded-3xl border-2 border-crop-200 bg-crop-50 p-5"
+        >
+          <p className="font-display font-extrabold text-base text-ink-900">
+            {t("dashboard.welcomeHeading")}
+          </p>
+          <Button className="w-full mt-3" onClick={enableAlerts}>
+            {t("dashboard.welcomePushCta")}
+          </Button>
+        </motion.section>
+      )}
 
       {/* Dashboard tabs: My Crops (default) and Seller Leads, with an unread badge. */}
       <div className="flex border-b border-ink-100 mt-2">
