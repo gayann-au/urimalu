@@ -387,7 +387,12 @@
     "priceSet": "{{crop}}: {{price}} per kg at {{merchant}}",
     "priceChanged": "{{crop}}: {{price}} per kg at {{merchant}} (was {{old}})",
     "priceUpdated": "{{crop}}: price updated at {{merchant}}",
-    "sellerLeadReady": "{{farmer}} is ready to sell. Tap to see details."
+    "sellerLeadReady": "{{farmer}} is ready to sell. Tap to see details.",
+    "sellerLeadResponse": "{{merchant}} opened your ready to sell notice.",
+    "merchantApproved": "Your merchant account is approved. Add your crops and prices to appear in the feed.",
+    "merchantRejected": "Your registration was not approved: {{reason}}",
+    "priceReminder": "Your prices have not been confirmed in 2 days. Confirm today's prices.",
+    "generic": "You have a new notification."
   },
   "report": {
     "loginRequired": "Login to report a merchant",

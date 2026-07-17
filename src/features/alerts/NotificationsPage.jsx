@@ -7,15 +7,10 @@ import { useMyNotifications, useMarkAllNotificationsRead } from "./useNotificati
 import { useUriMotion } from "../../lib/uiMotion";
 import { formatINR } from "../../lib/constants";
 
-// Build the sentence for one notification from its raw facts, in the reader's
-// current language. Price alerts have three shapes: a first price (no old
-// value), a change (old and new), and a move to call-for-price (no new
-// value). A seller lead notification is a single fixed sentence naming the
-// farmer.
-function notificationText(n, t) {
-  if (n.type === "seller_lead") {
-    return t("notif.sellerLeadReady", { farmer: n.farmer_name || t("notif.aFarmer") });
-  }
+// Price alerts have three shapes: a first price (no old value), a change (old
+// and new), and a move to call-for-price (no new value). Lifted out of
+// notificationText unchanged, so existing rows read exactly as before.
+function priceAlertText(n, t) {
   const merchant = n.merchant_name || t("notif.aMerchant");
   if (n.new_price == null) {
     return t("notif.priceUpdated", { crop: n.crop_name, merchant });
@@ -29,6 +24,39 @@ function notificationText(n, t) {
     price: formatINR(n.new_price),
     old: formatINR(n.old_price),
   });
+}
+
+// Build the sentence for one notification from its raw facts, in the reader's
+// current language. Every value notifications_type_chk allows gets an explicit
+// branch, and anything else falls to a generic sentence. The default matters:
+// this function previously treated "not seller_lead" as "price alert", so a
+// type added to the database ahead of the client rendered as a malformed price
+// sentence rather than failing visibly.
+function notificationText(n, t) {
+  switch (n.type) {
+    case "price_alert":
+      return priceAlertText(n, t);
+
+    case "seller_lead":
+      return t("notif.sellerLeadReady", { farmer: n.farmer_name || t("notif.aFarmer") });
+
+    case "seller_lead_response":
+      return t("notif.sellerLeadResponse", { merchant: n.merchant_name || t("notif.aMerchant") });
+
+    case "merchant_approved":
+      return t("notif.merchantApproved");
+
+    // message holds the rejection reason; notifications_type_fields_chk
+    // guarantees it is non null for this type.
+    case "merchant_rejected":
+      return t("notif.merchantRejected", { reason: n.message });
+
+    case "price_reminder":
+      return t("notif.priceReminder");
+
+    default:
+      return t("notif.generic");
+  }
 }
 
 // Simple notification list. Unread rows are highlighted; opening the page

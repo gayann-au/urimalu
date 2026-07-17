@@ -387,7 +387,12 @@
     "priceSet": "{{crop}}: {{merchant}} ಬಳಿ ಪ್ರತಿ ಕೆ.ಜಿ.ಗೆ {{price}}",
     "priceChanged": "{{crop}}: {{merchant}} ಬಳಿ ಪ್ರತಿ ಕೆ.ಜಿ.ಗೆ {{price}} (ಮೊದಲು {{old}})",
     "priceUpdated": "{{crop}}: {{merchant}} ಬಳಿ ಬೆಲೆ ನವೀಕರಿಸಲಾಗಿದೆ",
-    "sellerLeadReady": "{{farmer}} ಮಾರಾಟಕ್ಕೆ ಸಿದ್ಧ. ವಿವರ ನೋಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ."
+    "sellerLeadReady": "{{farmer}} ಮಾರಾಟಕ್ಕೆ ಸಿದ್ಧ. ವಿವರ ನೋಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ.",
+    "sellerLeadResponse": "{{merchant}} ನಿಮ್ಮ ಮಾರಾಟ ಸೂಚನೆಯನ್ನು ನೋಡಿದ್ದಾರೆ.",
+    "merchantApproved": "ನಿಮ್ಮ ವ್ಯಾಪಾರಿ ಖಾತೆ ಅನುಮೋದಿಸಲಾಗಿದೆ. ನಿಮ್ಮ ಬೆಳೆ ಮತ್ತು ಬೆಲೆಗಳನ್ನು ಸೇರಿಸಿ.",
+    "merchantRejected": "ನಿಮ್ಮ ನೋಂದಣಿ ಅನುಮೋದನೆ ಆಗಿಲ್ಲ: {{reason}}",
+    "priceReminder": "2 ದಿನಗಳಿಂದ ನಿಮ್ಮ ಬೆಲೆಗಳನ್ನು ಖಚಿತಪಡಿಸಿಲ್ಲ. ಇಂದಿನ ಬೆಲೆಗಳನ್ನು ಖಚಿತಪಡಿಸಿ.",
+    "generic": "ನಿಮಗೆ ಹೊಸ ಅಧಿಸೂಚನೆ ಇದೆ."
   },
   "report": {
     "loginRequired": "ದೂರು ಸಲ್ಲಿಸಲು ಲಾಗಿನ್ ಮಾಡಿ",
