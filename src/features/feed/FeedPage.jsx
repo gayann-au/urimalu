@@ -372,7 +372,7 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
           />
         </div>
         {crops.length > 0 && (
-          <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
+          <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar scroll-fade-right">
             {crops.map((c) => {
               const active = cropChip === c;
               return (

@@ -59,6 +59,44 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Right edge fade for horizontal scroll rows, added alongside .no-scrollbar.
+   Hiding the scrollbar also hides the only clue that a row scrolls, so this
+   puts the clue back.
+
+   A mask, not a gradient overlay, for two reasons. An overlay has to know the
+   colour behind it and these rows do not agree on one: the tab nav and the
+   crop chips sit on white, the admin status filters sit on paper. And an
+   ::after pinned to the right edge scrolls away with the content, because the
+   scroll container is its containing block. A mask is painted on the
+   scrollport and stays put.
+
+   mask-size parks the transparent tail 56px outside the box, so nothing fades
+   by default. A scroll timeline drags it back in, which ties the cue to real
+   overflow: a row that already fits has no scroll range, the timeline never
+   activates, and no fade is drawn. That is what keeps the tab nav crisp on
+   desktop, where flex-1 makes the five tabs fill the bar exactly. The cue also
+   melts away over the last 56px of travel so it stops promising more at the
+   end. Browsers without scroll timelines draw no cue rather than one that
+   claims content that is not there. */
+@supports (animation-timeline: scroll()) {
+  .scroll-fade-right {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent);
+    -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+    -webkit-mask-size: calc(100% + 56px) 100%;
+            mask-size: calc(100% + 56px) 100%;
+    animation: uri-scroll-fade-right linear both;
+    animation-timeline: scroll(self inline);
+    animation-range: calc(100% - 56px) 100%;
+  }
+
+  @keyframes uri-scroll-fade-right {
+    from { -webkit-mask-size: 100% 100%;              mask-size: 100% 100%; }
+    to   { -webkit-mask-size: calc(100% + 56px) 100%; mask-size: calc(100% + 56px) 100%; }
+  }
+}
+
 /* Soft warm brand glow shared by app screens, cloned from the landing hero
    glow (.uri-landing .hero::before in LandingPage.css). Same ember-500 and
    chilli-600 tones at the same low alpha, fixed to the top right corner so

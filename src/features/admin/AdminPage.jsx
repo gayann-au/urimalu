@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -19,6 +19,8 @@ const TABS = ["merchants", "farmers", "reviews", "reports", "requests"];
 export default function AdminPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState("merchants");
+  const { reduce } = useUriMotion();
+  const tabRefs = useRef({});
   const { data: openReports = [] } = useReports();
   const { data: users = [] } = useUsers();
   const openCount = openReports.length;
@@ -28,17 +30,32 @@ export default function AdminPage() {
   // on every refetch.
   const pendingCount = users.filter(u => u.role === "MERCHANT" && u.status === "PENDING").length;
   const tabCount = { merchants: pendingCount, reports: openCount };
+
+  // Keep the active tab on screen. Only about three of the five tabs fit at
+  // 375px, so Reports and Requests sit off the right edge until the row is
+  // scrolled. block: "nearest" is what keeps this horizontal: the default of
+  // "start" would scroll the document to pull the sticky nav to the top of the
+  // viewport on every switch, and on first render too.
+  useEffect(() => {
+    tabRefs.current[tab]?.scrollIntoView({
+      behavior: reduce ? "auto" : "smooth",
+      inline: "nearest",
+      block: "nearest",
+    });
+  }, [tab, reduce]);
+
   return (
     <div className="flex flex-col flex-1 pb-10 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8 isolate">
       <GlowBackdrop/>
       <Header title={t("admin.title")}/>
       <nav className="bg-white border-b border-ink-100 sticky top-[64px] z-20">
-        <div className="flex overflow-x-auto no-scrollbar">
+        <div className="flex overflow-x-auto no-scrollbar scroll-fade-right">
           {TABS.map(k => {
             const label = k === "reports" ? t("report.openReports") : t(`admin.tabs.${k}`);
             const count = tabCount[k] || 0;
             return (
               <button key={k} onClick={() => setTab(k)}
+                ref={el => { tabRefs.current[k] = el; }}
                 className={`flex-1 min-w-max px-4 py-3 text-xs font-bold uppercase tracking-wide border-b-2 transition-colors ${
                   tab === k ? "border-coorg-600 text-coorg-700" : "border-transparent text-ink-500 hover:text-ink-700"
                 }`}>
@@ -129,7 +146,7 @@ function MerchantsTab() {
 
   return (
     <>
-      <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
+      <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar scroll-fade-right">
         {["all", "pending", "approved", "rejected"].map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-bold border-2 min-h-[40px] transition-colors ${
