@@ -41,6 +41,16 @@ const bell = (
     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
   </svg>
 );
+const sent = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4 20-7Z" />
+  </svg>
+);
+const phoneCall = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+);
 // The brand chilli glyph, used as the eyebrow dot.
 function ChilliMark({ className }) {
   return (
@@ -185,6 +195,83 @@ function MerchantPhone({ reduce }) {
           Posted · 6:40 AM
         </motion.span>
       </motion.div>
+    </div>
+  );
+}
+
+// The signature sequence at 7:02 AM: the same feature from two sides, on the
+// page's one dark stage. Four beats, two per phone. The farmer posts that the
+// pepper is ready, every merchant buying pepper is alerted, a merchant calls,
+// and the farmer's phone rings. The connector arrows light up for each hop,
+// once out and once back, so the "either side" point is on screen. No number
+// is printed anywhere. Decorative and hidden from readers.
+function SignatureSequence({ reduce }) {
+  const ref = useRef(null);
+  const show = useInView(ref, { once: true, amount: 0.25 });
+  const card = (delay) => ({
+    initial: { opacity: 0, y: reduce ? 0 : 14, scale: reduce ? 1 : 0.98 },
+    animate: show
+      ? { opacity: 1, y: 0, scale: 1 }
+      : { opacity: 0, y: reduce ? 0 : 14, scale: reduce ? 1 : 0.98 },
+    transition: { duration: reduce ? 0 : 0.5, ease: EASE, delay: reduce ? 0 : delay },
+  });
+  const hop = (delay) => ({
+    initial: { opacity: 0.15 },
+    animate: show ? { opacity: reduce ? 0.85 : [0.15, 1, 0.35] } : { opacity: 0.15 },
+    transition: reduce ? { duration: 0 } : { duration: 1.1, ease: EASE, delay, times: [0, 0.4, 1] },
+  });
+  return (
+    <div className="sig-stage" ref={ref} aria-hidden="true">
+      <div className="sig-col">
+        <div className="phone sig-phone">
+          <div className="phone-notch" />
+          <div className="sig-screen">
+            <div className="sig-topbar"><b>Urimalu</b><i>7:02 AM</i></div>
+            <motion.div className="sig-card" {...card(0.3)}>
+              <span className="sig-ic post">{sent}</span>
+              <span className="sig-ct">
+                <span className="sig-t">Pepper, ready to sell</span>
+                <span className="sig-s">Posted to every merchant buying pepper</span>
+              </span>
+            </motion.div>
+            <motion.div className="sig-card ring" {...card(3)}>
+              <span className="sig-ic call">{phoneCall}</span>
+              <span className="sig-ct">
+                <span className="sig-t">Incoming call</span>
+                <span className="sig-s">A merchant, about your pepper</span>
+              </span>
+            </motion.div>
+          </div>
+        </div>
+        <span className="sig-label">Farmer</span>
+      </div>
+      <div className="sig-link">
+        <motion.span className="sig-arrow to-merchant" {...hop(0.9)}>{arrow}</motion.span>
+        <motion.span className="sig-arrow to-farmer" {...hop(2.6)}>{arrow}</motion.span>
+      </div>
+      <div className="sig-col">
+        <div className="phone sig-phone">
+          <div className="phone-notch" />
+          <div className="sig-screen">
+            <div className="sig-topbar"><b>Urimalu</b><i>7:02 AM</i></div>
+            <motion.div className="sig-card" {...card(1.3)}>
+              <span className="sig-ic alert">{bell}</span>
+              <span className="sig-ct">
+                <span className="sig-t">Pepper ready nearby</span>
+                <span className="sig-s">A farmer is ready to sell</span>
+              </span>
+            </motion.div>
+            <motion.div className="sig-card" {...card(2)}>
+              <span className="sig-ic call">{phoneCall}</span>
+              <span className="sig-ct">
+                <span className="sig-t">Calling the farmer</span>
+                <span className="sig-s">About the pepper</span>
+              </span>
+            </motion.div>
+          </div>
+        </div>
+        <span className="sig-label">Merchant</span>
+      </div>
     </div>
   );
 }
@@ -337,6 +424,23 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Signature sequence, the page's one dark stage and one bold moment:
+            the same feature from two sides. Farmer posts, a merchant is
+            alerted, the merchant calls, the farmer's phone rings. */}
+        <section className="signature">
+          <div className="wrap">
+            <motion.div className="sig-head" variants={stagger} initial="hidden" whileInView="show" viewport={inView}>
+              <motion.span className="eyebrow on-ink" variants={fadeUp}>
+                <ChilliMark className="dot" />
+                Both sides
+              </motion.span>
+              <motion.h2 variants={fadeUp}>The farmer can start it too.</motion.h2>
+              <motion.p className="sig-body" variants={fadeUp}>Merchants post prices in the morning. But a farmer can post as well. Say the pepper is ready, and every merchant buying pepper hears about it. The call can start from either side.</motion.p>
+            </motion.div>
+            <SignatureSequence reduce={reduce} />
+          </div>
+        </section>
+
         {/* Closing. The ask, then the quiet fact underneath it. */}
         <section className="wrap closing">
           <motion.div className="cta" variants={cardIn} initial="hidden" whileInView="show" viewport={inView}>
@@ -370,7 +474,7 @@ export default function LandingPage() {
             <div className="ft-brand">
               <img src="/icons/logo-urimalu.png" alt="Urimalu" style={{ height: "31px", width: "auto" }} />
             </div>
-            <p className="ft-tag">Real daily crop prices, shared between the people who grow and the people who buy.</p>
+            <p className="ft-tag">Daily crop prices, shared between farmers and merchants.</p>
           </div>
           <div className="ft-links">
             <Link to="/signup/farmer">Farmers</Link>
