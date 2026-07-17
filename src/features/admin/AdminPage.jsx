@@ -134,8 +134,8 @@ function MerchantsTab() {
     return m.status === filter.toUpperCase();
   }), [merchants, filter]);
 
-  async function act(name, fn, okKey) {
-    setBusyId(name);
+  async function act(id, name, fn, okKey) {
+    setBusyId(id);
     try { await fn(); toast({ tone: "ok", text: t(okKey, { name }) }); }
     catch (e) { toast({ tone: "err", text: e.message?.startsWith("admin.") ? t(e.message) : e.message || "Error" }); }
     finally { setBusyId(null); }
@@ -163,7 +163,7 @@ function MerchantsTab() {
         <motion.ul variants={m.stagger} initial="hidden" animate="show"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {list.map(mc => {
-            const inflight = busyId === mc.business_name;
+            const inflight = busyId === mc.id;
             return (
               <motion.li key={mc.id} variants={m.fadeUp} className={CARD}>
                 <div className="flex items-start justify-between gap-3">
@@ -207,7 +207,7 @@ function MerchantsTab() {
                         disabled={rejectReason.trim().length < 20}
                         onClick={() => {
                           const reason = rejectReason.trim();
-                          act(mc.business_name,
+                          act(mc.id, mc.business_name,
                             () => setStatus.mutateAsync({ userId: mc.id, status: "REJECTED", reason }),
                             "admin.rejectedToast");
                           setRejectingId(null);
@@ -221,7 +221,7 @@ function MerchantsTab() {
                   <div className="mt-4 flex gap-2">
                     {mc.status !== "APPROVED" && (
                       <Button size="sm" variant="primary" loading={inflight} className="flex-1"
-                        onClick={() => act(mc.business_name, () => setStatus.mutateAsync({ userId: mc.id, status: "APPROVED" }), "admin.approvedToast")}>
+                        onClick={() => act(mc.id, mc.business_name, () => setStatus.mutateAsync({ userId: mc.id, status: "APPROVED" }), "admin.approvedToast")}>
                         {t("admin.approve")}
                       </Button>
                     )}
@@ -234,7 +234,7 @@ function MerchantsTab() {
                     <Button size="sm" variant="dangerSoft" loading={inflight}
                       onClick={() => {
                         if (!confirm(t("admin.confirmRemove"))) return;
-                        act(mc.business_name, () => removeUser.mutateAsync(mc.id), "admin.removedToast");
+                        act(mc.id, mc.business_name, () => removeUser.mutateAsync(mc.id), "admin.removedToast");
                       }}>
                       {t("admin.remove")}
                     </Button>
@@ -255,6 +255,7 @@ function FarmersTab() {
   const usersQ = useUsers();
   const users = usersQ.data || [];
   const removeUser = useRemoveUser();
+  const [busyId, setBusyId] = useState(null);
   if (usersQ.isError) return <LoadError onRetry={() => usersQ.refetch()}/>;
   if (usersQ.isLoading) return <LoadingCard/>;
   const farmers = users.filter(u => u.role === "FARMER").sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
@@ -262,7 +263,9 @@ function FarmersTab() {
   return (
     <motion.ul variants={m.stagger} initial="hidden" animate="show"
       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {farmers.map(f => (
+      {farmers.map(f => {
+        const inflight = busyId === f.id;
+        return (
         <motion.li key={f.id} variants={m.fadeUp} className={`${CARD} flex items-start justify-between gap-3`}>
           <div className="min-w-0">
             <div className="font-display text-lg font-extrabold tracking-tight text-ink-900 truncate">{f.full_name || "(no name)"}</div>
@@ -270,13 +273,16 @@ function FarmersTab() {
             <div className="text-xs text-ink-500 truncate">{f.email}</div>
             <div className="text-[11px] text-ink-400 mt-1.5">{t("admin.signupDate")}: {format(new Date(f.created_at), "d MMM yyyy")}</div>
           </div>
-          <Button size="sm" variant="dangerSoft" onClick={async () => {
+          <Button size="sm" variant="dangerSoft" loading={inflight} onClick={async () => {
             if (!confirm(t("admin.confirmRemove"))) return;
+            setBusyId(f.id);
             try { await removeUser.mutateAsync(f.id); toast({ text: `Removed ${f.full_name}` }); }
             catch (e) { toast({ tone: "err", text: e.message?.startsWith("admin.") ? t(e.message) : e.message }); }
+            finally { setBusyId(null); }
           }}>{t("admin.remove")}</Button>
         </motion.li>
-      ))}
+        );
+      })}
     </motion.ul>
   );
 }
@@ -289,6 +295,7 @@ function ReviewsTab() {
   const users = usersQ.data || [];
   const reviews = reviewsQ.data || [];
   const removeReview = useRemoveReview();
+  const [busyId, setBusyId] = useState(null);
   const byId = useMemo(() => new Map(users.map(u => [u.id, u])), [users]);
   if (usersQ.isError || reviewsQ.isError) return <LoadError onRetry={() => { usersQ.refetch(); reviewsQ.refetch(); }}/>;
   if (usersQ.isLoading || reviewsQ.isLoading) return <LoadingCard/>;
@@ -296,7 +303,9 @@ function ReviewsTab() {
   return (
     <motion.ul variants={m.stagger} initial="hidden" animate="show"
       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {reviews.map(r => (
+      {reviews.map(r => {
+        const inflight = busyId === r.id;
+        return (
         <motion.li key={r.id} variants={m.fadeUp} className={CARD}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -308,13 +317,16 @@ function ReviewsTab() {
             </div>
             {r.flagged && <Tag tone="flag">Flagged</Tag>}
           </div>
-          <Button size="sm" variant="dangerSoft" className="mt-4 w-full" onClick={async () => {
+          <Button size="sm" variant="dangerSoft" loading={inflight} className="mt-4 w-full" onClick={async () => {
             if (!confirm(t("admin.confirmRemove"))) return;
+            setBusyId(r.id);
             try { await removeReview.mutateAsync(r.id); toast({ text: "Removed" }); }
             catch (e) { toast({ tone: "err", text: e.message }); }
+            finally { setBusyId(null); }
           }}>{t("admin.remove")}</Button>
         </motion.li>
-      ))}
+        );
+      })}
     </motion.ul>
   );
 }

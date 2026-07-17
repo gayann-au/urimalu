@@ -147,8 +147,6 @@ export function useLogin() {
     mutationFn: async ({ email, password }) => {
       const e = email.toLowerCase().trim();
       const { data, error } = await supabase.auth.signInWithPassword({ email: e, password });
-      // eslint-disable-next-line no-console
-      console.log("[login] response", { user: !!data?.user, error });
       if (error) throw { code: mapAuthError(error), raw: error.message };
       if (!data?.user?.id) throw { code: "auth.loginError" };
       let profile = null;
