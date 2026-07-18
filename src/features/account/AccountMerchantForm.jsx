@@ -11,7 +11,7 @@ import { toast } from "../../components/ui/Toast";
 import { useUpdateOwnProfile } from "./useAccount";
 import { useUriMotion } from "../../lib/uiMotion";
 import {
-  DISTRICTS, YEARS_TRADING, BUSINESS_TYPES, CROPS_TRADED, phoneRegex,
+  DISTRICTS, YEARS_TRADING, BUSINESS_TYPES, CROPS_TRADED, phoneRegex, normalizeIndianMobile,
 } from "../../lib/constants";
 
 // Merchant self-edit form. Same business fields and validation as the merchant
@@ -95,8 +95,8 @@ export default function AccountMerchantForm({ profile }) {
     const patch = {
       business_name: values.businessName.trim(),
       owner_name: values.ownerName.trim(),
-      phone: values.phone.trim(),
-      whatsapp: (values.whatsappSame ? values.phone : values.whatsapp).trim(),
+      phone: normalizeIndianMobile(values.phone),
+      whatsapp: normalizeIndianMobile(values.whatsappSame ? values.phone : values.whatsapp),
       town: values.town.trim(),
       district: values.district,
       years_trading: values.yearsTrading,
@@ -144,7 +144,7 @@ export default function AccountMerchantForm({ profile }) {
           error={errors.businessName ? t(errors.businessName.message) : null}/>
         <Input label={t("auth.ownerName")} maxLength={100} {...register("ownerName")}
           error={errors.ownerName ? t(errors.ownerName.message) : null}/>
-        <Input label={t("auth.phone")} type="tel" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
+        <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
           error={errors.phone ? t(errors.phone.message) : null}/>
         <div>
           <div className="flex items-center justify-between mb-1.5">
@@ -154,7 +154,7 @@ export default function AccountMerchantForm({ profile }) {
               {t("auth.sameAsPhone")}
             </label>
           </div>
-          <Input type="tel" disabled={waSame} maxLength={10} placeholder="98XXXXXXXX" {...register("whatsapp")}
+          <Input type="tel" prefix="+91" disabled={waSame} maxLength={10} placeholder="98XXXXXXXX" {...register("whatsapp")}
             error={errors.whatsapp && !waSame ? t(errors.whatsapp.message) : null}/>
         </div>
         <div className="grid grid-cols-2 gap-3">

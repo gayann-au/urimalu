@@ -50,7 +50,7 @@ export default function OnboardingFarmerForm({ onBack }) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input label={t("auth.fullName")} maxLength={100} {...register("fullName")}
             error={errors.fullName ? t(errors.fullName.message) : null}/>
-          <Input label={t("auth.phone")} type="tel" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
+          <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
             error={errors.phone ? t(errors.phone.message) : null}/>
           <Select label={t("auth.district")} {...register("district")}>
             {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}

@@ -87,7 +87,7 @@ export default function OnboardingMerchantForm({ onBack }) {
             error={errors.businessName ? t(errors.businessName.message) : null}/>
           <Input label={t("auth.ownerName")} maxLength={100} {...register("ownerName")}
             error={errors.ownerName ? t(errors.ownerName.message) : null}/>
-          <Input label={t("auth.phone")} type="tel" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
+          <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
             error={errors.phone ? t(errors.phone.message) : null}/>
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -97,7 +97,7 @@ export default function OnboardingMerchantForm({ onBack }) {
                 {t("auth.sameAsPhone")}
               </label>
             </div>
-            <Input type="tel" disabled={waSame} maxLength={10} placeholder="98XXXXXXXX" {...register("whatsapp")}
+            <Input type="tel" prefix="+91" disabled={waSame} maxLength={10} placeholder="98XXXXXXXX" {...register("whatsapp")}
               error={errors.whatsapp && !waSame ? t(errors.whatsapp.message) : null}/>
           </div>
           <div className="grid grid-cols-2 gap-3">

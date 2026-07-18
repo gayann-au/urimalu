@@ -9,7 +9,7 @@ import { Input, Select } from "../../components/ui/Input";
 import { toast } from "../../components/ui/Toast";
 import { useUpdateOwnProfile } from "./useAccount";
 import { useUriMotion } from "../../lib/uiMotion";
-import { DISTRICTS, phoneRegex } from "../../lib/constants";
+import { DISTRICTS, phoneRegex, normalizeIndianMobile } from "../../lib/constants";
 
 // Farmer self-edit form. Same fields and validation as the farmer signup and
 // onboarding (name, phone, district), prefilled from the current profile, with
@@ -41,7 +41,7 @@ export default function AccountFarmerForm({ profile }) {
         userId: profile.id,
         patch: {
           full_name: values.fullName.trim(),
-          phone: values.phone.trim(),
+          phone: normalizeIndianMobile(values.phone),
           district: values.district || null,
         },
       });
@@ -56,7 +56,7 @@ export default function AccountFarmerForm({ profile }) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input label={t("auth.fullName")} maxLength={100} {...register("fullName")}
           error={errors.fullName ? t(errors.fullName.message) : null}/>
-        <Input label={t("auth.phone")} type="tel" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
+        <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
           error={errors.phone ? t(errors.phone.message) : null}/>
         <Select label={t("auth.district")} {...register("district")}>
           {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
