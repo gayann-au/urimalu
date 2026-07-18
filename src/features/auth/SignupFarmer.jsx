@@ -14,13 +14,18 @@ import { DistrictPicker } from "./DistrictPicker";
 import { useSignupFarmer } from "./useAuth";
 import LegalConsent from "../legal/LegalConsent";
 import { useUriMotion } from "../../lib/uiMotion";
-import { phoneRegex } from "../../lib/constants";
+import { PhoneField } from "../../components/ui/PhoneField";
+import { isValidPhone, DEFAULT_PHONE_COUNTRY } from "../../lib/phone";
 
 const schema = z.object({
   fullName: z.string().min(2, "auth.fullName"),
-  phone: z.string().regex(phoneRegex, "auth.phoneInvalid"),
+  phone: z.string(),
+  phoneCountry: z.string().default("IN"),
   email: z.string().email("auth.emailInvalid"),
   password: z.string().min(6, "auth.pwTooShort"),
+}).superRefine((v, ctx) => {
+  if (!isValidPhone(v.phone, v.phoneCountry))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "auth.phoneInvalid", path: ["phone"] });
 });
 
 export default function SignupFarmer() {
@@ -30,7 +35,7 @@ export default function SignupFarmer() {
   const [stage, setStage] = useState("form"); // form -> district
   const [formValues, setFormValues] = useState(null);
   const [topError, setTopError] = useState(null);
-  const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(schema) });
+  const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(schema), defaultValues: { phoneCountry: DEFAULT_PHONE_COUNTRY } });
 
   // Stage 1: the details form only advances to the district step. The account
   // is deliberately NOT created here. Previously onSubmit created the account,
@@ -72,7 +77,7 @@ export default function SignupFarmer() {
             <motion.div variants={m.fadeUp} initial="hidden" animate="show" className="bg-white rounded-3xl border border-ink-200 shadow-sm p-6 md:p-7">
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <Input label={t("auth.fullName")} maxLength={100} {...register("fullName")} error={errors.fullName ? t(errors.fullName.message) : null}/>
-                <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
+                <PhoneField label={t("auth.phone")} countryReg={register("phoneCountry")} numberReg={register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
                 <Input label={t("auth.email")} type="email" autoComplete="email" maxLength={255} {...register("email")} error={errors.email ? t(errors.email.message) : null}/>
                 <PasswordInput label={t("auth.password")} autoComplete="new-password" maxLength={72} {...register("password")} error={errors.password ? t(errors.password.message) : null}/>
                 {topError && <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold">{t(topError)}</div>}

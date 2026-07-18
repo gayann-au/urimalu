@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
-import { USER_COLUMNS_AUTHED, WELCOME_FLAG_KEY, normalizeIndianMobile } from "../../lib/constants";
+import { USER_COLUMNS_AUTHED, WELCOME_FLAG_KEY } from "../../lib/constants";
+import { normalizePhone } from "../../lib/phone";
 import { toast } from "../../components/ui/Toast";
 import i18n from "../../i18n";
 
@@ -230,7 +231,7 @@ export function useSignupFarmer() {
       // are left untouched, so the policy allows it).
       const { error: updErr } = await supabase.from("users").update({
         full_name: data.fullName.trim(),
-        phone: normalizeIndianMobile(data.phone),
+        phone: normalizePhone(data.phone, data.phoneCountry),
         district: data.district || null,
       }).eq("id", userId);
       if (updErr) throw { code: "auth.loginError", raw: updErr.message };
@@ -277,8 +278,8 @@ export function useSignupMerchant() {
       const { error: updErr } = await supabase.from("users").update({
         business_name: data.businessName.trim(),
         owner_name: data.ownerName.trim(),
-        phone: normalizeIndianMobile(data.phone),
-        whatsapp: normalizeIndianMobile(data.whatsapp || data.phone),
+        phone: normalizePhone(data.phone, data.phoneCountry),
+        whatsapp: normalizePhone(data.whatsapp || data.phone, data.whatsappCountry || data.phoneCountry),
         town: data.town.trim(),
         district: data.district,
         years_trading: data.yearsTrading,

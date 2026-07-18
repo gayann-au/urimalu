@@ -8,7 +8,9 @@ import { Button } from "../../components/ui/Button";
 import { Input, Select } from "../../components/ui/Input";
 import { useFarmerOnboarding } from "./useOnboarding";
 import { useUriMotion } from "../../lib/uiMotion";
-import { DISTRICTS, phoneRegex } from "../../lib/constants";
+import { DISTRICTS } from "../../lib/constants";
+import { PhoneField } from "../../components/ui/PhoneField";
+import { isValidPhone, DEFAULT_PHONE_COUNTRY } from "../../lib/phone";
 
 // Farmer half of Google onboarding. Collects the same profile fields the
 // password farmer sign-up collects (full name, phone, district), minus the
@@ -17,8 +19,12 @@ import { DISTRICTS, phoneRegex } from "../../lib/constants";
 // sign-up flow.
 const schema = z.object({
   fullName: z.string().min(2, "auth.fullName"),
-  phone: z.string().regex(phoneRegex, "auth.phoneInvalid"),
+  phone: z.string(),
+  phoneCountry: z.string().default("IN"),
   district: z.string(),
+}).superRefine((v, ctx) => {
+  if (!isValidPhone(v.phone, v.phoneCountry))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "auth.phoneInvalid", path: ["phone"] });
 });
 
 export default function OnboardingFarmerForm({ onBack }) {
@@ -28,7 +34,7 @@ export default function OnboardingFarmerForm({ onBack }) {
   const [topError, setTopError] = useState(null);
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { district: DISTRICTS[0] },
+    defaultValues: { district: DISTRICTS[0], phoneCountry: DEFAULT_PHONE_COUNTRY },
   });
 
   async function onSubmit(values) {
@@ -50,7 +56,7 @@ export default function OnboardingFarmerForm({ onBack }) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input label={t("auth.fullName")} maxLength={100} {...register("fullName")}
             error={errors.fullName ? t(errors.fullName.message) : null}/>
-          <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
+          <PhoneField label={t("auth.phone")} countryReg={register("phoneCountry")} numberReg={register("phone")}
             error={errors.phone ? t(errors.phone.message) : null}/>
           <Select label={t("auth.district")} {...register("district")}>
             {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}

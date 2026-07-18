@@ -9,15 +9,21 @@ import { Input, Select } from "../../components/ui/Input";
 import { toast } from "../../components/ui/Toast";
 import { useUpdateOwnProfile } from "./useAccount";
 import { useUriMotion } from "../../lib/uiMotion";
-import { DISTRICTS, phoneRegex, normalizeIndianMobile } from "../../lib/constants";
+import { DISTRICTS } from "../../lib/constants";
+import { PhoneField } from "../../components/ui/PhoneField";
+import { isValidPhone, normalizePhone, splitPhone } from "../../lib/phone";
 
 // Farmer self-edit form. Same fields and validation as the farmer signup and
 // onboarding (name, phone, district), prefilled from the current profile, with
 // a self-update instead of a create. Email and role are not editable here.
 const schema = z.object({
   fullName: z.string().min(2, "auth.fullName"),
-  phone: z.string().regex(phoneRegex, "auth.phoneInvalid"),
+  phone: z.string(),
+  phoneCountry: z.string().default("IN"),
   district: z.string(),
+}).superRefine((v, ctx) => {
+  if (!isValidPhone(v.phone, v.phoneCountry))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "auth.phoneInvalid", path: ["phone"] });
 });
 
 export default function AccountFarmerForm({ profile }) {
@@ -25,11 +31,13 @@ export default function AccountFarmerForm({ profile }) {
   const m = useUriMotion();
   const update = useUpdateOwnProfile();
   const [topError, setTopError] = useState(null);
+  const initialPhone = splitPhone(profile.phone);
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       fullName: profile.full_name || "",
-      phone: profile.phone || "",
+      phone: initialPhone.national,
+      phoneCountry: initialPhone.country,
       district: profile.district || DISTRICTS[0],
     },
   });
@@ -41,7 +49,7 @@ export default function AccountFarmerForm({ profile }) {
         userId: profile.id,
         patch: {
           full_name: values.fullName.trim(),
-          phone: normalizeIndianMobile(values.phone),
+          phone: normalizePhone(values.phone, values.phoneCountry),
           district: values.district || null,
         },
       });
@@ -56,7 +64,7 @@ export default function AccountFarmerForm({ profile }) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input label={t("auth.fullName")} maxLength={100} {...register("fullName")}
           error={errors.fullName ? t(errors.fullName.message) : null}/>
-        <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
+        <PhoneField label={t("auth.phone")} countryReg={register("phoneCountry")} numberReg={register("phone")}
           error={errors.phone ? t(errors.phone.message) : null}/>
         <Select label={t("auth.district")} {...register("district")}>
           {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
