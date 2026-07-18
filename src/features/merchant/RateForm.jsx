@@ -36,10 +36,15 @@ const schema = z
     notes:          z.string().optional(),
   })
   .superRefine((v, ctx) => {
-    if (!v.call_for_price && (v.price == null || v.price <= 0)) {
+    // Price is optional, the same way call for price already lets a merchant
+    // skip it. But a listing still needs to say something about the deal, so
+    // require at least one of: a price, call for price, or a note.
+    const hasPrice = v.price != null && v.price > 0;
+    const hasNotes = !!(v.notes && v.notes.trim());
+    if (!v.call_for_price && !hasPrice && !hasNotes) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Price is required",
+        message: "Add a price, turn on call for price, or add a note",
         path: ["price"],
       });
     }
@@ -205,7 +210,7 @@ export function RateForm({ listing, onSave, onCancel }) {
       {!callForPrice && (
         <div>
           <Input
-            label={`Price (${unitLabel})`}
+            label={`Price (${unitLabel}), optional`}
             type="number"
             inputMode="decimal"
             placeholder="e.g. 5000"
