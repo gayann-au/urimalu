@@ -299,22 +299,3 @@ export function toTitleCaseCrop(name) {
     })
     .join(" ");
 }
-
-// Indian mobile validation
-export const phoneRegex = /^[6-9]\d{9}$/;
-
-// Normalise any user-entered Indian mobile to the canonical +91XXXXXXXXXX
-// storage form: country code plus the 10 subscriber digits, no spaces or
-// punctuation. Strips all non-digits, then sets aside a country code (a leading
-// 91) or trunk prefix (a leading 0) so "+91 98765 43210", "919876543210",
-// "098765 43210" and "9876543210" all reduce to the same 10 digits. Returns
-// null if what remains is not a valid Indian mobile (10 digits starting 6-9).
-// Every write of a phone or whatsapp number goes through this so stored values
-// stay consistent with the +91 data migration. Idempotent: a value that is
-// already "+91XXXXXXXXXX" normalises back to itself.
-export function normalizeIndianMobile(raw) {
-  let digits = String(raw ?? "").replace(/\D/g, "");
-  if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
-  else if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
-  return phoneRegex.test(digits) ? "+91" + digits : null;
-}

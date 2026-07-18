@@ -9,8 +9,10 @@ import { Input, Textarea, Select } from "../../components/ui/Input";
 import { useMerchantOnboarding } from "./useOnboarding";
 import { useUriMotion } from "../../lib/uiMotion";
 import {
-  DISTRICTS, YEARS_TRADING, BUSINESS_TYPES, CROPS_TRADED, phoneRegex,
+  DISTRICTS, YEARS_TRADING, BUSINESS_TYPES, CROPS_TRADED,
 } from "../../lib/constants";
+import { PhoneField } from "../../components/ui/PhoneField";
+import { isValidPhone, DEFAULT_PHONE_COUNTRY } from "../../lib/phone";
 
 // Merchant half of Google onboarding. Collects the same business profile the
 // password merchant sign-up collects, minus the email and password, which the
@@ -21,19 +23,23 @@ import {
 const schema = z.object({
   businessName: z.string().min(2, "auth.businessName"),
   ownerName: z.string().min(2, "auth.ownerName"),
-  phone: z.string().regex(phoneRegex, "auth.phoneInvalid"),
+  phone: z.string(),
+  phoneCountry: z.string().default("IN"),
   whatsappSame: z.boolean().default(true),
   whatsapp: z.string().optional(),
+  whatsappCountry: z.string().default("IN"),
   town: z.string().min(2, "auth.town"),
   district: z.string(),
   yearsTrading: z.string(),
   businessType: z.string(),
   cropsTraded: z.array(z.string()).min(1, "auth.cropsTraded"),
   businessDescription: z.string().max(200).optional(),
-}).refine(
-  (v) => v.whatsappSame || (v.whatsapp && phoneRegex.test(v.whatsapp)),
-  { message: "auth.phoneInvalid", path: ["whatsapp"] }
-);
+}).superRefine((v, ctx) => {
+  if (!isValidPhone(v.phone, v.phoneCountry))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "auth.phoneInvalid", path: ["phone"] });
+  if (!v.whatsappSame && !isValidPhone(v.whatsapp, v.whatsappCountry))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "auth.phoneInvalid", path: ["whatsapp"] });
+});
 
 export default function OnboardingMerchantForm({ onBack }) {
   const { t } = useTranslation();
@@ -44,6 +50,8 @@ export default function OnboardingMerchantForm({ onBack }) {
     resolver: zodResolver(schema),
     defaultValues: {
       whatsappSame: true,
+      phoneCountry: DEFAULT_PHONE_COUNTRY,
+      whatsappCountry: DEFAULT_PHONE_COUNTRY,
       district: DISTRICTS[0],
       yearsTrading: YEARS_TRADING[1].value,
       businessType: BUSINESS_TYPES[0].value,
@@ -69,6 +77,7 @@ export default function OnboardingMerchantForm({ onBack }) {
       await onboard.mutateAsync({
         ...values,
         whatsapp: values.whatsappSame ? values.phone : values.whatsapp,
+        whatsappCountry: values.whatsappSame ? values.phoneCountry : values.whatsappCountry,
       });
     } catch (e) {
       setTopError(e?.code || "auth.onboardingError");
@@ -87,7 +96,7 @@ export default function OnboardingMerchantForm({ onBack }) {
             error={errors.businessName ? t(errors.businessName.message) : null}/>
           <Input label={t("auth.ownerName")} maxLength={100} {...register("ownerName")}
             error={errors.ownerName ? t(errors.ownerName.message) : null}/>
-          <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
+          <PhoneField label={t("auth.phone")} countryReg={register("phoneCountry")} numberReg={register("phone")}
             error={errors.phone ? t(errors.phone.message) : null}/>
           <div>
             <div className="flex items-center justify-between mb-1.5">
@@ -97,7 +106,7 @@ export default function OnboardingMerchantForm({ onBack }) {
                 {t("auth.sameAsPhone")}
               </label>
             </div>
-            <Input type="tel" prefix="+91" disabled={waSame} maxLength={10} placeholder="98XXXXXXXX" {...register("whatsapp")}
+            <PhoneField countryReg={register("whatsappCountry")} numberReg={register("whatsapp")} disabled={waSame}
               error={errors.whatsapp && !waSame ? t(errors.whatsapp.message) : null}/>
           </div>
           <div className="grid grid-cols-2 gap-3">

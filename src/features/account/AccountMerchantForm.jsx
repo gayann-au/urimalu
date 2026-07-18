@@ -11,8 +11,10 @@ import { toast } from "../../components/ui/Toast";
 import { useUpdateOwnProfile } from "./useAccount";
 import { useUriMotion } from "../../lib/uiMotion";
 import {
-  DISTRICTS, YEARS_TRADING, BUSINESS_TYPES, CROPS_TRADED, phoneRegex, normalizeIndianMobile,
+  DISTRICTS, YEARS_TRADING, BUSINESS_TYPES, CROPS_TRADED,
 } from "../../lib/constants";
+import { PhoneField } from "../../components/ui/PhoneField";
+import { isValidPhone, normalizePhone, splitPhone, DEFAULT_PHONE_COUNTRY } from "../../lib/phone";
 
 // Merchant self-edit form. Same business fields and validation as the merchant
 // signup, resubmit, and onboarding forms, prefilled from the current profile,
@@ -26,19 +28,23 @@ import {
 const schema = z.object({
   businessName: z.string().min(2, "auth.businessName"),
   ownerName: z.string().min(2, "auth.ownerName"),
-  phone: z.string().regex(phoneRegex, "auth.phoneInvalid"),
+  phone: z.string(),
+  phoneCountry: z.string().default("IN"),
   whatsappSame: z.boolean().default(true),
   whatsapp: z.string().optional(),
+  whatsappCountry: z.string().default("IN"),
   town: z.string().min(2, "auth.town"),
   district: z.string(),
   yearsTrading: z.string(),
   businessType: z.string(),
   cropsTraded: z.array(z.string()).min(1, "auth.cropsTraded"),
   businessDescription: z.string().max(200).optional(),
-}).refine(
-  (v) => v.whatsappSame || (v.whatsapp && phoneRegex.test(v.whatsapp)),
-  { message: "auth.phoneInvalid", path: ["whatsapp"] }
-);
+}).superRefine((v, ctx) => {
+  if (!isValidPhone(v.phone, v.phoneCountry))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "auth.phoneInvalid", path: ["phone"] });
+  if (!v.whatsappSame && !isValidPhone(v.whatsapp, v.whatsappCountry))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "auth.phoneInvalid", path: ["whatsapp"] });
+});
 
 // Compares two crop lists ignoring order, so merely reordering the selection is
 // not treated as a change that needs re-review.
@@ -54,14 +60,18 @@ export default function AccountMerchantForm({ profile }) {
   const nav = useNavigate();
   const update = useUpdateOwnProfile();
   const [topError, setTopError] = useState(null);
+  const initialPhone = splitPhone(profile.phone);
+  const initialWa = splitPhone(profile.whatsapp);
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       businessName: profile.business_name || "",
       ownerName: profile.owner_name || "",
-      phone: profile.phone || "",
+      phone: initialPhone.national,
+      phoneCountry: initialPhone.country,
       whatsappSame: !profile.whatsapp || profile.whatsapp === profile.phone,
-      whatsapp: profile.whatsapp || "",
+      whatsapp: initialWa.national,
+      whatsappCountry: initialWa.country,
       town: profile.town || "",
       district: profile.district || DISTRICTS[0],
       yearsTrading: profile.years_trading || YEARS_TRADING[1].value,
@@ -95,8 +105,8 @@ export default function AccountMerchantForm({ profile }) {
     const patch = {
       business_name: values.businessName.trim(),
       owner_name: values.ownerName.trim(),
-      phone: normalizeIndianMobile(values.phone),
-      whatsapp: normalizeIndianMobile(values.whatsappSame ? values.phone : values.whatsapp),
+      phone: normalizePhone(values.phone, values.phoneCountry),
+      whatsapp: normalizePhone(values.whatsappSame ? values.phone : values.whatsapp, values.whatsappSame ? values.phoneCountry : values.whatsappCountry),
       town: values.town.trim(),
       district: values.district,
       years_trading: values.yearsTrading,
@@ -144,7 +154,7 @@ export default function AccountMerchantForm({ profile }) {
           error={errors.businessName ? t(errors.businessName.message) : null}/>
         <Input label={t("auth.ownerName")} maxLength={100} {...register("ownerName")}
           error={errors.ownerName ? t(errors.ownerName.message) : null}/>
-        <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")}
+        <PhoneField label={t("auth.phone")} countryReg={register("phoneCountry")} numberReg={register("phone")}
           error={errors.phone ? t(errors.phone.message) : null}/>
         <div>
           <div className="flex items-center justify-between mb-1.5">
@@ -154,7 +164,7 @@ export default function AccountMerchantForm({ profile }) {
               {t("auth.sameAsPhone")}
             </label>
           </div>
-          <Input type="tel" prefix="+91" disabled={waSame} maxLength={10} placeholder="98XXXXXXXX" {...register("whatsapp")}
+          <PhoneField countryReg={register("whatsappCountry")} numberReg={register("whatsapp")} disabled={waSame}
             error={errors.whatsapp && !waSame ? t(errors.whatsapp.message) : null}/>
         </div>
         <div className="grid grid-cols-2 gap-3">

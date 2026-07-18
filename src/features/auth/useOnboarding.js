@@ -2,7 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
-import { USER_COLUMNS_AUTHED, WELCOME_FLAG_KEY, normalizeIndianMobile } from "../../lib/constants";
+import { USER_COLUMNS_AUTHED, WELCOME_FLAG_KEY } from "../../lib/constants";
+import { normalizePhone } from "../../lib/phone";
 
 // Onboarding for brand new Google accounts. The Google session already exists
 // (Supabase minted it from the verified id token) but there is no public.users
@@ -58,7 +59,7 @@ export function useFarmerOnboarding() {
     mutationFn: (data) =>
       completeOnboarding("FARMER", {
         full_name: data.fullName.trim(),
-        phone: normalizeIndianMobile(data.phone),
+        phone: normalizePhone(data.phone, data.phoneCountry),
         district: data.district || null,
       }),
     onSuccess: ({ userId, profile }) => {
@@ -80,8 +81,8 @@ export function useMerchantOnboarding() {
       completeOnboarding("MERCHANT", {
         business_name: data.businessName.trim(),
         owner_name: data.ownerName.trim(),
-        phone: normalizeIndianMobile(data.phone),
-        whatsapp: normalizeIndianMobile(data.whatsapp || data.phone),
+        phone: normalizePhone(data.phone, data.phoneCountry),
+        whatsapp: normalizePhone(data.whatsapp || data.phone, data.whatsappCountry || data.phoneCountry),
         town: data.town.trim(),
         district: data.district,
         years_trading: data.yearsTrading,

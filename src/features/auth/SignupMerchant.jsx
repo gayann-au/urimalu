@@ -18,15 +18,19 @@ import { qk } from "../../lib/queryClient";
 import { toast } from "../../components/ui/Toast";
 import { useUriMotion } from "../../lib/uiMotion";
 import {
-  DISTRICTS, YEARS_TRADING, BUSINESS_TYPES, CROPS_TRADED, phoneRegex, normalizeIndianMobile,
+  DISTRICTS, YEARS_TRADING, BUSINESS_TYPES, CROPS_TRADED,
 } from "../../lib/constants";
+import { PhoneField } from "../../components/ui/PhoneField";
+import { isValidPhone, normalizePhone, splitPhone, DEFAULT_PHONE_COUNTRY } from "../../lib/phone";
 
 const profileShape = {
   businessName: z.string().min(2, "auth.businessName"),
   ownerName: z.string().min(2, "auth.ownerName"),
-  phone: z.string().regex(phoneRegex, "auth.phoneInvalid"),
+  phone: z.string(),
+  phoneCountry: z.string().default("IN"),
   whatsappSame: z.boolean().default(true),
   whatsapp: z.string().optional(),
+  whatsappCountry: z.string().default("IN"),
   town: z.string().min(2, "auth.town"),
   district: z.string(),
   yearsTrading: z.string(),
@@ -35,16 +39,20 @@ const profileShape = {
   businessDescription: z.string().max(200).optional(),
 };
 
-const whatsappRefine = (v) => v.whatsappSame || (v.whatsapp && phoneRegex.test(v.whatsapp));
+const phoneWhatsappRefine = (v, ctx) => {
+  if (!isValidPhone(v.phone, v.phoneCountry))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "auth.phoneInvalid", path: ["phone"] });
+  if (!v.whatsappSame && !isValidPhone(v.whatsapp, v.whatsappCountry))
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "auth.phoneInvalid", path: ["whatsapp"] });
+};
 
 const registerSchema = z.object({
   ...profileShape,
   email: z.string().email("auth.emailInvalid"),
   password: z.string().min(6, "auth.pwTooShort"),
-}).refine(whatsappRefine, { message: "auth.phoneInvalid", path: ["whatsapp"] });
+}).superRefine(phoneWhatsappRefine);
 
-const resubmitSchema = z.object(profileShape)
-  .refine(whatsappRefine, { message: "auth.phoneInvalid", path: ["whatsapp"] });
+const resubmitSchema = z.object(profileShape).superRefine(phoneWhatsappRefine);
 
 export default function SignupMerchant({ resubmitMode = false, prefill = null, onAfterResubmit = null }) {
   const { t } = useTranslation();
@@ -54,12 +62,16 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
   const [topError, setTopError] = useState(null);
   const [resubmitting, setResubmitting] = useState(false);
 
+  const prefillPhone = splitPhone(prefill?.phone);
+  const prefillWa = splitPhone(prefill?.whatsapp);
   const profileDefaults = prefill ? {
     businessName: prefill.business_name || "",
     ownerName: prefill.owner_name || "",
-    phone: prefill.phone || "",
+    phone: prefillPhone.national,
+    phoneCountry: prefillPhone.country,
     whatsappSame: !prefill.whatsapp || prefill.whatsapp === prefill.phone,
-    whatsapp: prefill.whatsapp || "",
+    whatsapp: prefillWa.national,
+    whatsappCountry: prefillWa.country,
     town: prefill.town || "",
     district: prefill.district || DISTRICTS[0],
     yearsTrading: prefill.years_trading || YEARS_TRADING[1].value,
@@ -68,6 +80,8 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
     businessDescription: prefill.business_description || "",
   } : {
     whatsappSame: true,
+    phoneCountry: DEFAULT_PHONE_COUNTRY,
+    whatsappCountry: DEFAULT_PHONE_COUNTRY,
     district: DISTRICTS[0],
     yearsTrading: YEARS_TRADING[1].value,
     businessType: BUSINESS_TYPES[0].value,
@@ -99,8 +113,8 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
         const patch = {
           business_name: values.businessName.trim(),
           owner_name: values.ownerName.trim(),
-          phone: normalizeIndianMobile(values.phone),
-          whatsapp: normalizeIndianMobile(values.whatsappSame ? values.phone : values.whatsapp),
+          phone: normalizePhone(values.phone, values.phoneCountry),
+          whatsapp: normalizePhone(values.whatsappSame ? values.phone : values.whatsapp, values.whatsappSame ? values.phoneCountry : values.whatsappCountry),
           town: values.town.trim(),
           district: values.district,
           years_trading: values.yearsTrading,
@@ -132,6 +146,7 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
       await signup.mutateAsync({
         ...values,
         whatsapp: values.whatsappSame ? values.phone : values.whatsapp,
+        whatsappCountry: values.whatsappSame ? values.phoneCountry : values.whatsappCountry,
       });
       // Merchant goes to the pending page via the existing post-signup redirect.
     } catch (e) {
@@ -158,7 +173,7 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input label={t("auth.businessName")} maxLength={100} {...register("businessName")} error={errors.businessName ? t(errors.businessName.message) : null}/>
             <Input label={t("auth.ownerName")} maxLength={100}    {...register("ownerName")}    error={errors.ownerName ? t(errors.ownerName.message) : null}/>
-            <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
+            <PhoneField label={t("auth.phone")} countryReg={register("phoneCountry")} numberReg={register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-semibold text-ink-700">{t("auth.whatsappNum")}</label>
@@ -167,7 +182,7 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
                   {t("auth.sameAsPhone")}
                 </label>
               </div>
-              <Input type="tel" prefix="+91" disabled={waSame} maxLength={10} placeholder="98XXXXXXXX" {...register("whatsapp")}
+              <PhoneField countryReg={register("whatsappCountry")} numberReg={register("whatsapp")} disabled={waSame}
                 error={errors.whatsapp && !waSame ? t(errors.whatsapp.message) : null}/>
             </div>
             <div className="grid grid-cols-2 gap-3">
