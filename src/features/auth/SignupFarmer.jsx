@@ -72,7 +72,7 @@ export default function SignupFarmer() {
             <motion.div variants={m.fadeUp} initial="hidden" animate="show" className="bg-white rounded-3xl border border-ink-200 shadow-sm p-6 md:p-7">
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <Input label={t("auth.fullName")} maxLength={100} {...register("fullName")} error={errors.fullName ? t(errors.fullName.message) : null}/>
-                <Input label={t("auth.phone")} type="tel" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
+                <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
                 <Input label={t("auth.email")} type="email" autoComplete="email" maxLength={255} {...register("email")} error={errors.email ? t(errors.email.message) : null}/>
                 <PasswordInput label={t("auth.password")} autoComplete="new-password" maxLength={72} {...register("password")} error={errors.password ? t(errors.password.message) : null}/>
                 {topError && <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm font-semibold">{t(topError)}</div>}

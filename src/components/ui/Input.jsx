@@ -1,20 +1,28 @@
 import { forwardRef } from "react";
 
 export const Input = forwardRef(function Input(
-  { label, error, help, className = "", containerClassName = "", ...rest }, ref
+  { label, error, help, prefix, className = "", containerClassName = "", ...rest }, ref
 ) {
   return (
     <div className={containerClassName}>
       {label && (
         <label className="block text-sm font-semibold text-gray-700 mb-1.5">{label}</label>
       )}
-      <input
-        ref={ref}
-        className={`w-full rounded-xl border-2 px-4 py-3 text-base bg-white transition outline-none disabled:bg-gray-50 disabled:text-gray-500
-          ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-coorg-500"} ${className}`}
-        aria-invalid={!!error}
-        {...rest}
-      />
+      <div className="relative">
+        {prefix && (
+          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-base text-gray-500">
+            {prefix}
+          </span>
+        )}
+        <input
+          ref={ref}
+          className={`w-full rounded-xl border-2 py-3 text-base bg-white transition outline-none disabled:bg-gray-50 disabled:text-gray-500
+            ${prefix ? "pl-14 pr-4" : "px-4"}
+            ${error ? "border-red-300 focus:border-red-500" : "border-gray-200 focus:border-coorg-500"} ${className}`}
+          aria-invalid={!!error}
+          {...rest}
+        />
+      </div>
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
       {help && !error && <p className="text-[11px] text-gray-500 italic mt-1">{help}</p>}
     </div>

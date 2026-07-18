@@ -18,7 +18,7 @@ import { qk } from "../../lib/queryClient";
 import { toast } from "../../components/ui/Toast";
 import { useUriMotion } from "../../lib/uiMotion";
 import {
-  DISTRICTS, YEARS_TRADING, BUSINESS_TYPES, CROPS_TRADED, phoneRegex,
+  DISTRICTS, YEARS_TRADING, BUSINESS_TYPES, CROPS_TRADED, phoneRegex, normalizeIndianMobile,
 } from "../../lib/constants";
 
 const profileShape = {
@@ -99,8 +99,8 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
         const patch = {
           business_name: values.businessName.trim(),
           owner_name: values.ownerName.trim(),
-          phone: values.phone.trim(),
-          whatsapp: (values.whatsappSame ? values.phone : values.whatsapp).trim(),
+          phone: normalizeIndianMobile(values.phone),
+          whatsapp: normalizeIndianMobile(values.whatsappSame ? values.phone : values.whatsapp),
           town: values.town.trim(),
           district: values.district,
           years_trading: values.yearsTrading,
@@ -158,7 +158,7 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input label={t("auth.businessName")} maxLength={100} {...register("businessName")} error={errors.businessName ? t(errors.businessName.message) : null}/>
             <Input label={t("auth.ownerName")} maxLength={100}    {...register("ownerName")}    error={errors.ownerName ? t(errors.ownerName.message) : null}/>
-            <Input label={t("auth.phone")} type="tel" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
+            <Input label={t("auth.phone")} type="tel" prefix="+91" maxLength={10} placeholder="98XXXXXXXX" {...register("phone")} error={errors.phone ? t(errors.phone.message) : null}/>
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-semibold text-ink-700">{t("auth.whatsappNum")}</label>
@@ -167,7 +167,7 @@ export default function SignupMerchant({ resubmitMode = false, prefill = null, o
                   {t("auth.sameAsPhone")}
                 </label>
               </div>
-              <Input type="tel" disabled={waSame} maxLength={10} placeholder="98XXXXXXXX" {...register("whatsapp")}
+              <Input type="tel" prefix="+91" disabled={waSame} maxLength={10} placeholder="98XXXXXXXX" {...register("whatsapp")}
                 error={errors.whatsapp && !waSame ? t(errors.whatsapp.message) : null}/>
             </div>
             <div className="grid grid-cols-2 gap-3">
