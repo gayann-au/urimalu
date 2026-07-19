@@ -234,6 +234,34 @@ function MobileDrawer({ open, onClose, profile, lang, onToggleLang, onLogout, t 
   );
 }
 
+// Logo image with a graceful fallback. The asset ships at the requested path
+// (/icons/logo-urimalu.png) and loads fine on a clean load, so this guards the
+// stale-shell case: a browser still running a cached app shell from before the
+// deploy that introduced the brand assets can fail this fetch and would
+// otherwise show the browser's broken-image glyph next to the wordmark. On any
+// load error we swap to the "Urimalu" text wordmark instead.
+function LogoMark() {
+  const [broken, setBroken] = useState(false);
+  if (broken) {
+    return (
+      <span
+        className="font-display font-extrabold text-lg tracking-tight text-chilli-700"
+        style={{ lineHeight: "36px" }}
+      >
+        Urimalu
+      </span>
+    );
+  }
+  return (
+    <img
+      src="/icons/logo-urimalu.png"
+      alt="Urimalu"
+      style={{ height: "36px", width: "auto" }}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 export function Header({ showBack = false, title }) {
   const { t } = useTranslation();
   const lang = useUiStore(s => s.lang);
@@ -286,7 +314,7 @@ export function Header({ showBack = false, title }) {
           ) : (
             <Link to="/" className="flex items-center gap-2.5 min-w-0 min-h-[44px]">
               <div className="leading-tight min-w-0">
-                <img src="/icons/logo-urimalu.png" alt="Urimalu" style={{ height: "36px", width: "auto" }} />
+                <LogoMark/>
                 <div className={`text-[11px] text-ink-500 truncate ${lang === "kn" ? "kn" : ""}`}>{t("app.tagline")}</div>
               </div>
             </Link>
