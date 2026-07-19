@@ -198,6 +198,7 @@
     "pickCropHint": "Pick a crop above to compare prices across merchants.",
     "noListingsMatch": "No listings match your search.",
     "clearFilter": "Clear",
+    "sortPriceMixed": "Mixed",
     "sortPriceHighToLow": "Price: High to Low",
     "sortPriceLowToHigh": "Price: Low to High",
     "loggedOutCropHint": "Log in to compare prices across merchants.",

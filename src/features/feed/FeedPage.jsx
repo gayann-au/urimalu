@@ -312,9 +312,9 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
   const nav = useNavigate();
   const [search, setSearch] = useState("");
   const [cropChip, setCropChip] = useState(null);
-  // Price sort direction for the results list. "desc" is High to Low, the
-  // default: farmers are sellers, so the highest price is the best result.
-  const [sortDir, setSortDir] = useState("desc");
+  // Price sort mode for the results list. "mixed" is the default: the feed's
+  // original unsorted order. "desc" is High to Low, "asc" is Low to High.
+  const [sortDir, setSortDir] = useState("mixed");
   const deferredSearch = useDeferredValue(search);
 
   const crops = useMemo(() => uniqueCropsInFeed(items), [items]);
@@ -323,7 +323,7 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
   // Reset the sort back to the default whenever the selected crop changes, so
   // the choice never carries over from one crop to the next. Not persisted.
   useEffect(() => {
-    setSortDir("desc");
+    setSortDir("mixed");
   }, [cropChip]);
 
   // Only build the list when a crop is selected or a search is active.
@@ -334,6 +334,11 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
     let out = items;
     if (cropChip) out = out.filter((i) => i.crop_name === cropChip);
     if (q) out = out.filter((i) => (i.crop_name || "").toLowerCase().includes(q));
+
+    // Mixed: the feed's original order, straight out of the filter step. No
+    // partition, no sort, so priced and Call-for-Price listings stay
+    // interleaved exactly as they were before this sort feature existed.
+    if (sortDir === "mixed") return out;
 
     // Keep Call-for-Price and price-less listings out of the numeric ordering.
     // Sort only the priced listings by the chosen direction (Array.sort is
@@ -455,6 +460,12 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
                 pick-a-crop hint. Sized for a thumb tap on mobile. */}
             <div className="mb-4 flex justify-end">
               <div className="inline-flex rounded-full border-2 border-ink-200 bg-white p-1">
+                <SortPill
+                  active={sortDir === "mixed"}
+                  onClick={() => setSortDir("mixed")}
+                >
+                  {t("feed.sortPriceMixed")}
+                </SortPill>
                 <SortPill
                   active={sortDir === "desc"}
                   onClick={() => setSortDir("desc")}
