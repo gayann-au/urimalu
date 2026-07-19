@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -53,6 +53,13 @@ export default function DashboardPage() {
   // before dismissing it. Low harm: tapping the button just re-runs
   // promptAfterFollow, which safely no-ops if permission was already decided.
   const [welcomeDone, setWelcomeDone] = useState(false);
+  // Transient "Confirmed" checkmark shown on the confirm button for ~2s after a
+  // successful confirm. A ref holds the timer so it is cleared on unmount.
+  const [justConfirmed, setJustConfirmed] = useState(false);
+  const confirmFlashTimer = useRef(null);
+  useEffect(() => () => {
+    if (confirmFlashTimer.current) clearTimeout(confirmFlashTimer.current);
+  }, []);
 
   if (!profile) return null;
 
@@ -61,7 +68,23 @@ export default function DashboardPage() {
   const editingListing  = formMode && formMode !== "new" ? formMode : null;
   const formOpen        = formMode !== null;
   const lastConfirmed   = lastConfirmedLabel(activeListings, t, i18n.language);
-  const showWelcome     = !!location.state?.welcome && !welcomeDone;
+  // Only offer the push opt-in card while the browser has not yet decided on
+  // notification permission. Once it is "granted" (or "denied"), the real
+  // browser state is authoritative and the card must not reappear on refresh,
+  // even though location.state.welcome persists in history. This fixes the
+  // prompt reappearing after a grant (issue 4a): the card was gated only on the
+  // in-memory welcomeDone flag and route state, never on Notification.permission.
+  // Second condition only. showWelcome keeps the original trigger
+  // (location.state?.welcome) so the push opt-in card still appears ONLY after
+  // that trigger fires, never on a plain dashboard load. This just additionally
+  // suppresses it once the browser permission is no longer "default" (granted
+  // or denied), so it cannot reappear after a grant. Guarded with
+  // typeof window.Notification so a browser without the Notification API is
+  // simply treated as "not undecided" instead of throwing.
+  const pushUndecided   =
+    typeof window.Notification !== "undefined" &&
+    window.Notification.permission === "default";
+  const showWelcome     = !!location.state?.welcome && !welcomeDone && pushUndecided;
 
   function openAdd()         { setFormMode("new"); }
   function openEdit(listing) { setFormMode(listing); }
@@ -133,6 +156,11 @@ export default function DashboardPage() {
   async function handleConfirm() {
     try {
       await confirmPrices.mutateAsync(profile.id);
+      // Transient checkmark on the button for ~2s. The "last confirmed" line
+      // below updates on its own once the invalidated listings refetch lands.
+      setJustConfirmed(true);
+      if (confirmFlashTimer.current) clearTimeout(confirmFlashTimer.current);
+      confirmFlashTimer.current = setTimeout(() => setJustConfirmed(false), 2000);
       toast({ tone: "ok", text: t("dashboard.confirmedToast") });
     } catch (e) {
       toast({ tone: "err", text: e.message || t("dashboard.failedToConfirm") });
@@ -211,7 +239,14 @@ export default function DashboardPage() {
             onClick={handleConfirm}
             loading={confirmPrices.isPending}
           >
-            {t("dashboard.confirmTodaysPrices")}
+            {justConfirmed ? (
+              <>
+                <CheckIcon/>
+                {t("dashboard.confirmedFlash")}
+              </>
+            ) : (
+              t("dashboard.confirmTodaysPrices")
+            )}
           </Button>
           <p className="text-xs text-ink-500 text-center mt-2">
             {lastConfirmed}
@@ -238,8 +273,7 @@ export default function DashboardPage() {
           <motion.ul
             variants={m.stagger}
             initial="hidden"
-            whileInView="show"
-            viewport={m.inView}
+            animate="show"
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
           >
             {listings.map((l) => (
@@ -339,9 +373,21 @@ function DashTabButton({ active, onClick, badge, children }) {
   );
 }
 
-// Find the most recent confirmed_at among the given listings, and return a
-// plain readable label. The date is rendered with the active language's
-// locale (kn-IN or en-IN).
+// Small checkmark for the transient "Confirmed" state on the confirm button.
+function CheckIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 6 9 17l-5-5"/>
+    </svg>
+  );
+}
+
+// Real last-confirmation line for the merchant's crop set, pulled from the most
+// recent confirmed_at among the active listings. Per the issue 5 spec this is
+// binary: if the latest confirm happened today, show the local time; otherwise
+// (never, or only on an earlier day) show "Not yet confirmed today". The time
+// is rendered with the active language's locale (kn-IN or en-IN).
 function lastConfirmedLabel(listings, t, lang) {
   let maxTs = null;
   for (const l of listings) {
@@ -350,7 +396,7 @@ function lastConfirmedLabel(listings, t, lang) {
     if (isNaN(ts)) continue;
     if (maxTs == null || ts > maxTs) maxTs = ts;
   }
-  if (maxTs == null) return t("feed.notConfirmedYet");
+  if (maxTs == null) return t("dashboard.notYetConfirmedToday");
 
   const today = new Date();
   const last = new Date(maxTs);
@@ -359,12 +405,11 @@ function lastConfirmedLabel(listings, t, lang) {
     last.getMonth()    === today.getMonth() &&
     last.getDate()     === today.getDate();
 
-  if (sameDay) return t("dashboard.confirmedToday");
+  if (!sameDay) return t("dashboard.notYetConfirmedToday");
+
   const locale = lang === "kn" ? "kn-IN" : "en-IN";
-  const date = last.toLocaleDateString(locale, {
-    day: "numeric", month: "short", year: "numeric",
-  });
-  return t("dashboard.lastConfirmedOn", { date });
+  const time = last.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+  return t("dashboard.lastConfirmedTodayAt", { time });
 }
 
 function ListingRow({ listing, onToggle, onEdit, onDelete, t, fadeUp, cardHover }) {
