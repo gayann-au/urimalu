@@ -9,17 +9,17 @@ import {
 import { useInstallPrompt } from "../hooks/useInstallPrompt";
 
 // Slim, dismissible install prompt strip. It never renders when the app is
-// already installed, when it was dismissed within the last two weeks, or on
-// desktop. On mobile it adapts to the environment: a "open in your browser"
-// nudge inside social/messaging webviews, manual Add to Home Screen steps on
-// iOS, the native install button on eligible Android Chromium, and per-browser
-// manual steps on Android otherwise. It reads only environment detection, the
-// install hook, and localStorage. It never touches Supabase or any API.
+// already installed, when it was confirmed installed on this browser before,
+// when it was dismissed during this visit, or on desktop. On mobile it adapts
+// to the environment: a "open in your browser" nudge inside social/messaging
+// webviews, manual Add to Home Screen steps on iOS, the native install button
+// on eligible Android Chromium, and per-browser manual steps on Android
+// otherwise. It reads only environment detection, the install hook, and
+// localStorage. It never touches Supabase or any API.
 
-const DISMISS_KEY = "urimalu_install_banner_dismissed_at";
-// Two weeks. After this window passes, a previously dismissed banner may show
-// again, so a user who was not ready the first time gets one more chance.
-const DISMISS_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+// Set once we have confirmed a real install on this browser, so the popup never
+// returns after the app has genuinely been installed here.
+const INSTALLED_KEY = "urimalu_pwa_installed_confirmed";
 
 // Hold the popup back on first paint. It may appear only after the user has had
 // a moment with the page: either six seconds pass, or they scroll or tap once,
@@ -35,29 +35,25 @@ const IN_APP_LABEL = {
   line: "Line",
 };
 
-// True when a dismissal timestamp exists and is still inside the window. Any
+// True when a real install has been confirmed on this browser before. Any
 // storage failure (private mode, blocked storage) is swallowed and treated as
-// "not dismissed", so a storage error can never suppress the banner.
-function isRecentlyDismissed() {
+// "not installed", so a storage error can never suppress a genuine prompt.
+function isPermanentlyInstalled() {
   try {
-    const raw = window.localStorage.getItem(DISMISS_KEY);
-    if (!raw) return false;
-    const at = Number(raw);
-    if (!Number.isFinite(at)) return false;
-    return Date.now() - at < DISMISS_WINDOW_MS;
+    return window.localStorage.getItem(INSTALLED_KEY) === "true";
   } catch {
     return false;
   }
 }
 
-// Records the current time as the dismissal moment. A storage failure is
-// swallowed: the banner still hides for this session via component state, it
-// just will not be remembered across reloads.
-function recordDismissal() {
+// Records that the app has been installed on this browser, so the popup stays
+// hidden permanently from now on.
+function recordPermanentInstall() {
   try {
-    window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
+    window.localStorage.setItem(INSTALLED_KEY, "true");
   } catch {
-    // Ignore: dismissal simply is not persisted when storage is unavailable.
+    // Ignore: the flag simply will not persist when storage is unavailable,
+    // meaning the popup may show again on this browser despite a real install.
   }
 }
 
@@ -117,7 +113,7 @@ export default function InstallBanner() {
   // the early returns below. It stays inert on browsers that never fire
   // beforeinstallprompt, so this costs nothing there.
   const { canInstall, isInstalled, promptInstall } = useInstallPrompt();
-  const [dismissed, setDismissed] = useState(() => isRecentlyDismissed());
+  const [dismissed, setDismissed] = useState(false);
   // Gate that holds the popup back until the reveal condition is met. It starts
   // false so nothing shows on the very first paint.
   const [ready, setReady] = useState(false);
@@ -147,6 +143,12 @@ export default function InstallBanner() {
     };
   }, []);
 
+  // Once a real install is confirmed for this session, remember it permanently
+  // so the popup never returns on this browser.
+  useEffect(() => {
+    if (isInstalled) recordPermanentInstall();
+  }, [isInstalled]);
+
   // Reveal gate: before the delay or first interaction, render nothing at all,
   // regardless of what the priority checks below would otherwise decide.
   if (!ready) return null;
@@ -154,15 +156,17 @@ export default function InstallBanner() {
   // 1. Already installed: nothing to offer, ever.
   if (isStandalone()) return null;
 
+  // 1a. Confirmed installed on this browser in the past: stay hidden forever.
+  if (isPermanentlyInstalled()) return null;
+
   // 1b. Installed during this visit (appinstalled fired): hide immediately
   // instead of falling through to a manual-instructions branch.
   if (isInstalled) return null;
 
-  // 2. Dismissed within the window: stay hidden.
+  // 2. Dismissed during this visit: stay hidden until the next load.
   if (dismissed) return null;
 
   const handleClose = () => {
-    recordDismissal();
     setDismissed(true);
   };
 
