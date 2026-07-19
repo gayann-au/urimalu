@@ -251,7 +251,6 @@
     "cropCountOne": "1 crop",
     "cropCountN": "{{count}} crops",
     "priceHistory": "Price history",
-    "browseCrops": "Browse crops",
     "confirmTodaysPrices": "Confirm today's prices",
     "confirmedToday": "Confirmed today",
     "lastConfirmedOn": "Last confirmed: {{date}}",
@@ -371,15 +370,6 @@
     "emptyBody": "Farmers who are ready to sell will show up here.",
     "unread": "Unread",
     "waMessage": "Namaste {{name}}, I saw you are ready to sell on Urimalu."
-  },
-  "cropsBrowse": {
-    "title": "All crops",
-    "sub": "Crops merchants are buying today, with current prices",
-    "merchantsOne": "1 merchant buying",
-    "merchantsN": "{{count}} merchants buying",
-    "single": "{{price}} per kg",
-    "range": "{{min}} to {{max}} per kg",
-    "none": "No crops are listed right now."
   },
   "notif": {
     "title": "Notifications",

@@ -14,7 +14,6 @@ const SignupMerchant  = lazy(() => import("../features/auth/SignupMerchant"));
 const PendingPage     = lazy(() => import("../features/merchant/PendingPage"));
 const DashboardPage   = lazy(() => import("../features/merchant/DashboardPage"));
 const HistoryPage     = lazy(() => import("../features/merchant/HistoryPage"));
-const CropsBrowsePage = lazy(() => import("../features/merchant/CropsBrowsePage"));
 const ProfilePage     = lazy(() => import("../features/merchant/ProfilePage"));
 const AdminPage       = lazy(() => import("../features/admin/AdminPage"));
 const LandingPage     = lazy(() => import("../features/landing/LandingPage"));
@@ -95,16 +94,6 @@ function MerchantHistoryGuard() {
   if (!profile || profile.role !== "MERCHANT") return nonMerchantRedirect(profile);
   if (profile.status !== "APPROVED") return <Navigate to="/merchant/pending" replace/>;
   return <HistoryPage/>;
-}
-
-// Crop discovery list for approved merchants, the merchant counterpart of the
-// farmer feed's By Crop tab. Same access rules as the dashboard and history.
-function MerchantCropsGuard() {
-  const { profile, isLoading } = useAuth();
-  if (isLoading) return <PageLoader/>;
-  if (!profile || profile.role !== "MERCHANT") return nonMerchantRedirect(profile);
-  if (profile.status !== "APPROVED") return <Navigate to="/merchant/pending" replace/>;
-  return <CropsBrowsePage/>;
 }
 
 // Any logged-in user (farmer, merchant, admin) can view a public merchant
@@ -242,7 +231,6 @@ export function AppRoutes() {
         <Route path="/merchant/pending"   element={<MerchantPendingGuard/>}/>
         <Route path="/merchant/dashboard" element={<MerchantDashboardGuard/>}/>
         <Route path="/merchant/history"   element={<MerchantHistoryGuard/>}/>
-        <Route path="/merchant/crops"     element={<MerchantCropsGuard/>}/>
         <Route path="/merchant/:id"       element={<ProfileGuard/>}/>
         <Route path="/admin"              element={<AdminOnly><AdminPage/></AdminOnly>}/>
         <Route path="/privacy"            element={<PrivacyPage/>}/>

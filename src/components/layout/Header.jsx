@@ -116,7 +116,6 @@ function drawerNavLinks(profile, t) {
     return [
       { to: dashTgt, label: t("nav.dashboard") },
       { to: "/merchant/history", label: t("dashboard.priceHistory") },
-      { to: "/merchant/crops", label: t("dashboard.browseCrops") },
       { to: dashTgt, label: t("dashboard.sellerLeadsTab") },
     ];
   }
