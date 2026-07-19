@@ -312,10 +312,19 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
   const nav = useNavigate();
   const [search, setSearch] = useState("");
   const [cropChip, setCropChip] = useState(null);
+  // Price sort direction for the results list. "desc" is High to Low, the
+  // default: farmers are sellers, so the highest price is the best result.
+  const [sortDir, setSortDir] = useState("desc");
   const deferredSearch = useDeferredValue(search);
 
   const crops = useMemo(() => uniqueCropsInFeed(items), [items]);
   const isFiltered = !!cropChip || deferredSearch.trim().length > 0;
+
+  // Reset the sort back to the default whenever the selected crop changes, so
+  // the choice never carries over from one crop to the next. Not persisted.
+  useEffect(() => {
+    setSortDir("desc");
+  }, [cropChip]);
 
   // Only build the list when a crop is selected or a search is active.
   // When nothing is selected we show the hint instead of dumping every listing.
@@ -325,9 +334,25 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
     let out = items;
     if (cropChip) out = out.filter((i) => i.crop_name === cropChip);
     if (q) out = out.filter((i) => (i.crop_name || "").toLowerCase().includes(q));
-    out = [...out].sort((a, b) => priceKey(b) - priceKey(a));
-    return out;
-  }, [items, cropChip, deferredSearch, isFiltered]);
+
+    // Keep Call-for-Price and price-less listings out of the numeric ordering.
+    // Sort only the priced listings by the chosen direction (Array.sort is
+    // stable, so equal prices keep their existing order), then append the
+    // unpriced ones in their existing order so they always trail every priced
+    // listing, in both directions.
+    const priced = [];
+    const unpriced = [];
+    for (const i of out) {
+      if (numericPrice(i) == null) unpriced.push(i);
+      else priced.push(i);
+    }
+    priced.sort((a, b) =>
+      sortDir === "asc"
+        ? numericPrice(a) - numericPrice(b)
+        : numericPrice(b) - numericPrice(a)
+    );
+    return [...priced, ...unpriced];
+  }, [items, cropChip, deferredSearch, isFiltered, sortDir]);
 
   function toggleChip(name) {
     setCropChip((c) => (c === name ? null : name));
@@ -424,28 +449,70 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
             <p>{t("feed.noListingsMatch")}</p>
           </div>
         ) : (
-          <motion.div
-            variants={m.stagger}
-            initial="hidden"
-            whileInView="show"
-            viewport={m.inView}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            {list.map((item) => <RateCard key={item.id} item={item}/>)}
-          </motion.div>
+          <>
+            {/* Price sort: a two-option pill toggle above the list. Only shown
+                once a crop is selected (this results branch), never on the
+                pick-a-crop hint. Sized for a thumb tap on mobile. */}
+            <div className="mb-4 flex justify-end">
+              <div className="inline-flex rounded-full border-2 border-ink-200 bg-white p-1">
+                <SortPill
+                  active={sortDir === "desc"}
+                  onClick={() => setSortDir("desc")}
+                >
+                  {t("feed.sortPriceHighToLow")}
+                </SortPill>
+                <SortPill
+                  active={sortDir === "asc"}
+                  onClick={() => setSortDir("asc")}
+                >
+                  {t("feed.sortPriceLowToHigh")}
+                </SortPill>
+              </div>
+            </div>
+            <motion.div
+              variants={m.stagger}
+              initial="hidden"
+              whileInView="show"
+              viewport={m.inView}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              {list.map((item) => <RateCard key={item.id} item={item}/>)}
+            </motion.div>
+          </>
         )}
       </main>
     </>
   );
 }
 
-// Sort key for the by-crop view: bigger price_per_kg is better.
-// call_for_price and missing price_per_kg sink to the bottom.
-function priceKey(item) {
-  if (item.call_for_price) return -Infinity;
-  if (item.price_per_kg == null) return -Infinity;
+// One option of the price sort toggle. Matches the crop chip styling: solid
+// coorg fill when active, quiet ink text otherwise. aria-pressed exposes the
+// active state to screen readers.
+function SortPill({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`whitespace-nowrap rounded-full px-4 min-h-[40px] text-sm font-semibold transition-colors ${
+        active
+          ? "bg-coorg-600 text-white"
+          : "text-ink-700 hover:text-coorg-700"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Numeric per-kg price used to order the by-crop view, or null when the
+// listing has no sortable price. call_for_price and missing or non-numeric
+// price_per_kg return null so the caller can group them out of the ordering.
+function numericPrice(item) {
+  if (item.call_for_price) return null;
+  if (item.price_per_kg == null) return null;
   const n = Number(item.price_per_kg);
-  return isNaN(n) ? -Infinity : n;
+  return isNaN(n) ? null : n;
 }
 
 // "Updated today" if the timestamp is today, otherwise "Updated <date>".

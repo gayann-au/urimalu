@@ -198,6 +198,8 @@
     "pickCropHint": "ಬೆಲೆಗಳನ್ನು ಹೋಲಿಸಲು ಮೇಲಿನ ಒಂದು ಬೆಳೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
     "noListingsMatch": "ನಿಮ್ಮ ಹುಡುಕಾಟಕ್ಕೆ ಯಾವುದೇ ದರಗಳಿಲ್ಲ.",
     "clearFilter": "ತೆರವು",
+    "sortPriceHighToLow": "ಬೆಲೆ: ಹೆಚ್ಚಿನಿಂದ ಕಡಿಮೆಗೆ",
+    "sortPriceLowToHigh": "ಬೆಲೆ: ಕಡಿಮೆಯಿಂದ ಹೆಚ್ಚಿಗೆ",
     "loggedOutCropHint": "ಬೆಲೆಗಳನ್ನು ಹೋಲಿಸಲು ಲಾಗಿನ್ ಮಾಡಿ.",
     "notConfirmedYet": "ಇನ್ನೂ ಖಚಿತಪಡಿಸಿಲ್ಲ",
     "updatedToday": "ಇಂದು ನವೀಕರಿಸಲಾಗಿದೆ",
