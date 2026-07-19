@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   isStandalone,
@@ -20,6 +20,11 @@ const DISMISS_KEY = "urimalu_install_banner_dismissed_at";
 // Two weeks. After this window passes, a previously dismissed banner may show
 // again, so a user who was not ready the first time gets one more chance.
 const DISMISS_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
+// Hold the popup back on first paint. It may appear only after the user has had
+// a moment with the page: either six seconds pass, or they scroll or tap once,
+// whichever comes first. This keeps the install nudge from ambushing arrival.
+const REVEAL_DELAY_MS = 6 * 1000;
 
 // Human-facing labels for the known in-app browsers. Detection returns lowercase
 // keys; these are the names users actually see in their app.
@@ -75,23 +80,32 @@ function CloseIcon() {
   );
 }
 
-// Shared chrome for every variant: a slim fixed bar at the bottom of the
-// viewport that sits above page content without covering the top navigation,
-// plus an always-present close button. `children` carries the variant-specific
+// Shared chrome for every variant: a full-screen dimmed backdrop with a
+// centered card on top, matching the modal pattern used elsewhere in the app
+// (see DistrictPicker). Tapping the backdrop outside the card dismisses it the
+// same way the close button does. `children` carries the variant-specific
 // message and any action button.
 function Strip({ children, onClose, closeLabel }) {
   return (
-    <div className="w-full bg-paper border-t border-ink-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
-      <div className="mx-auto max-w-md px-4 py-3 flex items-center gap-3">
-        <div className="flex-1 text-sm text-ink-800 leading-snug">{children}</div>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={closeLabel}
-          className="shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-[14px] text-ink-500 hover:text-ink-800 hover:bg-ink-50 transition-colors"
-        >
-          <CloseIcon />
-        </button>
+    <div
+      className="fixed inset-0 bg-black/40 z-40 flex items-end sm:items-center justify-center"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[430px] bg-paper rounded-t-3xl sm:rounded-3xl shadow-xl p-6 sm:m-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-3">
+          <div className="flex-1 text-sm text-ink-800 leading-snug">{children}</div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={closeLabel}
+            className="shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-[14px] text-ink-500 hover:text-ink-800 hover:bg-ink-50 transition-colors"
+          >
+            <CloseIcon />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -104,6 +118,38 @@ export default function InstallBanner() {
   // beforeinstallprompt, so this costs nothing there.
   const { canInstall, isInstalled, promptInstall } = useInstallPrompt();
   const [dismissed, setDismissed] = useState(() => isRecentlyDismissed());
+  // Gate that holds the popup back until the reveal condition is met. It starts
+  // false so nothing shows on the very first paint.
+  const [ready, setReady] = useState(false);
+
+  // Reveal the popup once the user has settled in: after REVEAL_DELAY_MS, or on
+  // the first scroll or first tap/click anywhere, whichever happens first. All
+  // triggers funnel through a single one-shot reveal so it can only fire once,
+  // and everything is torn down on unmount.
+  useEffect(() => {
+    let revealed = false;
+    let timerId = 0;
+    const reveal = () => {
+      if (revealed) return;
+      revealed = true;
+      window.clearTimeout(timerId);
+      window.removeEventListener("scroll", reveal);
+      window.removeEventListener("pointerdown", reveal);
+      setReady(true);
+    };
+    timerId = window.setTimeout(reveal, REVEAL_DELAY_MS);
+    window.addEventListener("scroll", reveal, { passive: true });
+    window.addEventListener("pointerdown", reveal);
+    return () => {
+      window.clearTimeout(timerId);
+      window.removeEventListener("scroll", reveal);
+      window.removeEventListener("pointerdown", reveal);
+    };
+  }, []);
+
+  // Reveal gate: before the delay or first interaction, render nothing at all,
+  // regardless of what the priority checks below would otherwise decide.
+  if (!ready) return null;
 
   // 1. Already installed: nothing to offer, ever.
   if (isStandalone()) return null;
