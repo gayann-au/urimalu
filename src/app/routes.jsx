@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/useAuth";
 import FarmerDistrictGate from "../features/auth/FarmerDistrictGate";
 import { useRealtimeNotifications } from "../features/alerts/useNotifications";
+import ChunkReloadGuardReset from "./ChunkReloadGuardReset";
 
 const FeedPage        = lazy(() => import("../features/feed/FeedPage"));
 const LoginPage       = lazy(() => import("../features/auth/LoginPage"));
@@ -226,6 +227,7 @@ export function AppRoutes() {
     <Suspense fallback={<PageLoader/>}>
       <RequireOnboarding>
       <RequireFarmerDistrict>
+      <ChunkReloadGuardReset/>
       <NotificationsRealtimeMount/>
       <Routes>
         <Route path="/"     element={<HomeRoute/>}/>
