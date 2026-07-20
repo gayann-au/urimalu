@@ -201,6 +201,8 @@
     "sortPriceMixed": "Mixed",
     "sortPriceHighToLow": "Price: High to Low",
     "sortPriceLowToHigh": "Price: Low to High",
+    "sortPriceRecent": "Recently Updated",
+    "sortPriceOldest": "Oldest Updated",
     "loggedOutCropHint": "Log in to compare prices across merchants.",
     "notConfirmedYet": "Not confirmed yet",
     "updatedToday": "Updated today",

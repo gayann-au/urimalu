@@ -201,6 +201,8 @@
     "sortPriceMixed": "ಮಿಶ್ರ",
     "sortPriceHighToLow": "ಬೆಲೆ: ಹೆಚ್ಚಿನಿಂದ ಕಡಿಮೆಗೆ",
     "sortPriceLowToHigh": "ಬೆಲೆ: ಕಡಿಮೆಯಿಂದ ಹೆಚ್ಚಿಗೆ",
+    "sortPriceRecent": "ಇತ್ತೀಚೆಗೆ ನವೀಕರಿಸಿದ",
+    "sortPriceOldest": "ಹಳೆಯದಾಗಿ ನವೀಕರಿಸಿದ",
     "loggedOutCropHint": "ಬೆಲೆಗಳನ್ನು ಹೋಲಿಸಲು ಲಾಗಿನ್ ಮಾಡಿ.",
     "notConfirmedYet": "ಇನ್ನೂ ಖಚಿತಪಡಿಸಿಲ್ಲ",
     "updatedToday": "ಇಂದು ನವೀಕರಿಸಲಾಗಿದೆ",

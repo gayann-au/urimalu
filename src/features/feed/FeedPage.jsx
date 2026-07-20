@@ -340,6 +340,18 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
     // interleaved exactly as they were before this sort feature existed.
     if (sortDir === "mixed") return out;
 
+    // Recently Updated / Oldest Updated: order the full list by confirmed_at,
+    // parsed as real dates. Every listing carries a confirmed time regardless
+    // of price, so there is no priced/unpriced split here. Array.sort is
+    // stable, so listings sharing a timestamp keep their existing order.
+    if (sortDir === "recent" || sortDir === "oldest") {
+      return [...out].sort((a, b) =>
+        sortDir === "recent"
+          ? confirmedTime(b) - confirmedTime(a)
+          : confirmedTime(a) - confirmedTime(b)
+      );
+    }
+
     // Keep Call-for-Price and price-less listings out of the numeric ordering.
     // Sort only the priced listings by the chosen direction (Array.sort is
     // stable, so equal prices keep their existing order), then append the
@@ -455,10 +467,12 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
           </div>
         ) : (
           <>
-            {/* Price sort: a two-option pill toggle above the list. Only shown
+            {/* Price sort: a five-option pill toggle above the list. Only shown
                 once a crop is selected (this results branch), never on the
-                pick-a-crop hint. Sized for a thumb tap on mobile. */}
-            <div className="mb-4 flex justify-end">
+                pick-a-crop hint. The row scrolls horizontally with the same
+                fade cue as the crop chip row when the pills overflow a narrow
+                screen. Sized for a thumb tap on mobile. */}
+            <div className="mb-4 overflow-x-auto no-scrollbar scroll-fade-right">
               <div className="inline-flex rounded-full border-2 border-ink-200 bg-white p-1">
                 <SortPill
                   active={sortDir === "mixed"}
@@ -477,6 +491,18 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
                   onClick={() => setSortDir("asc")}
                 >
                   {t("feed.sortPriceLowToHigh")}
+                </SortPill>
+                <SortPill
+                  active={sortDir === "recent"}
+                  onClick={() => setSortDir("recent")}
+                >
+                  {t("feed.sortPriceRecent")}
+                </SortPill>
+                <SortPill
+                  active={sortDir === "oldest"}
+                  onClick={() => setSortDir("oldest")}
+                >
+                  {t("feed.sortPriceOldest")}
                 </SortPill>
               </div>
             </div>
@@ -529,6 +555,16 @@ function numericPrice(item) {
   if (item.price_per_kg == null) return null;
   const n = Number(item.price_per_kg);
   return isNaN(n) ? null : n;
+}
+
+// Millisecond timestamp of when a listing was last confirmed, used by the
+// recent and oldest sort modes. confirmed_at drives the "Last confirmed"
+// label the farmer sees, so we order by that same field. Missing or
+// unparseable values fall back to 0 so they sort as the oldest, without
+// adding a tiebreak of their own.
+function confirmedTime(item) {
+  const ts = Date.parse(item.confirmed_at);
+  return isNaN(ts) ? 0 : ts;
 }
 
 // "Updated today" if the timestamp is today, otherwise "Updated <date>".
