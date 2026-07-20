@@ -4,14 +4,13 @@ import { useAuth } from "../features/auth/useAuth";
 
 export function useLeadTracking() {
   const { user, profile } = useAuth();
-  const trackLead = useCallback(async (merchantId, type, crop = null) => {
+  const trackLead = useCallback(async (merchantId, type) => {
     if (!user || !profile) return; // never track for guests
     try {
       await supabase.from("leads").insert({
         merchant_id: merchantId,
         farmer_id: profile.id,
         type,
-        crop,
       });
     } catch (e) {
       // eslint-disable-next-line no-console
