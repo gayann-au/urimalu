@@ -346,8 +346,7 @@ export default function ProfilePage() {
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
             variants={stagger}
             initial="hidden"
-            whileInView="show"
-            viewport={inView}
+            animate="show"
           >
             {filtered.map((l) => (
               <ListingRow key={l.id} listing={l} t={t} fadeUp={fadeUp} cardHover={cardHover}/>
