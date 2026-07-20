@@ -480,11 +480,16 @@ function CropsTab({ items, isLoading, isError, onRetry, loggedIn }) {
                 </SortPill>
               </div>
             </div>
+            {/* Reveal on mount with animate, not whileInView. This grid is
+                shown by tapping a crop chip, so it mounts already in the
+                viewport. The in-view observer sometimes never fires in that
+                case, leaving the cards stuck at the hidden opacity 0 state,
+                which read as a blank white frame until a second tap remounted
+                it. animate="show" fades them in unconditionally on mount. */}
             <motion.div
               variants={m.stagger}
               initial="hidden"
-              whileInView="show"
-              viewport={m.inView}
+              animate="show"
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             >
               {list.map((item) => <RateCard key={item.id} item={item}/>)}
