@@ -18,7 +18,7 @@ import { isValidPhone, DEFAULT_PHONE_COUNTRY } from "../../lib/phone";
 // password are never asked here, so this does not duplicate the password
 // sign-up flow.
 const schema = z.object({
-  fullName: z.string().min(2, "auth.fullName"),
+  fullName: z.string().trim().min(2, "auth.fullName"),
   phone: z.string(),
   phoneCountry: z.string().default("IN"),
   district: z.string(),

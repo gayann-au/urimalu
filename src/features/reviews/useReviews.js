@@ -12,7 +12,7 @@ export function useAddReview() {
       const { data, error } = await supabase.from("reviews").insert({
         merchant_id: merchantId,
         farmer_id: profile.id,
-        author_name: authorName || profile.full_name || "Farmer",
+        author_name: authorName?.trim() || profile.full_name?.trim() || "Farmer",
         rating,
         comment: comment || null,
       }).select().single();

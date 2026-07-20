@@ -484,7 +484,7 @@ export default function ProfilePage() {
                     // message; only close the form once the save succeeds.
                     await addReview.mutateAsync({
                       merchantId: merchant.id,
-                      authorName: me.full_name || t("profile.defaultFarmerName"),
+                      authorName: me.full_name?.trim() || t("profile.defaultFarmerName"),
                       ...p,
                     });
                     setShowReview(false);

@@ -18,7 +18,7 @@ import { PhoneField } from "../../components/ui/PhoneField";
 import { isValidPhone, DEFAULT_PHONE_COUNTRY } from "../../lib/phone";
 
 const schema = z.object({
-  fullName: z.string().min(2, "auth.fullName"),
+  fullName: z.string().trim().min(2, "auth.fullName"),
   phone: z.string(),
   phoneCountry: z.string().default("IN"),
   email: z.string().email("auth.emailInvalid"),
