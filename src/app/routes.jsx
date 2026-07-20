@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/useAuth";
 import FarmerDistrictGate from "../features/auth/FarmerDistrictGate";
+import FarmerNameGate from "../features/auth/FarmerNameGate";
 import { useRealtimeNotifications } from "../features/alerts/useNotifications";
 import ChunkReloadGuardReset from "./ChunkReloadGuardReset";
 
@@ -162,6 +163,24 @@ function RequireFarmerDistrict({ children }) {
   return children;
 }
 
+// A logged-in farmer whose full_name is missing or blank (whitespace only) is
+// asked for it once, at app load, before anything else in the app. This runs
+// OUTSIDE RequireFarmerDistrict below, so a farmer missing both name and
+// district is asked for their name first, matching the order signup collects
+// them (full name is the first field on the farmer signup form, district the
+// last step). The blank test trims first, so a name of only spaces counts as
+// missing, the same definition the signup validation and the review author
+// fallback use. Merchants and admins are never affected, and a farmer who
+// already has a real name passes straight through. Saving a name refreshes the
+// profile, which clears this gate for good, so the farmer is never asked again.
+function RequireFarmerName({ children }) {
+  const { profile } = useAuth();
+  if (profile && profile.role === "FARMER" && !profile.full_name?.trim()) {
+    return <FarmerNameGate/>;
+  }
+  return children;
+}
+
 // The onboarding screen itself. Only a signed-in account with no profile row
 // belongs here: logged-out visitors go to login, already-onboarded users are
 // bounced to their normal landing spot.
@@ -215,6 +234,7 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader/>}>
       <RequireOnboarding>
+      <RequireFarmerName>
       <RequireFarmerDistrict>
       <ChunkReloadGuardReset/>
       <NotificationsRealtimeMount/>
@@ -240,6 +260,7 @@ export function AppRoutes() {
         <Route path="*" element={<NotFoundPage/>}/>
       </Routes>
       </RequireFarmerDistrict>
+      </RequireFarmerName>
       </RequireOnboarding>
     </Suspense>
   );
