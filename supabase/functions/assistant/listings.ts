@@ -35,6 +35,13 @@ const HISTORY_COLS =
 
 const MAX_ROWS = 14;
 
+// The supabase-js client cannot infer the row shape of a select that embeds a
+// related table, because this project has no generated database types, so the
+// type of the returned data widens to include GenericStringError. Both queries
+// below read plain column values, so the result is narrowed to this row shape
+// at the point it is read. Typing only, nothing changes at runtime.
+type FactRow = Record<string, unknown>;
+
 function rupees(v: number | null | undefined): string | null {
   if (v == null || isNaN(Number(v))) return null;
   return "Rs " + Math.round(Number(v));
@@ -121,7 +128,7 @@ async function fetchCurrent(
 
   const { data, error } = await query;
   if (error) throw error;
-  const rows = data ?? [];
+  const rows = (data ?? []) as unknown as FactRow[];
   if (rows.length === 0) return { facts: "", count: 0 };
 
   const lines = rows.map((r: Record<string, unknown>) => currentLine(r));
@@ -152,7 +159,7 @@ async function fetchHistory(
 
   const { data, error } = await query;
   if (error) throw error;
-  const rows = data ?? [];
+  const rows = (data ?? []) as unknown as FactRow[];
   if (rows.length === 0) return { facts: "", count: 0 };
 
   const lines = rows.slice(0, MAX_ROWS).map((r: Record<string, unknown>) => historyLine(r));
