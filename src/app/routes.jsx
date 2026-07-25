@@ -7,6 +7,8 @@ import FarmerNameGate from "../features/auth/FarmerNameGate";
 import { useRealtimeNotifications } from "../features/alerts/useNotifications";
 import ChunkReloadGuardReset from "./ChunkReloadGuardReset";
 
+const AssistantWidget = lazy(() => import("../features/assistant/AssistantWidget"));
+
 const FeedPage        = lazy(() => import("../features/feed/FeedPage"));
 const LoginPage       = lazy(() => import("../features/auth/LoginPage"));
 const OnboardingPage  = lazy(() => import("../features/auth/OnboardingPage"));
@@ -238,6 +240,7 @@ export function AppRoutes() {
       <RequireFarmerDistrict>
       <ChunkReloadGuardReset/>
       <NotificationsRealtimeMount/>
+      <AssistantWidget/>
       <Routes>
         <Route path="/"     element={<HomeRoute/>}/>
         <Route path="/feed" element={<FeedGuard/>}/>
