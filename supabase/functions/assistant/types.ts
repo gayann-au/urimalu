@@ -15,7 +15,7 @@ export interface AssistantRequest {
 // How an answer was produced. Returned to the client for debugging and so the
 // UI can, if it ever wants to, treat data-backed answers differently from
 // general ones. "blocked" and "smalltalk" never touch Groq.
-export type ReplySource = "smalltalk" | "blocked" | "data" | "general" | "error";
+export type ReplySource = "smalltalk" | "blocked" | "data" | "knowledge" | "general" | "error";
 
 // The response envelope the browser receives.
 export interface AssistantReply {

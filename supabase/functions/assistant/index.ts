@@ -26,8 +26,9 @@ import { detectSmallTalk, smallTalkReply } from "./smalltalk.ts";
 import { runGuardrails } from "./guardrails.ts";
 import { detectIntent } from "./intent.ts";
 import { lookupFacts } from "./listings.ts";
+import { findSection } from "./knowledge.ts";
 import { askModel, MissingKeyError, RateLimitError, LlmError } from "./llm.ts";
-import { dataSystemPrompt, noDataSystemPrompt, generalSystemPrompt } from "./prompts.ts";
+import { dataSystemPrompt, noDataSystemPrompt, generalSystemPrompt, knowledgeSystemPrompt } from "./prompts.ts";
 import type { AssistantReply, Role } from "./types.ts";
 
 const MAX_MESSAGE_LEN = 1000;
@@ -107,6 +108,21 @@ async function answerQuestion(message: string, role: Role): Promise<AssistantRep
       ],
     });
     return { reply: answer.text, source: "data" };
+  }
+
+  // Knowledge path: a question about how Urimalu works, answered from
+  // knowledge.ts instead of the model's own guesses. Skipped when the user
+  // asked about prices without naming a crop and the only match was the
+  // generic prices section, so the existing "which crop?" nudge still runs.
+  const section = findSection(message);
+  if (section && !(intent.priceIntentWithoutCrop && section.id === "prices-and-listings")) {
+    const answer = await askModel({
+      messages: [
+        { role: "system", content: knowledgeSystemPrompt(role, section.content) },
+        { role: "user", content: message },
+      ],
+    });
+    return { reply: answer.text, source: "knowledge" };
   }
 
   // General path: Groq answers from its own knowledge, behind the guardrails.

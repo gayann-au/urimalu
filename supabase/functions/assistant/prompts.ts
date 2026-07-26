@@ -61,3 +61,17 @@ export function generalSystemPrompt(role: Role, priceIntentWithoutCrop: boolean)
     : "";
   return BASE + "\n\n" + roleNote(role) + nudge;
 }
+
+export function knowledgeSystemPrompt(role: Role, content: string): string {
+  return (
+    BASE +
+    "\n\n" +
+    roleNote(role) +
+    "\n\nThe following are the ONLY facts about how Urimalu works that apply " +
+    "to this question. Answer using only these facts. Do not add anything " +
+    "about Urimalu that is not written here. If the facts do not cover what " +
+    "was asked, say plainly that you do not know that part. Keep it short.\n\n" +
+    "URIMALU FACTS:\n" +
+    content
+  );
+}
