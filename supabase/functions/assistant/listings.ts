@@ -121,7 +121,7 @@ async function fetchCurrent(
     .eq("users.status", "APPROVED")
     .eq("users.is_disabled", false)
     .or(cropOrFilter(crop))
-    .order("price_per_kg", { ascending: true, nullsFirst: false })
+    .order("price_per_kg", { ascending: false, nullsFirst: false })
     .limit(MAX_ROWS);
 
   query = applyMarket(query, market);
@@ -132,7 +132,14 @@ async function fetchCurrent(
   if (rows.length === 0) return { facts: "", count: 0 };
 
   const lines = rows.map((r: Record<string, unknown>) => currentLine(r));
-  return { facts: lines.join("\n"), count: rows.length };
+
+  // Rows come back highest price first, so the first row with a real
+  // price_per_kg is the highest price. Naming it explicitly means the model
+  // never has to decide which listing is "best" for itself.
+  const top = rows.find((r: Record<string, unknown>) => r.price_per_kg != null);
+  const facts = top ? `HIGHEST PRICE: ${currentLine(top)}\n\n${lines.join("\n")}` : lines.join("\n");
+
+  return { facts, count: rows.length };
 }
 
 // Historical snapshots over the last N days for the crop (and market).

@@ -34,7 +34,11 @@ export function dataSystemPrompt(role: Role, facts: string): string {
     "\n\n" +
     roleNote(role) +
     "\n\nThe following are the ONLY real listing facts from the Urimalu database for this question. " +
-    "Base your answer strictly on them. Do not add or guess any price. Summarise clearly (mention the best/typical price and where), and keep it brief.\n\n" +
+    "Base your answer strictly on them. Do not add or guess any price. " +
+    "If a line starting with HIGHEST PRICE is present, that line IS the best price: state it exactly as given, " +
+    "including the merchant and the place. Do not pick a different line, and do not recalculate or compare prices yourself. " +
+    "The best price for a farmer is the highest price, so never describe a lower price as the best one. " +
+    "Keep it brief.\n\n" +
     "FACTS:\n" +
     facts
   );
