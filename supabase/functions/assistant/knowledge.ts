@@ -130,12 +130,13 @@ export const KNOWLEDGE: KnowledgeSection[] = [
       "crosses", "reminder", "push", "tell me when",
     ],
     content:
-      "You can follow a crop and get an alert when its price changes.\n\n" +
-      "There are two kinds. Any price change tells you whenever a merchant changes the price for that crop. The other kind only tells you when the price crosses a limit you set, in rupees per kg.\n\n" +
+      "Price alerts are a farmer feature. Merchants do not have them.\n\n" +
+      "To turn one on, open the By Crop tab, tap your crop, then tap Price Watch, the star button on a merchant card. It is also on a merchant's profile page.\n\n" +
+      "Pick Any price change, or Only when price crosses a limit and type the limit in Limit (rupees per kg). Tap Save. The button then shows Watching.\n\n" +
+      "To change or stop it, tap Watching again and use Stop alerts.\n\n" +
       "The alert names the crop, the new price per kg, and the merchant who posted it. If there was an earlier price, it shows that too.\n\n" +
       "Alerts appear on the Notifications page. If you allow notifications in your browser, they also arrive as push messages on your phone.\n\n" +
-      "Merchants get alerts as well. A merchant is told when a farmer posts a Ready to Sell notice for a crop they buy, when a farmer opens their notice, and when their own account is approved or not approved.\n\n" +
-      "To stop alerts for a crop, open that crop again and turn them off.",
+      "Merchants get their own notifications instead: when a farmer posts a Ready to Sell notice for a crop they buy, when a farmer opens their notice, and when their own account is approved or not approved.",
   },
 
   {
