@@ -18,3 +18,5 @@ src/scripts/
 !public/icons/icon-maskable-512.png
 !public/icons/logo-urimalu.png
 !public/icons/logo-urimalu-dark-bg.png
+
+supabase/.temp/
