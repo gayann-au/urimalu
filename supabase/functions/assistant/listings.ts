@@ -96,6 +96,30 @@ function currentLine(row: Record<string, unknown>): string {
   return `${crop} at ${at}: ${money}${when ? `, updated ${when}` : ""}`;
 }
 
+// Same row as currentLine, but phrased for the HIGHEST PRICE headline. The
+// per-kg figure leads, because that is the number a farmer compares across
+// merchants; a pack price, when there is one, follows as context.
+function topLine(row: Record<string, unknown>): string {
+  const perKg = rupees(row.price_per_kg as number);
+  if (!perKg) return currentLine(row);
+
+  const m = (row.users ?? {}) as Record<string, unknown>;
+  const where = [m.town, m.district].filter(Boolean).join(", ");
+  const at = `${m.business_name ?? "a merchant"}${where ? ` (${where})` : ""}`;
+  const crop = String(row.crop_name ?? "Crop");
+
+  const price = rupees(row.price as number);
+  const unit = String(row.unit_label ?? "").trim();
+  const when = dateOnly((row.confirmed_at as string) ?? (row.updated_at as string));
+
+  let line = `${perKg}/kg, ${crop} at ${at}`;
+  if (price && unit && unit.toLowerCase() !== "per kg") {
+    line += `, sold as ${price} per ${unit}`;
+  }
+  if (when) line += `, updated ${when}`;
+  return line;
+}
+
 // One price_history row -> one fact line.
 function historyLine(row: Record<string, unknown>): string {
   const m = (row.users ?? {}) as Record<string, unknown>;
@@ -137,7 +161,7 @@ async function fetchCurrent(
   // price_per_kg is the highest price. Naming it explicitly means the model
   // never has to decide which listing is "best" for itself.
   const top = rows.find((r: Record<string, unknown>) => r.price_per_kg != null);
-  const facts = top ? `HIGHEST PRICE: ${currentLine(top)}\n\n${lines.join("\n")}` : lines.join("\n");
+  const facts = top ? `HIGHEST PRICE: ${topLine(top)}\n\n${lines.join("\n")}` : lines.join("\n");
 
   return { facts, count: rows.length };
 }
