@@ -34,6 +34,12 @@ import type { AssistantReply, Role } from "./types.ts";
 
 const MAX_MESSAGE_LEN = 1000;
 
+// Marks a question about how the app works, so it can outrank a crop name in
+// routing. Deliberately not global: a /g regex keeps lastIndex between calls,
+// so .test() would alternate true/false on the same message.
+const HOW_TO_PATTERN =
+  /how do i|how do you|how to|how does|how can i|where do i|where can i|do i need to|what happens when/i;
+
 // What answerQuestion hands back internally. The extra two fields are for
 // the log only and are stripped before the browser sees the response.
 interface Answered extends AssistantReply {
@@ -82,9 +88,13 @@ function replyForError(err: unknown): Answered {
 // Handle a real (non-small-talk, non-blocked) question.
 async function answerQuestion(message: string, role: Role): Promise<Answered> {
   const intent = detectIntent(message);
+  const section = findSection(message);
+  const knowledgeFirst = section !== null && HOW_TO_PATTERN.test(message);
 
   // Data path: a recognised crop -> look up exact facts, then let Groq phrase.
-  if (intent.kind === "data" && intent.crop) {
+  // Skipped when the question is a how-to that a knowledge section already
+  // answers, so naming a crop does not drag it onto the listings lookup.
+  if (intent.kind === "data" && intent.crop && !knowledgeFirst) {
     let facts = "";
     try {
       const result = await lookupFacts(admin, intent.crop, intent.market, intent.timeframe);
@@ -132,7 +142,6 @@ async function answerQuestion(message: string, role: Role): Promise<Answered> {
   // knowledge.ts instead of the model's own guesses. Skipped when the user
   // asked about prices without naming a crop and the only match was the
   // generic prices section, so the existing "which crop?" nudge still runs.
-  const section = findSection(message);
   if (section && !(intent.priceIntentWithoutCrop && section.id === "prices-and-listings")) {
     const answer = await askModel({
       messages: [
