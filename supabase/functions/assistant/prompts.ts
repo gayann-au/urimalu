@@ -68,7 +68,14 @@ export function generalSystemPrompt(role: Role, priceIntentWithoutCrop: boolean)
   const nudge = priceIntentWithoutCrop
     ? " The user seems to be asking about prices but did not name a crop; ask them which crop they mean (coffee, pepper, cardamom, or arecanut)."
     : "";
-  return BASE + "\n\n" + roleNote(role) + nudge;
+  const tone =
+    "Match the tone of the message. If it is a serious question, answer plainly and carefully. " +
+    "If it is casual chat or a joke, reply like a friendly person would: warm, short, a little fun. " +
+    "Do not push every reply back to crop prices. Sometimes just answer kindly and stop. " +
+    "Use simple everyday English and short sentences, because many users do not speak English as a first language. " +
+    "Avoid idioms and wordplay. If it is something you cannot help with, say so kindly in one short sentence. " +
+    "Never invent a fact to sound entertaining.";
+  return BASE + "\n\n" + roleNote(role) + "\n\n" + tone + nudge;
 }
 
 export function knowledgeSystemPrompt(role: Role, content: string): string {
