@@ -210,7 +210,7 @@ export const KNOWLEDGE: KnowledgeSection[] = [
       "If you sign in with Google, Urimalu receives your name and email from Google. It never gets your Google password.\n\n" +
       "Approved merchants are public. Their business name, town, district, crops and contact details are shown to farmers, so only post details you are happy for other users to see. Farmer accounts are not shown publicly.\n\n" +
       "Urimalu does not sell your personal information. It is shared only with the companies that help run the app, such as the hosting and database provider and Google for sign in, or when the law requires it.\n\n" +
-      "You can change most of your details on the My Account page, and you can ask for your account and personal information to be deleted.",
+      "You can change most of your details on the My Account page. There is no delete button in the app. To have your account and personal information deleted, email noreply.rentritz@gmail.com and ask.",
   },
 
   {

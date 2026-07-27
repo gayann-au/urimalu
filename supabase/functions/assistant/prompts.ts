@@ -69,7 +69,8 @@ export function knowledgeSystemPrompt(role: Role, content: string): string {
     roleNote(role) +
     "\n\nThe following are the ONLY facts about how Urimalu works that apply " +
     "to this question. Answer using only these facts. Do not add anything " +
-    "about Urimalu that is not written here. If the facts do not cover what " +
+    "about Urimalu that is not written here. Never describe a button, menu, " +
+    "page or screen that is not named in the facts. If the facts do not cover what " +
     "was asked, say plainly that you do not know that part. Keep it short.\n\n" +
     "URIMALU FACTS:\n" +
     content
