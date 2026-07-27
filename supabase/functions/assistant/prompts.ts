@@ -38,6 +38,10 @@ export function dataSystemPrompt(role: Role, facts: string): string {
     "If a line starting with HIGHEST PRICE is present, that line IS the best price: state it exactly as given, " +
     "including the merchant and the place. Do not pick a different line, and do not recalculate or compare prices yourself. " +
     "The best price for a farmer is the highest price, so never describe a lower price as the best one. " +
+    "These facts are listing data only. They say nothing about how the Urimalu app works. " +
+    "Never describe a button, menu, page, screen, setting, tab or step. " +
+    "If the question asks how to do something in the app, say plainly that you can only see current listing data " +
+    "and cannot give the steps. " +
     "Keep it brief.\n\n" +
     "FACTS:\n" +
     facts
