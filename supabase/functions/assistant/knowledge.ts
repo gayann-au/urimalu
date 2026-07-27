@@ -45,6 +45,9 @@ export const KNOWLEDGE: KnowledgeSection[] = [
       "what is urimalu", "about urimalu", "urimalu free", "free",
       "free to use", "marketplace", "commission", "fee", "fees", "charge",
       "charges", "cost", "who runs urimalu", "why urimalu",
+      "app work", "app works", "how it works", "how does it work",
+      "how urimalu works", "how does urimalu work", "use urimalu",
+      "using urimalu", "how do i use", "get started", "getting started",
     ],
     content:
       "Urimalu is a crop price marketplace for farmers and merchants in Coorg, which is also called Kodagu, in Karnataka. Merchants post the prices they are paying for coffee, pepper, cardamom and arecanut. Farmers see those prices and call the merchant they choose.\n\n" +
