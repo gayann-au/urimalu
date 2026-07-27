@@ -61,6 +61,7 @@ export interface AskModelResult {
   text: string;
   usage: { promptTokens: number; completionTokens: number; totalTokens: number } | null;
   finishReason: string | null;
+  model: string;
 }
 
 // Everything an adapter needs to build one request. Resolved from config plus
@@ -79,7 +80,9 @@ interface AdapterContext {
 // another object of this shape and registering it below. No caller changes.
 interface ProviderAdapter {
   buildRequest(ctx: AdapterContext): { url: string; init: RequestInit };
-  parseResponse(json: unknown): AskModelResult;
+  // The adapter reads the wire response, which does not carry the configured
+  // model name, so it returns everything except model and askModel adds that.
+  parseResponse(json: unknown): Omit<AskModelResult, "model">;
 }
 
 // Loose shape of an OpenAI-compatible chat-completions response. Every field is
@@ -215,5 +218,6 @@ export async function askModel(input: AskModelInput): Promise<AskModelResult> {
   }
 
   const json = await res.json().catch(() => null);
-  return adapter.parseResponse(json);
+  const result = adapter.parseResponse(json);
+  return { ...result, model: MODEL };
 }

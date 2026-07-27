@@ -27,11 +27,19 @@ import { runGuardrails } from "./guardrails.ts";
 import { detectIntent } from "./intent.ts";
 import { lookupFacts } from "./listings.ts";
 import { findSection } from "./knowledge.ts";
+import { userIdFromRequest, logInteraction } from "./log.ts";
 import { askModel, MissingKeyError, RateLimitError, LlmError } from "./llm.ts";
 import { dataSystemPrompt, noDataSystemPrompt, generalSystemPrompt, knowledgeSystemPrompt } from "./prompts.ts";
 import type { AssistantReply, Role } from "./types.ts";
 
 const MAX_MESSAGE_LEN = 1000;
+
+// What answerQuestion hands back internally. The extra two fields are for
+// the log only and are stripped before the browser sees the response.
+interface Answered extends AssistantReply {
+  model?: string | null;
+  tokensUsed?: number | null;
+}
 
 // Service-role client, same pattern as send-push. Used only for the read-only
 // facts lookup; RLS is re-applied in the query filters regardless.
@@ -59,20 +67,20 @@ function parseBody(body: unknown): { message: string; role: Role } | { error: st
 
 // Map a thrown error from the model provider layer to a user-facing reply.
 // Server-side detail is logged; the user only ever sees a friendly sentence.
-function replyForError(err: unknown): AssistantReply {
+function replyForError(err: unknown): Answered {
   if (err instanceof RateLimitError) {
-    return { reply: BUSY_REPLY, source: "error" };
+    return { reply: BUSY_REPLY, source: "error", model: null, tokensUsed: null };
   }
   // eslint-disable-next-line no-console
   console.error("[assistant]", err instanceof Error ? err.message : String(err));
   if (err instanceof MissingKeyError || err instanceof LlmError) {
-    return { reply: ERROR_REPLY, source: "error" };
+    return { reply: ERROR_REPLY, source: "error", model: null, tokensUsed: null };
   }
-  return { reply: ERROR_REPLY, source: "error" };
+  return { reply: ERROR_REPLY, source: "error", model: null, tokensUsed: null };
 }
 
 // Handle a real (non-small-talk, non-blocked) question.
-async function answerQuestion(message: string, role: Role): Promise<AssistantReply> {
+async function answerQuestion(message: string, role: Role): Promise<Answered> {
   const intent = detectIntent(message);
 
   // Data path: a recognised crop -> look up exact facts, then let Groq phrase.
@@ -94,7 +102,12 @@ async function answerQuestion(message: string, role: Role): Promise<AssistantRep
           { role: "user", content: message },
         ],
       });
-      return { reply: answer.text, source: "data" };
+      return {
+        reply: answer.text,
+        source: "data",
+        model: answer.model,
+        tokensUsed: answer.usage?.totalTokens ?? null,
+      };
     }
 
     // Crop understood but no matching listing: say so without inventing a price.
@@ -107,7 +120,12 @@ async function answerQuestion(message: string, role: Role): Promise<AssistantRep
         { role: "user", content: message },
       ],
     });
-    return { reply: answer.text, source: "data" };
+    return {
+      reply: answer.text,
+      source: "data",
+      model: answer.model,
+      tokensUsed: answer.usage?.totalTokens ?? null,
+    };
   }
 
   // Knowledge path: a question about how Urimalu works, answered from
@@ -122,7 +140,12 @@ async function answerQuestion(message: string, role: Role): Promise<AssistantRep
         { role: "user", content: message },
       ],
     });
-    return { reply: answer.text, source: "knowledge" };
+    return {
+      reply: answer.text,
+      source: "knowledge",
+      model: answer.model,
+      tokensUsed: answer.usage?.totalTokens ?? null,
+    };
   }
 
   // General path: Groq answers from its own knowledge, behind the guardrails.
@@ -132,7 +155,12 @@ async function answerQuestion(message: string, role: Role): Promise<AssistantRep
       { role: "user", content: message },
     ],
   });
-  return { reply: answer.text, source: "general" };
+  return {
+    reply: answer.text,
+    source: "general",
+    model: answer.model,
+    tokensUsed: answer.usage?.totalTokens ?? null,
+  };
 }
 
 Deno.serve(async (req) => {
@@ -157,25 +185,39 @@ Deno.serve(async (req) => {
   }
   const { message, role } = parsed;
 
-  // 1) Small talk -> instant canned reply, no Groq.
-  const smallTalk = detectSmallTalk(message);
-  if (smallTalk) {
-    const reply: AssistantReply = { reply: smallTalkReply(smallTalk, role), source: "smalltalk" };
-    return jsonResponse(reply);
-  }
-
-  // 2) Rule-based guardrails -> canned refusal, no Groq.
-  const guard = runGuardrails(message);
-  if (guard.blocked) {
-    const reply: AssistantReply = { reply: guard.reply ?? ERROR_REPLY, source: "blocked" };
-    return jsonResponse(reply);
-  }
-
-  // 3) Real question -> data or general path (may call Groq).
+  // Every path below produces one Answered, so the request is logged exactly
+  // once no matter which one served it.
+  //   1) Small talk -> instant canned reply, no Groq.
+  //   2) Rule-based guardrails -> canned refusal, no Groq.
+  //   3) Real question -> data, knowledge or general path (may call Groq).
+  const userId = userIdFromRequest(req);
+  let answered: Answered;
   try {
-    const reply = await answerQuestion(message, role);
-    return jsonResponse(reply);
+    const smallTalk = detectSmallTalk(message);
+    if (smallTalk) {
+      answered = { reply: smallTalkReply(smallTalk, role), source: "smalltalk" };
+    } else {
+      const guard = runGuardrails(message);
+      if (guard.blocked) {
+        answered = { reply: guard.reply ?? ERROR_REPLY, source: "blocked" };
+      } else {
+        answered = await answerQuestion(message, role);
+      }
+    }
   } catch (err) {
-    return jsonResponse(replyForError(err));
+    answered = replyForError(err);
   }
+
+  await logInteraction(admin, {
+    userId,
+    role,
+    message,
+    reply: answered.reply,
+    source: answered.source,
+    model: answered.model ?? null,
+    tokensUsed: answered.tokensUsed ?? null,
+    ok: answered.source !== "error",
+  });
+
+  return jsonResponse({ reply: answered.reply, source: answered.source });
 });
