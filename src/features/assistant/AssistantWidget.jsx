@@ -263,6 +263,17 @@ function Panel({ onClose, role }) {
     ? { top: viewport.offsetTop, height: viewport.height, bottom: "auto" }
     : undefined;
 
+  // Home indicator clearance under the composer, phones only, and only while
+  // the keyboard is shut. With the keyboard up the indicator is covered by it,
+  // so the same inset would just be a band of dead cream above the keys on a
+  // screen that has none to spare. Desktop never has a measured viewport, so
+  // this is the empty string there and the class list below is byte for byte
+  // what it was.
+  const composerInset =
+    viewport && !viewport.keyboardOpen
+      ? "pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+      : "";
+
   const suggestions = SUGGESTIONS[role] || SUGGESTIONS.FARMER;
 
   // Keep the newest message in view as the conversation grows.
@@ -357,8 +368,24 @@ function Panel({ onClose, role }) {
         <div aria-hidden="true" className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-chilli-600 to-ember-500"/>
 
         {/* Grab bar, phone only. Decorative: the panel is not draggable, this
-            just says which edge it came from. */}
-        <div aria-hidden="true" className="pt-2.5 pb-1 flex justify-center sm:hidden">
+            just says which edge it came from.
+
+            It also carries the notch clearance for the whole sheet, and it is
+            the right place for it precisely because this element is `sm:hidden`
+            and so cannot reach desktop at all. index.html sets
+            `viewport-fit=cover`, which opts every screen into drawing under the
+            notch and the home indicator, and this panel previously honoured
+            none of it.
+
+            There is no double count against the measured viewport above.
+            Safari reports the top inset as zero when its own chrome already
+            clears the notch, and the full inset when nothing does, which is the
+            standalone PWA case where the sheet really does start at the
+            physical top of the screen. */}
+        <div
+          aria-hidden="true"
+          className="pt-[calc(0.625rem+env(safe-area-inset-top))] pb-1 flex justify-center sm:hidden"
+        >
           <div className="h-1 w-[38px] rounded-full bg-ink-300"/>
         </div>
 
@@ -385,7 +412,11 @@ function Panel({ onClose, role }) {
         </div>
 
         {/* Messages */}
-        <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+        {/* `overscroll-contain` stops a flick that reaches the end of the
+            conversation from handing the scroll to the page behind the scrim,
+            which on iOS drags the whole document and is the single loudest tell
+            that something is a web page rather than an app. */}
+        <div ref={listRef} className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 flex flex-col gap-3">
           {messages.length === 0 ? (
             <EmptyState suggestions={suggestions} onPick={send} disabled={assistant.isPending}/>
           ) : (
@@ -397,7 +428,7 @@ function Panel({ onClose, role }) {
         </div>
 
         {/* Composer */}
-        <div className="border-t border-ink-100 p-3">
+        <div className={`border-t border-ink-100 p-3 ${composerInset}`}>
           <form onSubmit={handleSubmit} className="flex items-end gap-2">
             <input
               ref={inputRef}
