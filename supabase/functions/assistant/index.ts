@@ -57,6 +57,7 @@ const admin = createClient(
 // Friendly, non-technical fallbacks. English only for now.
 const BUSY_REPLY = "The assistant is busy right now because a lot of people are asking at once. Please try again in a minute.";
 const ERROR_REPLY = "Sorry, I could not answer that just now. Please try again in a moment.";
+const LOOKUP_FAIL_REPLY = "I could not check the listings just now. Please try again in a moment.";
 
 // Validate and narrow the request body. Returns a typed request or an error
 // string describing what was wrong.
@@ -96,10 +97,12 @@ async function answerQuestion(message: string, role: Role): Promise<Answered> {
   // answers, so naming a crop does not drag it onto the listings lookup.
   if (intent.kind === "data" && intent.crop && !knowledgeFirst) {
     let facts = "";
+    let lookupFailed = false;
     try {
       const result = await lookupFacts(admin, intent.crop, intent.market, intent.timeframe);
       facts = result.facts;
     } catch (err) {
+      lookupFailed = true;
       // eslint-disable-next-line no-console
       console.error("[assistant] listings lookup failed:", err instanceof Error ? err.message : String(err));
       // Fall through to a general answer rather than failing the whole request.
@@ -120,6 +123,19 @@ async function answerQuestion(message: string, role: Role): Promise<Answered> {
       };
     }
 
+    // The lookup errored, so we do not know whether listings exist. The prompt
+    // below states as fact that none do, which would be a confident falsehood
+    // about something a farmer might act on. A canned reply is honest, and it
+    // skips a model call the answer cannot benefit from.
+    if (lookupFailed) {
+      return {
+        reply: LOOKUP_FAIL_REPLY,
+        source: "lookupfail",
+        model: null,
+        tokensUsed: null,
+      };
+    }
+
     // Crop understood but no matching listing: say so without inventing a price.
     const answer = await askModel({
       messages: [
@@ -132,7 +148,7 @@ async function answerQuestion(message: string, role: Role): Promise<Answered> {
     });
     return {
       reply: answer.text,
-      source: "data",
+      source: "nolistings",
       model: answer.model,
       tokensUsed: answer.usage?.totalTokens ?? null,
     };
