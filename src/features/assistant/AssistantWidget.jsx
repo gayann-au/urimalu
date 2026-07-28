@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuth } from "../auth/useAuth";
@@ -66,6 +66,68 @@ const SOURCE_STAMP = {
 };
 
 const DESKTOP_QUERY = "(min-width: 640px)";
+
+// How much the visible area has to shrink before we call it a keyboard rather
+// than browser chrome sliding away. A URL bar is worth roughly 50 to 90px; no
+// software keyboard is anywhere near as short as 140.
+const KEYBOARD_THRESHOLD_PX = 140;
+
+// Measures the part of the screen the user can actually see.
+//
+// iOS Safari never resizes the layout viewport when the software keyboard
+// opens. Only the visual viewport shrinks. Since `fixed inset-0` and every `vh`
+// unit are both measured against the layout viewport, a shell built from them
+// keeps its full height with the keyboard up and everything pinned to its
+// bottom edge, the composer included, sits behind the keyboard. The same gap
+// explains the sliced header: on iOS the layout viewport also extends behind
+// the browser's own chrome, so the top of a full height panel is simply not on
+// screen. Neither symptom is reachable from CSS. `dvh` follows browser chrome
+// but ignores the keyboard, and the `interactive-widget` viewport property is
+// Chrome only.
+//
+// `offsetTop` is how far the visual viewport has scrolled down inside the
+// layout viewport. A fixed element stays pinned to the layout viewport while
+// that happens, so it has to be pushed down by the same amount to stay put.
+//
+// `keyboardOpen` calibrates against the tallest measurement taken since the
+// panel opened rather than against `window.innerHeight`, whose relationship to
+// the visual viewport differs between iOS versions. The tallest reading is the
+// keyboard-shut state by definition.
+//
+// Returns null when disabled or when the API is missing, and null is load
+// bearing: it means the caller writes no inline styles at all and the
+// stylesheet's own `inset-0` governs, exactly as it did before this hook
+// existed.
+function useVisualViewport(enabled) {
+  const [rect, setRect] = useState(null);
+  const tallestRef = useRef(0);
+
+  useLayoutEffect(() => {
+    const vv = typeof window === "undefined" ? null : window.visualViewport;
+    if (!enabled || !vv) {
+      setRect(null);
+      return;
+    }
+    tallestRef.current = 0;
+    function read() {
+      tallestRef.current = Math.max(tallestRef.current, vv.height);
+      setRect({
+        height: vv.height,
+        offsetTop: vv.offsetTop,
+        keyboardOpen: tallestRef.current - vv.height > KEYBOARD_THRESHOLD_PX,
+      });
+    }
+    read();
+    vv.addEventListener("resize", read);
+    vv.addEventListener("scroll", read);
+    return () => {
+      vv.removeEventListener("resize", read);
+      vv.removeEventListener("scroll", read);
+    };
+  }, [enabled]);
+
+  return rect;
+}
 
 function CloseIcon() {
   return (
@@ -189,6 +251,18 @@ function Panel({ onClose, role }) {
     typeof window !== "undefined" && window.matchMedia(DESKTOP_QUERY).matches
   );
 
+  // Phones only. On a desktop the hook is inert and returns null, so the shell
+  // below gets no inline styles and resolves through the identical CSS it used
+  // before any of this existed. That is deliberate: desktop is not a second
+  // layout, it is this layout with the measuring switched off.
+  const viewport = useVisualViewport(!isDesktop);
+
+  // `bottom: auto` is required because `inset-0` has already set both edges,
+  // and a top plus a height cannot win against that on its own.
+  const shellStyle = viewport
+    ? { top: viewport.offsetTop, height: viewport.height, bottom: "auto" }
+    : undefined;
+
   const suggestions = SUGGESTIONS[role] || SUGGESTIONS.FARMER;
 
   // Keep the newest message in view as the conversation grows.
@@ -263,13 +337,16 @@ function Panel({ onClose, role }) {
     // transform outright. Positioning the panel with a translate utility and
     // then animating scale on the same element would put the two in a fight
     // that the inline transform always wins.
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center pointer-events-none">
+    //
+    // It is also the only thing the measured viewport writes to, for the same
+    // reason: the panel's transform is spoken for, and the shell's is not.
+    <div style={shellStyle} className="fixed inset-0 z-50 flex items-end justify-center sm:items-center pointer-events-none">
       <motion.div
         role="dialog"
         aria-modal="true"
         aria-label={COPY.title}
         className="pointer-events-auto relative bg-paper border border-ink-200 shadow-2xl flex flex-col overflow-hidden
-                   w-full h-[92vh] rounded-t-3xl
+                   w-full h-full rounded-t-3xl
                    sm:w-[min(720px,92vw)] sm:h-[min(780px,86vh)] sm:rounded-3xl"
         initial={entrance.initial}
         animate={entrance.animate}
