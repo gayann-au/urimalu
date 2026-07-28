@@ -164,13 +164,22 @@ function PanelSparkleIcon() {
 // source stamp underneath, when the tier they came from has one. The user's own
 // messages never do: the stamp describes where an answer was sourced, and the
 // question was not sourced from anywhere.
+//
+// The min-width is what stops a one or two character message rendering as a
+// circle. "Hi" is around 16px of glyph inside 28px of horizontal padding, so
+// about 44px wide, against a height of about 39px once the line box and the
+// vertical padding are counted. A 16px radius on a box that small is close to
+// half its shorter side, which is a pill by definition, and a pill whose width
+// and height match is a circle. Widening the floor breaks the tie. The radius
+// is right for every longer message and should not be traded away to fix the
+// shortest ones.
 function Bubble({ from, text, source }) {
   const isUser = from === "user";
   const stamp = isUser ? undefined : SOURCE_STAMP[source];
   return (
     <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
       <div
-        className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
+        className={`min-w-[64px] max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
           isUser
             ? "bg-crop-600 text-white rounded-br-md"
             : "bg-paper-2 text-ink-800 rounded-bl-md"
