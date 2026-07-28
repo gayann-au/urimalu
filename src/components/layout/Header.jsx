@@ -123,6 +123,17 @@ function claimShine() {
 // now (see the note at the top of AssistantWidget.jsx), so its entry point is
 // fixed to English too rather than half translated.
 //
+// The gradient runs chilli-700 to chilli-600 and deliberately does not reach
+// ember. This pill carries a white text-sm bold label, which WCAG counts as
+// normal text and so needs 4.5:1, and white on ember-500 (#FF6A1A) measures
+// only 2.87:1. The failing end was the right end, exactly where the label
+// runs out, so the last word of "Urimalu AI" was the worst lit part of the
+// button: washed out indoors and gone entirely in the direct sunlight these
+// users read it in. The replacement measures 6.90:1 on chilli-700 and 5.00:1
+// on chilli-600, so every point along the sweep passes. Ember still appears
+// on the panel itself (the 2px top strip and the sparkle tile), where it sits
+// under no text and carries no contrast requirement.
+//
 // The shine is a single band of light swept across the pill twice, then never
 // again: repeat: 1 means one repeat after the first run, so it stops on its
 // own with no timer to clean up. Whether it runs at all is decided by the
@@ -133,7 +144,7 @@ function AssistantButton({ label, onClick, shine }) {
       type="button"
       onClick={onClick}
       aria-label="Open Urimalu AI assistant"
-      className="relative overflow-hidden rounded-full min-h-[44px] px-3.5 bg-gradient-to-r from-chilli-600 to-ember-500 text-white font-bold text-sm inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+      className="relative overflow-hidden rounded-full min-h-[44px] px-3.5 bg-gradient-to-r from-chilli-700 to-chilli-600 text-white font-bold text-sm inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
     >
       <SparkleIcon/>
       <span>{label}</span>
