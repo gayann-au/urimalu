@@ -52,6 +52,19 @@ const SUGGESTIONS = {
   ],
 };
 
+// Where an answer came from, printed under the assistant's own messages. Only
+// the three tiers that make a claim about their footing are stamped: grounded
+// listings, the written guide, and the model's own knowledge. Every other
+// source value (nolistings, lookupfail, smalltalk, blocked, error) is absent
+// from this map on purpose, so nothing is stamped for them. A source the
+// backend has not sent, or one this map does not know, also prints nothing:
+// silence is the only honest default when the tier is unknown.
+const SOURCE_STAMP = {
+  data: "From live Urimalu listings",
+  knowledge: "From the Urimalu guide",
+  general: "General knowledge, not Urimalu data",
+};
+
 const DESKTOP_QUERY = "(min-width: 640px)";
 
 function CloseIcon() {
@@ -85,11 +98,15 @@ function PanelSparkleIcon() {
 }
 
 // A single chat bubble. User messages sit right in crop green; assistant
-// messages sit left on a warm paper surface.
-function Bubble({ from, text }) {
+// messages sit left on a warm paper surface. Assistant messages also carry the
+// source stamp underneath, when the tier they came from has one. The user's own
+// messages never do: the stamp describes where an answer was sourced, and the
+// question was not sourced from anywhere.
+function Bubble({ from, text, source }) {
   const isUser = from === "user";
+  const stamp = isUser ? undefined : SOURCE_STAMP[source];
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
       <div
         className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
           isUser
@@ -99,6 +116,7 @@ function Bubble({ from, text }) {
       >
         {text}
       </div>
+      {stamp && <p className="pt-1 px-1 text-[11px] text-ink-500">{stamp}</p>}
     </div>
   );
 }
@@ -213,12 +231,12 @@ function Panel({ onClose, role }) {
     if (!text || assistant.isPending) return;
     setMessages((prev) => [...prev, { from: "user", text }]);
     setInput("");
-    // `source` is stored but not shown. The stamp that used to render it was
-    // removed because the Edge Function returns "data" both when a live
-    // listing was found and when a crop was recognised but nothing matched,
-    // and the second case is general reasoning wearing a listings label. The
-    // field costs nothing to keep, the API already returns it, and the stamp
-    // comes back the moment the backend reports the tier honestly.
+    // `source` is stored and shown. The stamp was held back while the Edge
+    // Function returned "data" both when a live listing was found and when a
+    // crop was recognised but nothing matched, because the second case was
+    // general reasoning wearing a listings label. The backend now separates
+    // those into "data", "nolistings" and "lookupfail", so the stamp is back
+    // and only the grounded tier claims to be grounded.
     assistant.mutate(text, {
       onSuccess: (data) => {
         setMessages((prev) => [...prev, { from: "bot", text: data.reply, source: data.source }]);
@@ -295,7 +313,7 @@ function Panel({ onClose, role }) {
             <EmptyState suggestions={suggestions} onPick={send} disabled={assistant.isPending}/>
           ) : (
             messages.map((m, i) => (
-              <Bubble key={i} from={m.from} text={m.text}/>
+              <Bubble key={i} from={m.from} text={m.text} source={m.source}/>
             ))
           )}
           {assistant.isPending && <ThinkingBubble reduce={reduce}/>}
