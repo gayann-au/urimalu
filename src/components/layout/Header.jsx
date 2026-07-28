@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -81,35 +81,6 @@ function SparkleIcon() {
   );
 }
 
-// Persisted gates for the shine sweep. This header is rendered by each page
-// rather than by the app shell, so every route change builds a fresh Header
-// and a fresh pill. Left ungated the sweep would replay on every navigation,
-// forever, which reads as a nag rather than as a one time hint.
-const SHINE_COUNT_KEY = "urimalu.assistantShineCount";
-const SHINE_SHOWN_KEY = "urimalu.assistantShineShown";
-const SHINE_MAX_SESSIONS = 3;
-
-// Decide whether the shine may play now, and claim it in the same breath so
-// two callers can never both win. Returns true at most once per browser
-// session, and only for the first SHINE_MAX_SESSIONS sessions ever.
-//
-// Every read and write is wrapped the way src/i18n/index.js wraps its
-// localStorage access: storage throws in private browsing and when cookies are
-// blocked, and a decoration is never worth an exception, so any failure at any
-// point means no shine at all. A missing or corrupt count reads as 0.
-function claimShine() {
-  try {
-    if (sessionStorage.getItem(SHINE_SHOWN_KEY)) return false;
-    const played = Number(localStorage.getItem(SHINE_COUNT_KEY)) || 0;
-    if (played >= SHINE_MAX_SESSIONS) return false;
-    sessionStorage.setItem(SHINE_SHOWN_KEY, "1");
-    localStorage.setItem(SHINE_COUNT_KEY, String(played + 1));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 // Assistant launcher. The entry point for the whole assistant now lives here,
 // in the shared header, so it sits in the same place on every page instead of
 // floating over the bottom right corner.
@@ -123,40 +94,71 @@ function claimShine() {
 // now (see the note at the top of AssistantWidget.jsx), so its entry point is
 // fixed to English too rather than half translated.
 //
-// The gradient runs chilli-700 to chilli-600 and deliberately does not reach
-// ember. This pill carries a white text-sm bold label, which WCAG counts as
-// normal text and so needs 4.5:1, and white on ember-500 (#FF6A1A) measures
-// only 2.87:1. The failing end was the right end, exactly where the label
-// runs out, so the last word of "Urimalu AI" was the worst lit part of the
-// button: washed out indoors and gone entirely in the direct sunlight these
-// users read it in. The replacement measures 6.90:1 on chilli-700 and 5.00:1
-// on chilli-600, so every point along the sweep passes. Ember still appears
-// on the panel itself (the 2px top strip and the sparkle tile), where it sits
-// under no text and carries no contrast requirement.
+// The pill is never flat and never flashes. What moves is the gradient
+// itself: a quadruple width band, chilli-900 to chilli-600 to chilli-900,
+// riding left to right and back on a six second breath. The pill is a
+// quarter of that band's width, so at any instant it shows a gentle slice
+// rather than the whole ramp, and travelling three quarters of the band
+// walks that slice from the dark head, across the light crest, to the dark
+// tail. The whole pill therefore dims and brightens together.
 //
-// The shine is a single band of light swept across the pill twice, then never
-// again: repeat: 1 means one repeat after the first run, so it stops on its
-// own with no timer to clean up. Whether it runs at all is decided by the
-// caller, once, and passed in: see the shine claim in Header below.
-function AssistantButton({ label, onClick, shine }) {
+// The geometry is the entire point, and the first attempt at this drift got
+// it wrong in a way worth recording. That version was a double width band
+// moved half its width, which is half a gradient period, so a point at
+// fraction p across the pill ran from p/2 to (p+1)/2. The left edge went
+// dark to light, the right edge went light to dark, and the centre ran 0.25
+// to 0.75, which are the same colour. That is a standing wave with a node
+// dead centre: the middle of the pill, where the label and most of the
+// pixels are, never changed colour at all, and the two ends swung in exact
+// antiphase so they cancelled in peripheral vision. It was technically
+// animating and practically invisible. Anyone not already staring at the
+// button missed it. Widening the band to four times the pill and travelling
+// three quarters of it keeps every part of the pill in phase, so there is no
+// node anywhere in the sweep.
+//
+// The earlier treatment before that was a white band swept across the pill
+// twice on first sight and then never again. It was rejected on two counts:
+// a bright repeating band over a coloured pill is the visual language of a
+// discount badge, not of a premium tool, and a one time hint needs persisted
+// counters and session gates to stop it becoming a nag, which is a lot of
+// machinery for a decoration. A permanent ambient drift needs no gate at all.
+//
+// Contrast is the hard bound on the palette here. This pill carries a white
+// text-sm bold label, which WCAG counts as normal text and so needs 4.5:1 at
+// every point of the drift, not just on average. White measures 11.89:1 on
+// chilli-900, 9.21:1 on chilli-800, 6.90:1 on chilli-700 and 5.00:1 on
+// chilli-600, so both stops and everything they interpolate through pass with
+// room to spare. The amplitude may only ever be widened downwards, into the
+// darker end. Nothing lighter than chilli-600 may enter this gradient: white
+// on chilli-500 is 4.25:1 and on ember-500 only 2.87:1, both failures. Ember
+// still appears on the panel itself (the 2px top strip and the sparkle tile),
+// where it sits under no text and carries no contrast requirement.
+//
+// bg-chilli-700 on the button is a solid fallback, not part of the drift. If
+// the animated layer ever fails to paint the label still reads at 6.90:1.
+// Under reduced motion the moving layer is not rendered at all and a static
+// chilli-700 to chilli-600 gradient stands in for it.
+function AssistantButton({ label, onClick }) {
+  const reduceMotion = useReducedMotion();
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label="Open Urimalu AI assistant"
-      className="relative overflow-hidden rounded-full min-h-[44px] px-3.5 bg-gradient-to-r from-chilli-700 to-chilli-600 text-white font-bold text-sm inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+      className={`relative overflow-hidden rounded-full min-h-[44px] px-3.5 bg-chilli-700 text-white font-bold text-sm inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+        reduceMotion ? "bg-gradient-to-r from-chilli-700 to-chilli-600" : ""
+      }`}
     >
-      <SparkleIcon/>
-      <span>{label}</span>
-      {shine && (
-        <motion.span
+      {!reduceMotion && (
+        <motion.div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-          initial={{ x: "-150%" }}
-          animate={{ x: "400%" }}
-          transition={{ duration: 1.1, ease: URI_EASE, delay: 0.5, repeat: 1, repeatDelay: 1.2 }}
+          className="pointer-events-none absolute inset-y-0 left-0 w-[400%] bg-gradient-to-r from-chilli-900 via-chilli-600 to-chilli-900"
+          animate={{ x: ["0%", "-75%"] }}
+          transition={{ duration: 6, ease: "easeInOut", repeat: Infinity, repeatType: "mirror" }}
         />
       )}
+      <span className="relative z-10 inline-flex"><SparkleIcon/></span>
+      <span className="relative z-10">{label}</span>
     </button>
   );
 }
@@ -359,9 +361,6 @@ export function Header({ showBack = false, title }) {
   const lang = useUiStore(s => s.lang);
   const toggleLang = useUiStore(s => s.toggleLang);
   const openAssistant = useUiStore(s => s.openAssistant);
-  const reduceMotion = useReducedMotion();
-  const [shine, setShine] = useState(false);
-  const shineClaimed = useRef(false);
   const { profile } = useAuth();
   const logout = useLogout();
   const nav = useNavigate();
@@ -390,28 +389,6 @@ export function Header({ showBack = false, title }) {
   // before the visitor has picked a role, and there is nothing to assist with
   // until they have.
   const assistantEligible = !!profile && (profile.role === "FARMER" || profile.role === "MERCHANT");
-
-  // The claim waits for eligibility instead of running on mount, because this
-  // header is rendered by plenty of pages that never show the pill: login, both
-  // signup forms, onboarding, the two password screens, the 404 and the admin
-  // console. Claimed on mount, someone signing in would spend the shine on the
-  // login page, where there is no pill to sweep, and reach the feed with it
-  // already used up. Three logins would exhaust all three sessions without the
-  // sweep ever being seen once.
-  //
-  // The ref holds it to one claim per Header mount, so the re-render that
-  // arrives with the profile cannot claim a second time. Both pills are handed
-  // the one result: both sit in the tree at all times, one hidden by a
-  // breakpoint rather than unmounted, so claiming per pill would let the hidden
-  // desktop one swallow the shine and leave the visible mobile one flat.
-  // Reduced motion returns before the claim, so a visitor who wants no
-  // animation does not silently burn a session on a sweep never rendered.
-  useEffect(() => {
-    if (shineClaimed.current) return;
-    if (!assistantEligible || reduceMotion) return;
-    shineClaimed.current = true;
-    setShine(claimShine());
-  }, [assistantEligible, reduceMotion]);
 
   let actionLink = null;
   if (profile) {
@@ -449,7 +426,7 @@ export function Header({ showBack = false, title }) {
 
         {/* Desktop and up: every action inline, unchanged from before. */}
         <div className="hidden md:flex items-center gap-0.5 sm:gap-1 shrink-0">
-          {assistantEligible && <AssistantButton label="Urimalu AI" onClick={openAssistant} shine={shine}/>}
+          {assistantEligible && <AssistantButton label="Urimalu AI" onClick={openAssistant}/>}
           <LangToggleButton lang={lang} onToggle={toggleLang}/>
           {actionLink}
           {profile && <BellButton unreadCount={unreadCount} label={t("nav.notifications")}/>}
@@ -476,7 +453,7 @@ export function Header({ showBack = false, title }) {
         <div className="flex md:hidden items-center gap-0.5 shrink-0">
           {profile ? (
             <>
-              {assistantEligible && <AssistantButton label="Ask AI" onClick={openAssistant} shine={shine}/>}
+              {assistantEligible && <AssistantButton label="Ask AI" onClick={openAssistant}/>}
               <BellButton unreadCount={unreadCount} label={t("nav.notifications")}/>
               <button onClick={() => setDrawerOpen(true)} aria-label={t("nav.openMenu")}
                 className="rounded-full h-11 w-11 text-ink-700 hover:text-crop-700 hover:bg-crop-50 transition-colors inline-flex items-center justify-center shrink-0">
