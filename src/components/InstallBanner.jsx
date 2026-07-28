@@ -97,7 +97,7 @@ function Strip({ children, onClose, closeLabel }) {
             type="button"
             onClick={onClose}
             aria-label={closeLabel}
-            className="shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-[14px] text-ink-500 hover:text-ink-800 hover:bg-ink-50 transition-colors"
+            className="shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-[14px] text-ink-500 hover:text-ink-800 hover:bg-ink-100 transition-colors"
           >
             <CloseIcon />
           </button>
