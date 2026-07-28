@@ -111,11 +111,24 @@ function useVisualViewport(enabled) {
     tallestRef.current = 0;
     function read() {
       tallestRef.current = Math.max(tallestRef.current, vv.height);
-      setRect({
+      const next = {
         height: vv.height,
         offsetTop: vv.offsetTop,
         keyboardOpen: tallestRef.current - vv.height > KEYBOARD_THRESHOLD_PX,
-      });
+      };
+      // These events fire per frame while the keyboard animates in and out.
+      // Returning the previous object when nothing actually moved keeps that
+      // from re-rendering the whole conversation on every one of those frames,
+      // which is the difference between a sheet that tracks the keyboard and
+      // one that stutters behind it on a cheap handset.
+      setRect((prev) =>
+        prev &&
+        prev.height === next.height &&
+        prev.offsetTop === next.offsetTop &&
+        prev.keyboardOpen === next.keyboardOpen
+          ? prev
+          : next
+      );
     }
     read();
     vv.addEventListener("resize", read);
@@ -414,7 +427,7 @@ function Panel({ onClose, role }) {
             type="button"
             onClick={onClose}
             aria-label={COPY.close}
-            className="h-10 w-10 rounded-full text-ink-700 hover:text-crop-700 hover:bg-crop-50 transition-colors inline-flex items-center justify-center shrink-0"
+            className="h-11 w-11 sm:h-10 sm:w-10 rounded-full text-ink-700 hover:text-crop-700 hover:bg-crop-50 transition-colors inline-flex items-center justify-center shrink-0"
           >
             <CloseIcon/>
           </button>
@@ -447,13 +460,21 @@ function Panel({ onClose, role }) {
               placeholder={COPY.placeholder}
               aria-label={COPY.placeholder}
               maxLength={1000}
-              className="flex-1 min-h-[44px] rounded-[14px] border border-ink-200 bg-card px-3.5 text-sm text-ink-800 placeholder:text-ink-300 focus:outline-none focus:border-crop-500 focus:ring-2 focus:ring-crop-100 transition-colors"
+              // 16px on a phone, and not for looks. iOS Safari force zooms the
+              // whole page when a text field under 16px takes focus, which
+              // scales the page out from under the finger mid tap and throws
+              // the visual viewport around on top of everything the keyboard
+              // is already doing. The rest of the app never hits this because
+              // the shared .field class in index.css is text-base; this input
+              // was the one place that broke the rule. sm: puts desktop back
+              // to 14px exactly.
+              className="flex-1 min-h-[48px] sm:min-h-[44px] rounded-[14px] border border-ink-200 bg-card px-3.5 text-base sm:text-sm text-ink-800 placeholder:text-ink-300 focus:outline-none focus:border-crop-500 focus:ring-2 focus:ring-crop-100 transition-colors"
             />
             <button
               type="submit"
               disabled={!input.trim() || assistant.isPending}
               aria-label={COPY.send}
-              className="h-11 w-11 shrink-0 rounded-[14px] bg-crop-600 text-white inline-flex items-center justify-center hover:bg-crop-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="h-12 w-12 sm:h-11 sm:w-11 shrink-0 rounded-[14px] bg-crop-600 text-white inline-flex items-center justify-center hover:bg-crop-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               <SendIcon/>
             </button>
