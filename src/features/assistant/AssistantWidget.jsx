@@ -6,9 +6,10 @@ import { useUiStore } from "../../hooks/useUiStore";
 import { URI_EASE } from "../../lib/uiMotion";
 import { useAssistant } from "./useAssistant";
 
-// The chat panel for the shared, role-aware assistant. Mounted once for
-// signed-in farmers and merchants (see routes.jsx). Uses only existing design
-// tokens (chilli/crop/ember/ink/paper) and the shared URI_EASE motion curve.
+// The chat panel for the shared, role-aware assistant. Mounted once for any
+// signed-in account that has a profile row, farmers, merchants and admins
+// alike (see routes.jsx). Uses only existing design tokens
+// (chilli/crop/ember/ink/paper) and the shared URI_EASE motion curve.
 //
 // This component no longer owns the way in. The launcher lives in the shared
 // header (see AssistantButton in Header.jsx) so it sits in the same place on
