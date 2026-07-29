@@ -243,8 +243,8 @@ export function AppRoutes() {
           assistant pill is visible there. Mounted deeper, the panel behind
           that pill would not exist and the button would do nothing.
           Hoisting it costs nothing: the widget reads profile from useAuth and
-          returns null for every role but FARMER and MERCHANT, so logged out
-          visitors and profile-less Google accounts still render nothing. */}
+          returns null unless a profile row exists, so logged out visitors and
+          profile-less Google accounts still render nothing. */}
       <AssistantWidget/>
       <RequireOnboarding>
       <RequireFarmerName>

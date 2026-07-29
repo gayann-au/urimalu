@@ -384,11 +384,14 @@ export function Header({ showBack = false, title }) {
   }
 
   // Same test AssistantWidget applies to itself, so the button and the panel
-  // can never disagree about who gets the assistant. Admins are excluded, and
-  // so is anyone without a profile row yet: /onboarding renders this header
-  // before the visitor has picked a role, and there is nothing to assist with
-  // until they have.
-  const assistantEligible = !!profile && (profile.role === "FARMER" || profile.role === "MERCHANT");
+  // can never disagree about who gets the assistant. Anyone without a profile
+  // row yet is excluded: /onboarding renders this header before the visitor
+  // has picked a role, and there is nothing to assist with until they have.
+  //
+  // Admins are included, but the backend contract is unchanged and still takes
+  // only FARMER or MERCHANT. useAssistant sends FARMER for any role that is not
+  // MERCHANT, so an admin is served, framed and logged as a farmer.
+  const assistantEligible = !!profile && (profile.role === "FARMER" || profile.role === "MERCHANT" || profile.role === "ADMIN");
 
   let actionLink = null;
   if (profile) {

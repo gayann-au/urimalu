@@ -1,9 +1,12 @@
 // Shared types for the assistant function. Kept in one small module so every
 // other file imports the same definitions instead of redeclaring them.
 
-// The two roles the assistant serves. ADMIN and logged-out visitors never
-// reach this function (the widget is only mounted for farmers and merchants),
-// so the request contract is limited to these two.
+// The two roles the assistant serves. The union still excludes ADMIN even
+// though admins now see the launcher, because ADMIN never arrives here:
+// useAssistant coerces any role that is not MERCHANT to FARMER before it
+// invokes, so an admin reaches this function as a FARMER and is framed and
+// logged as one. Logged-out visitors never reach it at all, because the widget
+// needs a profile row to render.
 export type Role = "FARMER" | "MERCHANT";
 
 // The validated request body. index.ts rejects anything that does not match.
