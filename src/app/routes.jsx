@@ -7,6 +7,8 @@ import FarmerNameGate from "../features/auth/FarmerNameGate";
 import { useRealtimeNotifications } from "../features/alerts/useNotifications";
 import ChunkReloadGuardReset from "./ChunkReloadGuardReset";
 
+const AssistantWidget = lazy(() => import("../features/assistant/AssistantWidget"));
+
 const FeedPage        = lazy(() => import("../features/feed/FeedPage"));
 const LoginPage       = lazy(() => import("../features/auth/LoginPage"));
 const OnboardingPage  = lazy(() => import("../features/auth/OnboardingPage"));
@@ -233,6 +235,17 @@ function NotificationsRealtimeMount() {
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader/>}>
+      {/* Outside the gates on purpose. RequireFarmerName and
+          RequireFarmerDistrict return their gate screen INSTEAD of their
+          children, so anything nested inside them stops being mounted the
+          moment a gate fires. Those gate screens still render the header, and
+          a farmer sitting on one has a profile with role FARMER, so the
+          assistant pill is visible there. Mounted deeper, the panel behind
+          that pill would not exist and the button would do nothing.
+          Hoisting it costs nothing: the widget reads profile from useAuth and
+          returns null for every role but FARMER and MERCHANT, so logged out
+          visitors and profile-less Google accounts still render nothing. */}
+      <AssistantWidget/>
       <RequireOnboarding>
       <RequireFarmerName>
       <RequireFarmerDistrict>

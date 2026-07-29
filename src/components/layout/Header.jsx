@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useUiStore } from "../../hooks/useUiStore";
 import { useAuth, useLogout } from "../../features/auth/useAuth";
 import { useUnreadNotificationCount } from "../../features/alerts/useNotifications";
@@ -16,12 +16,12 @@ import { URI_EASE } from "../../lib/uiMotion";
 // green bar. Colours and behaviour mirror LandingPage.css exactly: background
 // rgba(251,249,247,0.78), 14px backdrop blur, ink text, crop accents on hover.
 //
-// Above the md breakpoint the right side is unchanged: language toggle, role
-// action link, bell, account, logout/login, all inline. Below md, a signed-in
-// visitor sees only the bell and a hamburger; every other action (nav links,
-// language, profile, logout) moves into a slide-in drawer so the bar never
-// crowds on a phone. A logged-out visitor already has just two items on
-// mobile (language toggle, login), so that row is left as is.
+// Above the md breakpoint the right side is: assistant pill, language toggle,
+// role action link, bell, account, logout/login, all inline. Below md, a
+// signed-in visitor sees the assistant pill, the bell and a hamburger; every
+// other action (nav links, language, profile, logout) moves into a slide-in
+// drawer so the bar never crowds on a phone. A logged-out visitor already has
+// just two items on mobile (language toggle, login), so that row is left as is.
 
 // Quiet text action, the same treatment as the landing header login link.
 const NAV_LINK =
@@ -65,6 +65,101 @@ function CloseIcon() {
       <path d="M18 6 6 18"/>
       <path d="M6 6l12 12"/>
     </svg>
+  );
+}
+
+// A large four point sparkle with a small one trailing it, the usual shorthand
+// for "this is the AI thing". Sized 16 rather than the 18 the other header
+// icons use, because this one sits inside a pill next to a text label instead
+// of alone in a 44px circle.
+function SparkleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M11 3l2.1 5.9L19 11l-5.9 2.1L11 19l-2.1-5.9L3 11l5.9-2.1L11 3z"/>
+      <path d="M18.5 15.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z"/>
+    </svg>
+  );
+}
+
+// Assistant launcher. The entry point for the whole assistant now lives here,
+// in the shared header, so it sits in the same place on every page instead of
+// floating over the bottom right corner.
+//
+// The label is the only thing that differs between desktop and mobile, so the
+// caller passes it: "Urimalu AI" where there is room, "Ask AI" on a phone,
+// where the pill shares the bar with the bell and the hamburger and has to fit
+// a 360px screen.
+//
+// Deliberately not routed through i18next. The assistant is English only for
+// now (see the note at the top of AssistantWidget.jsx), so its entry point is
+// fixed to English too rather than half translated.
+//
+// The pill is never flat and never flashes. What moves is the gradient
+// itself: a quadruple width band, chilli-900 to chilli-600 to chilli-900,
+// riding left to right and back on a six second breath. The pill is a
+// quarter of that band's width, so at any instant it shows a gentle slice
+// rather than the whole ramp, and travelling three quarters of the band
+// walks that slice from the dark head, across the light crest, to the dark
+// tail. The whole pill therefore dims and brightens together.
+//
+// The geometry is the entire point, and the first attempt at this drift got
+// it wrong in a way worth recording. That version was a double width band
+// moved half its width, which is half a gradient period, so a point at
+// fraction p across the pill ran from p/2 to (p+1)/2. The left edge went
+// dark to light, the right edge went light to dark, and the centre ran 0.25
+// to 0.75, which are the same colour. That is a standing wave with a node
+// dead centre: the middle of the pill, where the label and most of the
+// pixels are, never changed colour at all, and the two ends swung in exact
+// antiphase so they cancelled in peripheral vision. It was technically
+// animating and practically invisible. Anyone not already staring at the
+// button missed it. Widening the band to four times the pill and travelling
+// three quarters of it keeps every part of the pill in phase, so there is no
+// node anywhere in the sweep.
+//
+// The earlier treatment before that was a white band swept across the pill
+// twice on first sight and then never again. It was rejected on two counts:
+// a bright repeating band over a coloured pill is the visual language of a
+// discount badge, not of a premium tool, and a one time hint needs persisted
+// counters and session gates to stop it becoming a nag, which is a lot of
+// machinery for a decoration. A permanent ambient drift needs no gate at all.
+//
+// Contrast is the hard bound on the palette here. This pill carries a white
+// text-sm bold label, which WCAG counts as normal text and so needs 4.5:1 at
+// every point of the drift, not just on average. White measures 11.89:1 on
+// chilli-900, 9.21:1 on chilli-800, 6.90:1 on chilli-700 and 5.00:1 on
+// chilli-600, so both stops and everything they interpolate through pass with
+// room to spare. The amplitude may only ever be widened downwards, into the
+// darker end. Nothing lighter than chilli-600 may enter this gradient: white
+// on chilli-500 is 4.25:1 and on ember-500 only 2.87:1, both failures. Ember
+// still appears on the panel itself (the 2px top strip and the sparkle tile),
+// where it sits under no text and carries no contrast requirement.
+//
+// bg-chilli-700 on the button is a solid fallback, not part of the drift. If
+// the animated layer ever fails to paint the label still reads at 6.90:1.
+// Under reduced motion the moving layer is not rendered at all and a static
+// chilli-700 to chilli-600 gradient stands in for it.
+function AssistantButton({ label, onClick }) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Open Urimalu AI assistant"
+      className={`relative overflow-hidden rounded-full min-h-[44px] px-3.5 bg-chilli-700 text-white font-bold text-sm inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+        reduceMotion ? "bg-gradient-to-r from-chilli-700 to-chilli-600" : ""
+      }`}
+    >
+      {!reduceMotion && (
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 w-[400%] bg-gradient-to-r from-chilli-900 via-chilli-600 to-chilli-900"
+          animate={{ x: ["0%", "-75%"] }}
+          transition={{ duration: 6, ease: "easeInOut", repeat: Infinity, repeatType: "mirror" }}
+        />
+      )}
+      <span className="relative z-10 inline-flex"><SparkleIcon/></span>
+      <span className="relative z-10">{label}</span>
+    </button>
   );
 }
 
@@ -265,6 +360,7 @@ export function Header({ showBack = false, title }) {
   const { t } = useTranslation();
   const lang = useUiStore(s => s.lang);
   const toggleLang = useUiStore(s => s.toggleLang);
+  const openAssistant = useUiStore(s => s.openAssistant);
   const { profile } = useAuth();
   const logout = useLogout();
   const nav = useNavigate();
@@ -286,6 +382,13 @@ export function Header({ showBack = false, title }) {
     closeDrawer();
     logout.mutate();
   }
+
+  // Same test AssistantWidget applies to itself, so the button and the panel
+  // can never disagree about who gets the assistant. Admins are excluded, and
+  // so is anyone without a profile row yet: /onboarding renders this header
+  // before the visitor has picked a role, and there is nothing to assist with
+  // until they have.
+  const assistantEligible = !!profile && (profile.role === "FARMER" || profile.role === "MERCHANT");
 
   let actionLink = null;
   if (profile) {
@@ -323,6 +426,7 @@ export function Header({ showBack = false, title }) {
 
         {/* Desktop and up: every action inline, unchanged from before. */}
         <div className="hidden md:flex items-center gap-0.5 sm:gap-1 shrink-0">
+          {assistantEligible && <AssistantButton label="Urimalu AI" onClick={openAssistant}/>}
           <LangToggleButton lang={lang} onToggle={toggleLang}/>
           {actionLink}
           {profile && <BellButton unreadCount={unreadCount} label={t("nav.notifications")}/>}
@@ -349,6 +453,7 @@ export function Header({ showBack = false, title }) {
         <div className="flex md:hidden items-center gap-0.5 shrink-0">
           {profile ? (
             <>
+              {assistantEligible && <AssistantButton label="Ask AI" onClick={openAssistant}/>}
               <BellButton unreadCount={unreadCount} label={t("nav.notifications")}/>
               <button onClick={() => setDrawerOpen(true)} aria-label={t("nav.openMenu")}
                 className="rounded-full h-11 w-11 text-ink-700 hover:text-crop-700 hover:bg-crop-50 transition-colors inline-flex items-center justify-center shrink-0">
