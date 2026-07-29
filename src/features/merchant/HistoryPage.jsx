@@ -11,7 +11,7 @@ import { useUriMotion } from "../../lib/uiMotion";
 import { formatINR } from "../../lib/constants";
 
 export default function HistoryPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const m = useUriMotion();
   const nav = useNavigate();
   const { profile } = useAuth();
@@ -19,8 +19,8 @@ export default function HistoryPage() {
   const [expandedDate, setExpandedDate] = useState(null);
 
   const groups = useMemo(
-    () => groupHistoryByDate(historyQ.data || []),
-    [historyQ.data]
+    () => groupHistoryByDate(historyQ.data || [], i18n.language),
+    [historyQ.data, i18n.language]
   );
 
   if (!profile) return null;

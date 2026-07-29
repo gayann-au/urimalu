@@ -18,7 +18,8 @@
     "hide": "Hide",
     "edit": "Edit",
     "loadError": "Couldn't load. Please try again.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "update": "Update"
   },
   "nav": {
     "login": "Login",
@@ -167,7 +168,9 @@
     "resubmitTitle": "Update your registration",
     "resubmitSub": "Fix the issues below and resubmit for review",
     "resubmitBtn": "Resubmit for review",
-    "resubmitToast": "Updated. Awaiting review."
+    "resubmitToast": "Updated. Awaiting review.",
+    "autoApproveError": "Automatic approval failed. Please try again.",
+    "autoApproveRetry": "Retry approval"
   },
   "welcome": {
     "firstLogin": "Welcome to Urimalu!"
@@ -197,7 +200,9 @@
     "loggedOutCropHint": "Log in to compare prices across merchants.",
     "notConfirmedYet": "Not confirmed yet",
     "updatedToday": "Updated today",
-    "updatedOn": "Updated {{date}}"
+    "updatedOn": "Updated {{date}}",
+    "gatedBuyingPlaceholder": "Buying x crops today",
+    "gatedUpdatedPlaceholder": "Updated xx xxx"
   },
   "card": {
     "perKg": "/kg",
@@ -402,5 +407,25 @@
     "cropConfirmedOne": "1 crop confirmed",
     "cropConfirmedN": "{{count}} crops confirmed",
     "backToDashboard": "Back to dashboard"
+  },
+  "rateForm": {
+    "cropNameLabel": "Crop name",
+    "cropNamePh": "e.g. Robusta Cherry",
+    "unitLabel": "Unit",
+    "unitWeightLabel": "Weight per unit (kg)",
+    "unitWeightPh": "e.g. 60",
+    "priceLabel": "Price ({{unit}})",
+    "pricePh": "e.g. 5000",
+    "perKgPreview": "= {{price}} per kg",
+    "varietyNotesLabel": "Variety or quality notes (optional)",
+    "varietyNotesPh": "e.g. AB grade, current season",
+    "validTillLabel": "Valid till (optional)",
+    "notesLabel": "Notes (optional)",
+    "notesPh": "Any extra detail for farmers",
+    "errCropRequired": "Crop name is required",
+    "errUnitRequired": "Unit is required",
+    "errUnitWeightPositive": "Unit weight must be greater than 0",
+    "errPriceRequired": "Price is required",
+    "errUnitKgRequired": "Enter the weight in kg for this unit"
   }
 }

@@ -21,13 +21,16 @@ const numOpt = z.preprocess(
   z.number().positive().max(9999999).nullable()
 );
 
+// Validation messages are stored as i18n keys, not literal text. Each render
+// site resolves them with t(), the same pattern the auth schemas use, so the
+// form errors follow the active language.
 const schema = z
   .object({
-    crop_name:      z.string().min(1, "Crop name is required"),
-    unit_label:     z.string().min(1, "Unit is required"),
+    crop_name:      z.string().min(1, "rateForm.errCropRequired"),
+    unit_label:     z.string().min(1, "rateForm.errUnitRequired"),
     unit_kg:        z.preprocess(
                       (v) => (v === "" || v == null ? null : Number(v)),
-                      z.number().positive("Unit weight must be greater than 0").nullable()
+                      z.number().positive("rateForm.errUnitWeightPositive").nullable()
                     ),
     call_for_price: z.boolean().default(false),
     price:          numOpt,
@@ -39,14 +42,14 @@ const schema = z
     if (!v.call_for_price && (v.price == null || v.price <= 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Price is required",
+        message: "rateForm.errPriceRequired",
         path: ["price"],
       });
     }
     if (v.unit_kg == null || v.unit_kg <= 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Enter the weight in kg for this unit",
+        message: "rateForm.errUnitKgRequired",
         path: ["unit_kg"],
       });
     }
@@ -151,17 +154,17 @@ export function RateForm({ listing, onSave, onCancel }) {
       {/* Crop name */}
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-          Crop name
+          {t("rateForm.cropNameLabel")}
         </label>
         <Autocomplete
-          placeholder="e.g. Robusta Cherry"
+          placeholder={t("rateForm.cropNamePh")}
           maxLength={100}
           value={cropNameVal}
           onChange={(v) =>
             setValue("crop_name", v, { shouldValidate: true, shouldDirty: true })
           }
           getSuggestions={(q) => cropSuggestions(q, i18n.language)}
-          error={errors.crop_name?.message}
+          error={errors.crop_name ? t(errors.crop_name.message) : undefined}
           optionClassName={knCls}
         />
       </div>
@@ -169,10 +172,10 @@ export function RateForm({ listing, onSave, onCancel }) {
       {/* Unit */}
       <div className="space-y-2">
         <Select
-          label="Unit"
+          label={t("rateForm.unitLabel")}
           onChange={handleUnitChange}
           {...unitLabelRest}
-          error={errors.unit_label?.message}
+          error={errors.unit_label ? t(errors.unit_label.message) : undefined}
         >
           {UNIT_OPTIONS.map((opt) => (
             <option key={opt.label} value={opt.label}>
@@ -184,19 +187,19 @@ export function RateForm({ listing, onSave, onCancel }) {
         {/* Custom unit weight input. Shown only when "custom" is selected. */}
         {isCustomUnit && (
           <Input
-            label="Weight per unit (kg)"
+            label={t("rateForm.unitWeightLabel")}
             type="number"
             inputMode="decimal"
-            placeholder="e.g. 60"
+            placeholder={t("rateForm.unitWeightPh")}
             {...register("unit_kg")}
-            error={errors.unit_kg?.message}
+            error={errors.unit_kg ? t(errors.unit_kg.message) : undefined}
           />
         )}
       </div>
 
       {/* Call for price toggle */}
       <Toggle
-        label="Call for price"
+        label={t("card.callForPrice")}
         value={callForPrice}
         onChange={handleCallForPriceToggle}
       />
@@ -205,16 +208,16 @@ export function RateForm({ listing, onSave, onCancel }) {
       {!callForPrice && (
         <div>
           <Input
-            label={`Price (${unitLabel})`}
+            label={t("rateForm.priceLabel", { unit: unitLabel })}
             type="number"
             inputMode="decimal"
-            placeholder="e.g. 5000"
+            placeholder={t("rateForm.pricePh")}
             {...register("price")}
-            error={errors.price?.message}
+            error={errors.price ? t(errors.price.message) : undefined}
           />
           {perKg != null && (
             <p className="text-xs text-gray-500 mt-1">
-              = {formatINR(perKg)} per kg
+              {t("rateForm.perKgPreview", { price: formatINR(perKg) })}
             </p>
           )}
         </div>
@@ -222,24 +225,24 @@ export function RateForm({ listing, onSave, onCancel }) {
 
       {/* Variety or quality notes */}
       <Input
-        label="Variety or quality notes (optional)"
-        placeholder="e.g. AB grade, current season"
+        label={t("rateForm.varietyNotesLabel")}
+        placeholder={t("rateForm.varietyNotesPh")}
         maxLength={200}
         {...register("variety_notes")}
       />
 
       {/* Valid till */}
       <Input
-        label="Valid till (optional)"
+        label={t("rateForm.validTillLabel")}
         type="date"
         {...register("valid_till")}
       />
 
       {/* Notes */}
       <Textarea
-        label="Notes (optional)"
+        label={t("rateForm.notesLabel")}
         rows={2}
-        placeholder="Any extra detail for farmers"
+        placeholder={t("rateForm.notesPh")}
         maxLength={500}
         value={notesVal}
         {...register("notes")}
@@ -256,7 +259,7 @@ export function RateForm({ listing, onSave, onCancel }) {
         </button>
         <Button type="submit" size="lg" loading={isSubmitting}>
           <span className={knCls}>
-            {listing?.id ? "Update" : "Add crop"}
+            {listing?.id ? t("common.update") : t("dashboard.addCrop")}
           </span>
         </Button>
       </div>

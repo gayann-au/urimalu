@@ -202,7 +202,7 @@ export function useMyPriceHistory(merchantId) {
 // Returns an array of { date_key, date_label, crops } sorted newest first.
 // Within each day, each crop_name appears once — the row with the most
 // recent recorded_at wins. Crops are sorted by crop_name ascending.
-export function groupHistoryByDate(rows) {
+export function groupHistoryByDate(rows, lang) {
   // date_key -> Map<crop_name, latest row for that crop on that date>
   const byDateAndCrop = new Map();
   for (const r of rows || []) {
@@ -224,7 +224,7 @@ export function groupHistoryByDate(rows) {
     const sample = crops[0]?.recorded_at;
     groups.push({
       date_key:   dKey,
-      date_label: sample ? dateLabel(sample) : dKey,
+      date_label: sample ? dateLabel(sample, lang) : dKey,
       crops,
     });
   }
@@ -240,9 +240,11 @@ function localDateKey(ts) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// Readable date label like "5 Jun 2026".
-function dateLabel(ts) {
-  return new Date(ts).toLocaleDateString("en-IN", {
+// Readable date label like "5 Jun 2026", rendered in the active language's
+// locale (kn-IN or en-IN).
+function dateLabel(ts, lang) {
+  const locale = lang === "kn" ? "kn-IN" : "en-IN";
+  return new Date(ts).toLocaleDateString(locale, {
     day: "numeric", month: "short", year: "numeric",
   });
 }

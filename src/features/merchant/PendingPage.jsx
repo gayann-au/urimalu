@@ -133,9 +133,9 @@ export default function PendingPage() {
 
         {status !== "REJECTED" && autoApproveError && (
           <motion.div variants={m.fadeUp} className="mt-4 rounded-2xl bg-red-50 border-2 border-red-300 px-4 py-4 w-full max-w-sm text-left">
-            <p className="text-sm text-red-900">{t("pending.autoApproveError", "Automatic approval failed. Please try again.")}</p>
+            <p className="text-sm text-red-900">{t("pending.autoApproveError")}</p>
             <Button variant="danger" className="mt-3 w-full" loading={autoApproving} onClick={runAutoApprove}>
-              {t("pending.autoApproveRetry", "Retry approval")}
+              {t("pending.autoApproveRetry")}
             </Button>
           </motion.div>
         )}

@@ -283,10 +283,10 @@ function MerchantCardGated({ group, onLogin }) {
         xxxxxxxx, xxxxxxx
       </p>
       <p aria-hidden="true" className="text-sm font-semibold text-ink-700 mt-3 tabular-nums select-none blur-sm">
-        Buying x crops today
+        {t("feed.gatedBuyingPlaceholder")}
       </p>
       <p aria-hidden="true" className="text-xs text-ink-500 mt-1 select-none blur-sm">
-        Updated xx xxx
+        {t("feed.gatedUpdatedPlaceholder")}
       </p>
       <button
         type="button"

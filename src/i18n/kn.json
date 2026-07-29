@@ -18,7 +18,8 @@
     "hide": "ಮರೆಮಾಡಿ",
     "edit": "ಸಂಪಾದಿಸಿ",
     "loadError": "ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
-    "retry": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
+    "retry": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
+    "update": "ನವೀಕರಿಸಿ"
   },
   "nav": {
     "login": "ಲಾಗಿನ್",
@@ -167,7 +168,9 @@
     "resubmitTitle": "ನಿಮ್ಮ ನೋಂದಣಿ ಅಪ್‌ಡೇಟ್ ಮಾಡಿ",
     "resubmitSub": "ಸಮಸ್ಯೆಗಳನ್ನು ಸರಿಪಡಿಸಿ ಮತ್ತೆ ಪರಿಶೀಲನೆಗೆ ಸಲ್ಲಿಸಿ",
     "resubmitBtn": "ಪರಿಶೀಲನೆಗೆ ಮತ್ತೆ ಸಲ್ಲಿಸಿ",
-    "resubmitToast": "ಅಪ್‌ಡೇಟ್ ಆಗಿದೆ. ಪರಿಶೀಲನೆಗೆ ಕಾಯಲಾಗುತ್ತಿದೆ."
+    "resubmitToast": "ಅಪ್‌ಡೇಟ್ ಆಗಿದೆ. ಪರಿಶೀಲನೆಗೆ ಕಾಯಲಾಗುತ್ತಿದೆ.",
+    "autoApproveError": "ಸ್ವಯಂ ಅನುಮೋದನೆ ವಿಫಲವಾಗಿದೆ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    "autoApproveRetry": "ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ"
   },
   "welcome": {
     "firstLogin": "Urimalu ಗೆ ಸ್ವಾಗತ!"
@@ -197,7 +200,9 @@
     "loggedOutCropHint": "ಬೆಲೆಗಳನ್ನು ಹೋಲಿಸಲು ಲಾಗಿನ್ ಮಾಡಿ.",
     "notConfirmedYet": "ಇನ್ನೂ ಖಚಿತಪಡಿಸಿಲ್ಲ",
     "updatedToday": "ಇಂದು ನವೀಕರಿಸಲಾಗಿದೆ",
-    "updatedOn": "ನವೀಕರಣ: {{date}}"
+    "updatedOn": "ನವೀಕರಣ: {{date}}",
+    "gatedBuyingPlaceholder": "ಇಂದು x ಬೆಳೆಗಳನ್ನು ಖರೀದಿಸುತ್ತಿದ್ದಾರೆ",
+    "gatedUpdatedPlaceholder": "ನವೀಕರಣ xx xxx"
   },
   "card": {
     "perKg": "/ಕೆ.ಜಿ",
@@ -402,5 +407,25 @@
     "cropConfirmedOne": "1 ಬೆಳೆ ಖಚಿತಪಡಿಸಲಾಗಿದೆ",
     "cropConfirmedN": "{{count}} ಬೆಳೆಗಳು ಖಚಿತಪಡಿಸಲಾಗಿವೆ",
     "backToDashboard": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗೆ ಹಿಂದೆ"
+  },
+  "rateForm": {
+    "cropNameLabel": "ಬೆಳೆಯ ಹೆಸರು",
+    "cropNamePh": "ಉದಾ: ರೋಬಸ್ಟಾ ಚೆರ್ರಿ",
+    "unitLabel": "ಅಳತೆ",
+    "unitWeightLabel": "ಪ್ರತಿ ಅಳತೆಗೆ ತೂಕ (ಕೆ.ಜಿ)",
+    "unitWeightPh": "ಉದಾ: 60",
+    "priceLabel": "ಬೆಲೆ ({{unit}})",
+    "pricePh": "ಉದಾ: 5000",
+    "perKgPreview": "= {{price}} ಪ್ರತಿ ಕೆ.ಜಿ",
+    "varietyNotesLabel": "ತಳಿ ಅಥವಾ ಗುಣಮಟ್ಟದ ಟಿಪ್ಪಣಿ (ಐಚ್ಛಿಕ)",
+    "varietyNotesPh": "ಉದಾ: AB ದರ್ಜೆ, ಈ ಹಂಗಾಮು",
+    "validTillLabel": "ಮಾನ್ಯ ಅವಧಿ (ಐಚ್ಛಿಕ)",
+    "notesLabel": "ಟಿಪ್ಪಣಿ (ಐಚ್ಛಿಕ)",
+    "notesPh": "ರೈತರಿಗೆ ಹೆಚ್ಚುವರಿ ವಿವರ",
+    "errCropRequired": "ಬೆಳೆಯ ಹೆಸರು ಅಗತ್ಯ",
+    "errUnitRequired": "ಅಳತೆ ಅಗತ್ಯ",
+    "errUnitWeightPositive": "ಅಳತೆಯ ತೂಕ 0 ಕ್ಕಿಂತ ಹೆಚ್ಚಿರಬೇಕು",
+    "errPriceRequired": "ಬೆಲೆ ಅಗತ್ಯ",
+    "errUnitKgRequired": "ಈ ಅಳತೆಯ ತೂಕವನ್ನು ಕೆ.ಜಿ.ಯಲ್ಲಿ ನಮೂದಿಸಿ"
   }
 }
