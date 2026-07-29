@@ -495,9 +495,10 @@ function Panel({ onClose, role }) {
   );
 }
 
-// Public component. Renders nothing for logged-out visitors and admins; the
-// assistant is the shared farmer/merchant helper. Portalled to document.body so
-// it floats above the app regardless of the current page's stacking context.
+// Public component. Renders nothing for logged-out visitors or for an account
+// with no profile row yet; farmers, merchants and admins all get the assistant.
+// Portalled to document.body so it floats above the app regardless of the
+// current page's stacking context.
 //
 // Open state comes from useUiStore rather than local state, because the button
 // that sets it now lives in the header. The eligibility test below is the same
@@ -507,7 +508,7 @@ export default function AssistantWidget() {
   const open = useUiStore((s) => s.assistantOpen);
   const closeAssistant = useUiStore((s) => s.closeAssistant);
 
-  const eligible = profile && (profile.role === "FARMER" || profile.role === "MERCHANT");
+  const eligible = profile && (profile.role === "FARMER" || profile.role === "MERCHANT" || profile.role === "ADMIN");
 
   // Open state outlives this component now that it sits in the store, so a
   // panel left open at logout would still be open for whoever signs in next
