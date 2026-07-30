@@ -4,11 +4,12 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/useAuth";
 import FarmerDistrictGate from "../features/auth/FarmerDistrictGate";
 import FarmerNameGate from "../features/auth/FarmerNameGate";
-import FarmerPhoneGate from "../features/auth/FarmerPhoneGate";
+
 import { useRealtimeNotifications } from "../features/alerts/useNotifications";
 import ChunkReloadGuardReset from "./ChunkReloadGuardReset";
 
 const AssistantWidget = lazy(() => import("../features/assistant/AssistantWidget"));
+const FarmerPhoneGate = lazy(() => import("../features/auth/FarmerPhoneGate"));
 
 const FeedPage        = lazy(() => import("../features/feed/FeedPage"));
 const LoginPage       = lazy(() => import("../features/auth/LoginPage"));
