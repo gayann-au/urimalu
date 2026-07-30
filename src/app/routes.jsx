@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/useAuth";
 import FarmerDistrictGate from "../features/auth/FarmerDistrictGate";
 import FarmerNameGate from "../features/auth/FarmerNameGate";
+import FarmerPhoneGate from "../features/auth/FarmerPhoneGate";
 import { useRealtimeNotifications } from "../features/alerts/useNotifications";
 import ChunkReloadGuardReset from "./ChunkReloadGuardReset";
 
@@ -183,6 +184,22 @@ function RequireFarmerName({ children }) {
   return children;
 }
 
+// A logged-in farmer whose phone is missing or blank (whitespace only) is asked
+// for it once, at app load, before anything else in the app. This sits between
+// RequireFarmerName and RequireFarmerDistrict below, so a farmer missing several
+// fields is asked in the order signup collects them: name, then phone, then
+// district. The blank test trims first, so a number of only spaces counts as
+// missing. Merchants and admins are never affected, and a farmer who already has
+// a number passes straight through. Saving a number refreshes the profile, which
+// clears this gate for good, so the farmer is never asked again.
+function RequireFarmerPhone({ children }) {
+  const { profile } = useAuth();
+  if (profile && profile.role === "FARMER" && !profile.phone?.trim()) {
+    return <FarmerPhoneGate/>;
+  }
+  return children;
+}
+
 // The onboarding screen itself. Only a signed-in account with no profile row
 // belongs here: logged-out visitors go to login, already-onboarded users are
 // bounced to their normal landing spot.
@@ -235,8 +252,8 @@ function NotificationsRealtimeMount() {
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader/>}>
-      {/* Outside the gates on purpose. RequireFarmerName and
-          RequireFarmerDistrict return their gate screen INSTEAD of their
+      {/* Outside the gates on purpose. RequireFarmerName, RequireFarmerPhone
+          and RequireFarmerDistrict return their gate screen INSTEAD of their
           children, so anything nested inside them stops being mounted the
           moment a gate fires. Those gate screens still render the header, and
           a farmer sitting on one has a profile with role FARMER, so the
@@ -248,6 +265,7 @@ export function AppRoutes() {
       <AssistantWidget/>
       <RequireOnboarding>
       <RequireFarmerName>
+      <RequireFarmerPhone>
       <RequireFarmerDistrict>
       <ChunkReloadGuardReset/>
       <NotificationsRealtimeMount/>
@@ -273,6 +291,7 @@ export function AppRoutes() {
         <Route path="*" element={<NotFoundPage/>}/>
       </Routes>
       </RequireFarmerDistrict>
+      </RequireFarmerPhone>
       </RequireFarmerName>
       </RequireOnboarding>
     </Suspense>
