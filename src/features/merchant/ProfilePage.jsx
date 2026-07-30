@@ -12,6 +12,7 @@ import { useAuth } from "../auth/useAuth";
 import { useUsers, useReviews } from "../feed/useFeed";
 import { LoadError } from "../../components/ui/LoadError";
 import { useLeadTracking } from "../../hooks/useLeadTracking";
+import { waNumber } from "../../lib/phone";
 import { useAddReview } from "../reviews/useReviews";
 import { ReviewForm } from "../reviews/ReviewForm";
 import { supabase } from "../../lib/supabase";
@@ -210,7 +211,7 @@ export default function ProfilePage() {
   function onWa() {
     if (!waPhone) return;
     trackLead(merchant.id, "WHATSAPP");
-    const num = String(waPhone).replace(/[^0-9]/g, "");
+    const num = waNumber(waPhone);
     const msg = encodeURIComponent(
       t("profile.waMessage", { name: merchant.business_name })
     );

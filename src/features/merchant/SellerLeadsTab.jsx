@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { LoadError } from "../../components/ui/LoadError";
 import { useUriMotion } from "../../lib/uiMotion";
+import { waNumber } from "../../lib/phone";
 import {
   useActiveSellerLeads,
   useMySellerLeadReads,
@@ -78,7 +79,7 @@ function LeadCard({ lead, unread, onMarkRead, locale, t, fadeUp }) {
 
   function onWa() {
     onMarkRead();
-    const num = String(lead.farmer_phone).replace(/[^0-9]/g, "");
+    const num = waNumber(lead.farmer_phone);
     const msg = encodeURIComponent(t("sellerLeads.waMessage", { name: lead.farmer_name || "" }));
     window.open(`https://wa.me/${num}?text=${msg}`, "_blank");
   }

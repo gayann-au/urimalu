@@ -84,3 +84,17 @@ export function splitPhone(e164) {
   }
   return { country: DEFAULT_PHONE_COUNTRY, national: s.replace(/[^0-9]/g, "") };
 }
+
+// WhatsApp click-to-chat needs a full international number. wa.me reads the
+// leading digits as a country code, so a bare 10 digit Indian number like
+// 9964270118 is read as Kyrgyzstan and the chat never opens. Rows written
+// before the country picker shipped are stored bare, so convert here at click
+// time rather than rewriting stored data. A value already starting with + is
+// left alone, a bare value is treated as Indian, and anything unparseable falls
+// back to the old digits only behaviour so nothing gets worse than it was.
+export function waNumber(raw) {
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
+  const e164 = s.startsWith("+") ? s : (normalizePhone(s, DEFAULT_PHONE_COUNTRY) || "");
+  return (e164 || s).replace(/[^0-9]/g, "");
+}

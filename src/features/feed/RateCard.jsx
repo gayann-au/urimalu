@@ -6,6 +6,7 @@ import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
 import { FollowCropButton } from "../alerts/FollowCropButton";
 import { useUriMotion } from "../../lib/uiMotion";
 import { BAG_WEIGHTS, formatINR, listingPriceView, formatValidTill } from "../../lib/constants";
+import { waNumber } from "../../lib/phone";
 
 // Coffee-bean glyph, the soft crop icon shared with the merchant profile cards.
 function BeanIcon() {
@@ -35,7 +36,7 @@ export function RateCard({ item }) {
   function onWa() {
     if (!waPhone) return;
     trackLead(merchant.id, "WHATSAPP");
-    const num = String(waPhone).replace(/[^0-9]/g, "");
+    const num = waNumber(waPhone);
     const msg = encodeURIComponent(t("profile.waMessage", { name: merchant.business_name || "" }));
     window.open(`https://wa.me/${num}?text=${msg}`, "_blank");
   }
