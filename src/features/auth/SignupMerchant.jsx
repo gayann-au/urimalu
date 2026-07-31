@@ -24,14 +24,14 @@ import { PhoneField } from "../../components/ui/PhoneField";
 import { isValidPhone, normalizePhone, splitPhone, DEFAULT_PHONE_COUNTRY } from "../../lib/phone";
 
 const profileShape = {
-  businessName: z.string().min(2, "auth.businessName"),
-  ownerName: z.string().min(2, "auth.ownerName"),
+  businessName: z.string().trim().min(2, "auth.businessName"),
+  ownerName: z.string().trim().min(2, "auth.ownerName"),
   phone: z.string(),
   phoneCountry: z.string().default("IN"),
   whatsappSame: z.boolean().default(true),
   whatsapp: z.string().optional(),
   whatsappCountry: z.string().default("IN"),
-  town: z.string().min(2, "auth.town"),
+  town: z.string().trim().min(2, "auth.town"),
   district: z.string(),
   yearsTrading: z.string(),
   businessType: z.string(),
