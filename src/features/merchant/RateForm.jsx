@@ -23,7 +23,7 @@ const numOpt = z.preprocess(
 
 const schema = z
   .object({
-    crop_name:      z.string().min(1, "Crop name is required"),
+    crop_name:      z.string().trim().min(1, "Crop name is required"),
     unit_label:     z.string().min(1, "Unit is required"),
     unit_kg:        z.preprocess(
                       (v) => (v === "" || v == null ? null : Number(v)),

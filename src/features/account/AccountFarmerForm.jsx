@@ -17,7 +17,7 @@ import { isValidPhone, normalizePhone, splitPhone } from "../../lib/phone";
 // onboarding (name, phone, district), prefilled from the current profile, with
 // a self-update instead of a create. Email and role are not editable here.
 const schema = z.object({
-  fullName: z.string().min(2, "auth.fullName"),
+  fullName: z.string().trim().min(2, "auth.fullName"),
   phone: z.string(),
   phoneCountry: z.string().default("IN"),
   district: z.string(),
