@@ -35,21 +35,23 @@ const COPY = {
   disclaimer: "Urimalu AI can make mistakes. Check anything important before you act.",
 };
 
-// One suggestion per answer tier, in tier order: a general farming question the
-// model answers from its own knowledge, a price question that has to hit live
-// listings, and an app question answered from the guide. Three is the whole
-// list on purpose. A longer menu would read as a command palette and would hide
-// the fact that anything at all can be typed.
+// Four suggestions, in tier order: two open questions the model answers from
+// its own knowledge, a price question that has to hit live listings, and an app
+// question answered from the guide. The list stays short on purpose. A longer
+// menu would read as a command palette and would hide the fact that anything at
+// all can be typed.
 const SUGGESTIONS = {
   FARMER: [
-    "Why do coffee prices change through the year?",
-    "What is today's Robusta Cherry price?",
-    "How do I set a price alert?",
+    "What happens to a coffee bean between the tree and your cup?",
+    "Why is farming the one job nobody can outsource?",
+    "What are merchants paying for coffee today?",
+    "How does Urimalu work?",
   ],
   MERCHANT: [
-    "What moves pepper prices globally?",
-    "What are other merchants paying for Arabica?",
-    "How do seller leads work?",
+    "What happens to a coffee bean between the tree and your cup?",
+    "Why is farming the one job nobody can outsource?",
+    "What are other merchants paying for coffee today?",
+    "How does Urimalu work?",
   ],
 };
 
