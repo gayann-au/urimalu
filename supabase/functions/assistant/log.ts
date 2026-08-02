@@ -27,6 +27,12 @@ interface LogEntry {
   source: string;
   model: string | null;
   tokensUsed: number | null;
+  // What the router decided the user was asking for, and which knowledge
+  // section served the answer. Null on the paths that never route: small talk,
+  // a blocked question, an error before routing. These two are what make the
+  // next routing problem measurable instead of guessed.
+  askType: string | null;
+  sectionId: string | null;
   ok: boolean;
 }
 
@@ -71,18 +77,35 @@ export function userIdFromRequest(req: Request): string | null {
 }
 
 // Write one interaction to assistant_logs. Never throws.
+//
+// ask_type and section_id are added by a separate hand-applied migration, so
+// there is a window where the deployed code knows about them and the live table
+// does not. In that window the first insert fails on an unknown column, and
+// losing every log row over two new fields would be a bad trade. So the insert
+// is retried once without them. The retry is safe because the first attempt
+// wrote nothing, and it costs nothing once the columns exist. Remove the
+// fallback after the migration is applied.
 export async function logInteraction(admin: InsertClient, entry: LogEntry): Promise<void> {
+  const row = {
+    user_id: entry.userId,
+    role: entry.role,
+    message: entry.message,
+    reply: entry.reply,
+    source: entry.source,
+    model: entry.model,
+    tokens_used: entry.tokensUsed,
+    ok: entry.ok,
+  };
+
   try {
-    const { error } = await admin.from("assistant_logs").insert({
-      user_id: entry.userId,
-      role: entry.role,
-      message: entry.message,
-      reply: entry.reply,
-      source: entry.source,
-      model: entry.model,
-      tokens_used: entry.tokensUsed,
-      ok: entry.ok,
+    let { error } = await admin.from("assistant_logs").insert({
+      ...row,
+      ask_type: entry.askType,
+      section_id: entry.sectionId,
     });
+    if (error) {
+      ({ error } = await admin.from("assistant_logs").insert(row));
+    }
     if (error) {
       // eslint-disable-next-line no-console
       console.error("[assistant] log insert failed:", (error as { message?: string }).message ?? String(error));

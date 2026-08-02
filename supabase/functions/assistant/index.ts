@@ -24,9 +24,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, jsonResponse } from "./cors.ts";
 import { detectSmallTalk, smallTalkReply } from "./smalltalk.ts";
 import { runGuardrails } from "./guardrails.ts";
-import { detectIntent } from "./intent.ts";
+import { routeMessage } from "./router.ts";
 import { lookupFacts } from "./listings.ts";
-import { findSection } from "./knowledge.ts";
 import { userIdFromRequest, logInteraction } from "./log.ts";
 import { askModel, MissingKeyError, RateLimitError, LlmError } from "./llm.ts";
 import { dataSystemPrompt, noDataSystemPrompt, generalSystemPrompt, knowledgeSystemPrompt } from "./prompts.ts";
@@ -34,24 +33,17 @@ import type { AssistantReply, Role } from "./types.ts";
 
 const MAX_MESSAGE_LEN = 1000;
 
-// Marks a question about how the app works, so it can outrank a crop name in
-// routing. Deliberately not global: a /g regex keeps lastIndex between calls,
-// so .test() would alternate true/false on the same message.
-const HOW_TO_PATTERN =
-  /how do i|how do you|how to|how does|how can i|where do i|where can i|do i need to|what happens when/i;
-
-// Marks a question that asks WHY or WHEN something happens, rather than what
-// the price is now. These are explanation questions. The listings path can
-// only quote current prices, so it dead ends on them. Send them to the
-// general tier, which is allowed to answer broadly about farming.
-const EXPLAIN_PATTERN =
-  /\bwhy\b|\bwhen is\b|\bwhen are\b|\bwhen do\b|\bwhen does\b|\bseason\b|\bharvest/i;
-
-// What answerQuestion hands back internally. The extra two fields are for
-// the log only and are stripped before the browser sees the response.
+// What answerQuestion hands back internally. The extra fields are for the log
+// only and are stripped before the browser sees the response.
+//
+// askType and sectionId are what make the next routing problem measurable
+// rather than guessed: they record what the router thought the user wanted and
+// which knowledge section, if any, served the answer.
 interface Answered extends AssistantReply {
   model?: string | null;
   tokensUsed?: number | null;
+  askType?: string | null;
+  sectionId?: string | null;
 }
 
 // Service-role client, same pattern as send-push. Used only for the read-only
@@ -94,16 +86,17 @@ function replyForError(err: unknown): Answered {
 }
 
 // Handle a real (non-small-talk, non-blocked) question.
+//
+// The tier decision lives in router.ts, not here. This function only executes
+// the tier it is handed. That split is deliberate: routing is now decidable,
+// and testable, without a database or a model call.
 async function answerQuestion(message: string, role: Role): Promise<Answered> {
-  const intent = detectIntent(message);
-  const section = findSection(message);
-  const knowledgeFirst = section !== null && HOW_TO_PATTERN.test(message);
-  const explainFirst = EXPLAIN_PATTERN.test(message);
+  const route = routeMessage(message);
+  const { intent, ask, sectionId } = route;
 
-  // Data path: a recognised crop -> look up exact facts, then let Groq phrase.
-  // Skipped when the question is a how-to that a knowledge section already
-  // answers, so naming a crop does not drag it onto the listings lookup.
-  if (intent.kind === "data" && intent.crop && !knowledgeFirst && !explainFirst) {
+  // Data tier: the router saw a request for a price AND a recognised crop, so
+  // there are exact rows to answer from. Look them up, then let Groq phrase.
+  if (route.tier === "data" && intent.crop) {
     let facts = "";
     let lookupFailed = false;
     try {
@@ -128,6 +121,8 @@ async function answerQuestion(message: string, role: Role): Promise<Answered> {
         source: "data",
         model: answer.model,
         tokensUsed: answer.usage?.totalTokens ?? null,
+        askType: ask,
+        sectionId,
       };
     }
 
@@ -141,6 +136,8 @@ async function answerQuestion(message: string, role: Role): Promise<Answered> {
         source: "lookupfail",
         model: null,
         tokensUsed: null,
+        askType: ask,
+        sectionId,
       };
     }
 
@@ -159,17 +156,18 @@ async function answerQuestion(message: string, role: Role): Promise<Answered> {
       source: "nolistings",
       model: answer.model,
       tokensUsed: answer.usage?.totalTokens ?? null,
+      askType: ask,
+      sectionId,
     };
   }
 
-  // Knowledge path: a question about how Urimalu works, answered from
-  // knowledge.ts instead of the model's own guesses. Skipped when the user
-  // asked about prices without naming a crop and the only match was the
-  // generic prices section, so the existing "which crop?" nudge still runs.
-  if (section && !(intent.priceIntentWithoutCrop && section.id === "prices-and-listings")) {
+  // Knowledge tier: the router saw a question about the app itself AND found a
+  // section that covers it. Answered from knowledge.ts, never from the model's
+  // own guesses about how Urimalu works.
+  if (route.tier === "knowledge" && route.section) {
     const answer = await askModel({
       messages: [
-        { role: "system", content: knowledgeSystemPrompt(role, section.content) },
+        { role: "system", content: knowledgeSystemPrompt(role, route.section.content) },
         { role: "user", content: message },
       ],
     });
@@ -178,13 +176,17 @@ async function answerQuestion(message: string, role: Role): Promise<Answered> {
       source: "knowledge",
       model: answer.model,
       tokensUsed: answer.usage?.totalTokens ?? null,
+      askType: ask,
+      sectionId,
     };
   }
 
-  // General path: Groq answers from its own knowledge, behind the guardrails.
+  // General tier. Everything the narrow tiers could not prove they hold ends up
+  // here, including every message they handed back, and it is allowed to answer
+  // broadly about farming.
   const answer = await askModel({
     messages: [
-      { role: "system", content: generalSystemPrompt(role, intent.priceIntentWithoutCrop) },
+      { role: "system", content: generalSystemPrompt(role, route.priceWithoutCrop) },
       { role: "user", content: message },
     ],
   });
@@ -193,6 +195,8 @@ async function answerQuestion(message: string, role: Role): Promise<Answered> {
     source: "general",
     model: answer.model,
     tokensUsed: answer.usage?.totalTokens ?? null,
+    askType: ask,
+    sectionId,
   };
 }
 
@@ -249,6 +253,8 @@ Deno.serve(async (req) => {
     source: answered.source,
     model: answered.model ?? null,
     tokensUsed: answered.tokensUsed ?? null,
+    askType: answered.askType ?? null,
+    sectionId: answered.sectionId ?? null,
     ok: answered.source !== "error",
   });
 
