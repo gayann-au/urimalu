@@ -55,19 +55,6 @@ const SUGGESTIONS = {
   ],
 };
 
-// Where an answer came from, printed under the assistant's own messages. Only
-// the three tiers that make a claim about their footing are stamped: grounded
-// listings, the written guide, and the model's own knowledge. Every other
-// source value (nolistings, lookupfail, smalltalk, blocked, error) is absent
-// from this map on purpose, so nothing is stamped for them. A source the
-// backend has not sent, or one this map does not know, also prints nothing:
-// silence is the only honest default when the tier is unknown.
-const SOURCE_STAMP = {
-  data: "From live Urimalu listings",
-  knowledge: "From the Urimalu guide",
-  general: "General knowledge, not Urimalu data",
-};
-
 const DESKTOP_QUERY = "(min-width: 640px)";
 
 // How much the visible area has to shrink before we call it a keyboard rather
@@ -176,10 +163,7 @@ function PanelSparkleIcon() {
 }
 
 // A single chat bubble. User messages sit right in crop green; assistant
-// messages sit left on a warm paper surface. Assistant messages also carry the
-// source stamp underneath, when the tier they came from has one. The user's own
-// messages never do: the stamp describes where an answer was sourced, and the
-// question was not sourced from anywhere.
+// messages sit left on a warm paper surface.
 //
 // The min-width is what stops a one or two character message rendering as a
 // circle. "Hi" is around 16px of glyph inside 28px of horizontal padding, so
@@ -189,9 +173,8 @@ function PanelSparkleIcon() {
 // and height match is a circle. Widening the floor breaks the tie. The radius
 // is right for every longer message and should not be traded away to fix the
 // shortest ones.
-function Bubble({ from, text, source }) {
+function Bubble({ from, text }) {
   const isUser = from === "user";
-  const stamp = isUser ? undefined : SOURCE_STAMP[source];
   return (
     <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
       <div
@@ -203,7 +186,6 @@ function Bubble({ from, text, source }) {
       >
         {text}
       </div>
-      {stamp && <p className="pt-1 px-1 text-[11px] text-ink-500">{stamp}</p>}
     </div>
   );
 }
@@ -341,12 +323,10 @@ function Panel({ onClose, role }) {
     if (!text || assistant.isPending) return;
     setMessages((prev) => [...prev, { from: "user", text }]);
     setInput("");
-    // `source` is stored and shown. The stamp was held back while the Edge
-    // Function returned "data" both when a live listing was found and when a
-    // crop was recognised but nothing matched, because the second case was
-    // general reasoning wearing a listings label. The backend now separates
-    // those into "data", "nolistings" and "lookupfail", so the stamp is back
-    // and only the grounded tier claims to be grounded.
+    // `source` is stored but no longer shown. The panel used to print the tier
+    // under each answer; that label is gone from the UI. The value is kept on
+    // the message because the Edge Function still returns it and still writes
+    // it to assistant_logs, so it stays available for debugging.
     assistant.mutate(text, {
       onSuccess: (data) => {
         setMessages((prev) => [...prev, { from: "bot", text: data.reply, source: data.source }]);
@@ -446,7 +426,7 @@ function Panel({ onClose, role }) {
             <EmptyState suggestions={suggestions} onPick={send} disabled={assistant.isPending}/>
           ) : (
             messages.map((m, i) => (
-              <Bubble key={i} from={m.from} text={m.text} source={m.source}/>
+              <Bubble key={i} from={m.from} text={m.text}/>
             ))
           )}
           {assistant.isPending && <ThinkingBubble reduce={reduce}/>}
