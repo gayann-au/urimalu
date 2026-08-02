@@ -503,5 +503,88 @@
     "quiet": {
       "line": "Urimalu is free to use, and it grows around the people who use it. Farmers send in ideas from inside the app, and the best ones get built."
     }
+  },
+  "market": {
+    "heading": "Market reference prices",
+    "intro": "Published by outside bodies. Not a merchant offer.",
+    "pickCrop": "Choose a crop",
+    "crop": {
+      "arabica_parchment": "Arabica Parchment",
+      "arabica_cherry": "Arabica Cherry",
+      "robusta_parchment": "Robusta Parchment",
+      "robusta_cherry": "Robusta Cherry",
+      "pepper": "Pepper",
+      "cardamom": "Cardamom"
+    },
+    "priceRange": "{{min}} to {{max}}",
+    "unitGloss": {
+      "per50kg": "for every 50 kg",
+      "perKg": "for every kg",
+      "uscLb": "US cents for every pound",
+      "usdTon": "US dollars for every tonne"
+    },
+    "pricedOn": "Priced {{date}}",
+    "ageDays": "{{count}} days ago",
+    "ageDay": "{{count}} day ago",
+    "ageToday": "today",
+    "checkedToday": "We checked this morning, {{date}}",
+    "checkedOn": "We last checked {{date}}",
+    "source": {
+      "cpa": "Coorg Planters' Association",
+      "coffeeBoard": "Coffee Board of India"
+    },
+    "flaggedLabel": "Note from our check:",
+    "calc": {
+      "heading": "Work out a total",
+      "bagsLabel": "Number of 50 kg bags",
+      "kgLabel": "Number of kilos",
+      "totalRange": "{{min}} to {{max}}",
+      "boardValue": "Board value",
+      "notWhatYouGet": "This is the board rate multiplied out. Moisture, outturn and grade deductions are not included, so a buyer's figure will differ."
+    },
+    "curve": {
+      "heading": "Prices for future months",
+      "explain": "These are the prices buyers on a world exchange are agreeing today for coffee to be delivered in these months. They are not Kodagu prices and not an offer to you.",
+      "exchange": {
+        "ice": "ICE, New York",
+        "liffe": "LIFFE, London"
+      }
+    },
+    "spot": {
+      "heading": "Today's world indicator",
+      "otherMilds": "ICO Other Milds, the group Indian arabica is priced in",
+      "robustas": "ICO Robustas"
+    },
+    "loading": "Loading market prices",
+    "emptyAll": "No market prices have arrived yet. They are collected once each morning.",
+    "emptyCrop": "No price has arrived for {{crop}} yet.",
+    "emptyCurve": "No future month prices have arrived yet."
+  },
+  "weather": {
+    "heading": "Weather",
+    "fallbackNote": "Showing Madikeri",
+    "temp": "Temperature",
+    "humidity": "Humidity",
+    "rainNow": "Rain right now",
+    "rainToday": "Rain today",
+    "rainTomorrow": "Rain tomorrow",
+    "rainDayAfter": "Rain day after",
+    "mm": "{{value}} mm",
+    "noRain": "None expected",
+    "loading": "Loading weather",
+    "error": "Weather could not be loaded",
+    "code": {
+      "clear": "Clear sky",
+      "mainlyClear": "Mostly clear",
+      "partlyCloudy": "Partly cloudy",
+      "overcast": "Cloudy",
+      "fog": "Fog",
+      "drizzle": "Light drizzle",
+      "rain": "Rain",
+      "heavyRain": "Heavy rain",
+      "showers": "Showers",
+      "thunderstorm": "Thunderstorm",
+      "unknown": "Weather not described"
+    }
   }
 }
