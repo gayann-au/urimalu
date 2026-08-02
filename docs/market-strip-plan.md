@@ -593,7 +593,7 @@ Madikeri otherwise, and always label the place the numbers are actually for.
    `DELIVERY_POINTS` (Virajpet, Gonikoppal, Kushalnagar, Madikeri, Somwarpet,
    Ponnampet, Suntikoppa) -> use that town's coordinates, label it by name.
 2. Anything else, including null, empty, unmatched free text, or a town
-   outside Kodagu -> use Madikeri's coordinates (12.4208, 75.7397) and label
+   outside Kodagu -> use Madikeri's coordinates (12.42602, 75.7382) and label
    it **Madikeri**, plus the `weather.fallbackNote` line.
 
 The label always names the place the numbers are for, never the user's own
@@ -607,8 +607,25 @@ gap to close by guessing. If per-farmer weather is wanted later, the fix is to
 collect a taluk during farmer onboarding, which is a separate piece of work
 with its own consent and validation questions.
 
-`kodaguPlaces.js` holds the seven coordinate pairs, hand-checked, with a
-comment that they are approximate town centres.
+`src/lib/kodaguPlaces.js` holds the seven coordinate pairs, with a comment that
+they are approximate town centres. They come from the Open-Meteo geocoding API,
+queried 2 August 2026, the same vendor as the forecast endpoint above:
+
+```
+https://geocoding-api.open-meteo.com/v1/search?name={town}&count=10&language=en&format=json
+```
+
+Each name was queried on its own and the result filtered to `admin1`
+"Karnataka" and `admin2` "Coorg". The Madikeri pair above is that sourced
+value. It replaced an earlier figure in this section that was recalled rather
+than looked up, so do not restore one that carries no source.
+
+**The `admin2 = Coorg` filter is load bearing, not ceremony.** Four of the
+seven names are ambiguous in that dataset, and first results would put three of
+the seven in the wrong state or the wrong country. One false match is itself in
+Karnataka, so filtering on state alone is not enough. The four ambiguous names
+and their false matches are recorded in commit `c51a615` and in the file's own
+comments, and are not repeated here.
 
 ### 10.2 WMO weather_code
 
