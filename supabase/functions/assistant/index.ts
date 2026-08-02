@@ -40,6 +40,13 @@ const MAX_MESSAGE_LEN = 1000;
 const HOW_TO_PATTERN =
   /how do i|how do you|how to|how does|how can i|where do i|where can i|do i need to|what happens when/i;
 
+// Marks a question that asks WHY or WHEN something happens, rather than what
+// the price is now. These are explanation questions. The listings path can
+// only quote current prices, so it dead ends on them. Send them to the
+// general tier, which is allowed to answer broadly about farming.
+const EXPLAIN_PATTERN =
+  /\bwhy\b|\bwhen is\b|\bwhen are\b|\bwhen do\b|\bwhen does\b|\bseason\b|\bharvest/i;
+
 // What answerQuestion hands back internally. The extra two fields are for
 // the log only and are stripped before the browser sees the response.
 interface Answered extends AssistantReply {
@@ -91,11 +98,12 @@ async function answerQuestion(message: string, role: Role): Promise<Answered> {
   const intent = detectIntent(message);
   const section = findSection(message);
   const knowledgeFirst = section !== null && HOW_TO_PATTERN.test(message);
+  const explainFirst = EXPLAIN_PATTERN.test(message);
 
   // Data path: a recognised crop -> look up exact facts, then let Groq phrase.
   // Skipped when the question is a how-to that a knowledge section already
   // answers, so naming a crop does not drag it onto the listings lookup.
-  if (intent.kind === "data" && intent.crop && !knowledgeFirst) {
+  if (intent.kind === "data" && intent.crop && !knowledgeFirst && !explainFirst) {
     let facts = "";
     let lookupFailed = false;
     try {
