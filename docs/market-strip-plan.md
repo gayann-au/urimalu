@@ -363,12 +363,23 @@ old fact. Both halves must be visible for that to land.
 `dataAge.js`, pure, no React, no i18n:
 
 ```
-ageInDays(sourceDate, now)        integer days, floor, never negative
+ageInDays(sourceDate, now)        integer days, rounded, never negative
 dataAge(sourceDate, now)          { days, band, key, params }
   band "fresh"   0 to 2 days
   band "ageing"  3 to 14 days
   band "stale"   15 days and over
 ```
+
+`ageInDays` rounds, it does not floor. Both sides are reduced to local
+midnights first, so the gap is a whole number of days except across a daylight
+saving boundary, where it is 23 or 25 hours and flooring would report the 23
+hour case a day short. India has no daylight saving, so this reaches only a
+reader who is travelling, but rounding costs nothing and removes the case
+entirely. The reasoning is written into `dataAge.js` itself.
+
+This paragraph said "floor" until 3 August 2026, which was wrong about code
+that was already committed. If the two ever disagree again, the file is right
+and this section is the stale one.
 
 Bands come from the brief. The day count is always rendered; the band only
 selects wording and weight, never replaces the number.
