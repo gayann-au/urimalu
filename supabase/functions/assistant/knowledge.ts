@@ -247,7 +247,7 @@ export const KNOWLEDGE: KnowledgeSection[] = [
       "Crop names show their Kannada spelling when the app is in Kannada, but the English spelling is what gets saved, so price alerts keep matching on one spelling.\n\n" +
       "The app is built for a phone screen.\n\n" +
       "This assistant replies in English only for now, even if you write in Kannada or another language. The rest of the app stays bilingual.\n\n" +
-      "This assistant can help with crop prices, market listings, general farming and market guidance, and how Urimalu works. It will not answer questions outside that.\n\n" +
+      "This assistant can help with crop prices, market listings, how Urimalu works, and farming questions of any kind, including crops that are not traded on Urimalu.\n\n" +
       "All prices in the app are in Indian rupees.",
   },
 
