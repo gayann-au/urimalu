@@ -160,17 +160,41 @@ The user-facing label says "ICO Other Milds, the group Indian arabica is
 priced in" rather than silently calling it arabica, because calling it arabica
 would be the same class of error as putting robusta under an arabica label.
 
-### 3.5 Two smaller ones, flagged not blocking
+### 3.5 Unit rendering: stored string plus gloss. Decided.
 
-**Unit rendering.** "Show the unit exactly as stored, NEVER convert or
-re-label" is unambiguous about the quantity basis and I will not touch that.
-But `INR/50kg` as literal display text is not readable for someone who reads
-Kannada first and has never used an app like this. My reading is that the rule
-protects the *basis*, not the *glyphs*. So the plan renders the stored string
-verbatim in a small mono token **and** a plain-words gloss beside it in the
-active language ("for every 50 kg" / "ಪ್ರತಿ 50 ಕೆ.ಜಿ.ಗೆ"). The stored string is
-always on screen, unaltered. If you meant the literal glyphs only, drop the
-gloss.
+**Settled, not an open question.** "Show the unit exactly as stored, NEVER
+convert or re-label" protects the quantity *basis*, not the *glyphs*. Confirmed
+by the owner. The basis is never touched; a plain-words gloss is added beside
+the stored string, which itself always renders verbatim.
+
+Why the gloss earns its place: **cardamom is the case that proves it.** The
+whole point of overriding CPA's wrong unit field is that cardamom is ₹3,352
+per kg, not per 50 kg. That correction is worth nothing to a reader who cannot
+parse `INR/kg`. `INR/50kg` is a compressed ASCII token, and the design
+constraint is a reader who is Kannada-first, may have no English, and has
+never used an app like this.
+
+**Layout.** The stored unit binds to the price on the same line, because it is
+the unit of that number. The gloss takes the line below.
+
+```
+₹9,400 to ₹10,200   INR/50kg
+ಪ್ರತಿ 50 ಕೆ.ಜಿ.ಗೆ
+```
+
+**Four guardrails. These are the decision, not decoration.**
+
+1. The gloss comes from an explicit map keyed on the **exact** stored string.
+   Four entries today: `INR/50kg`, `INR/kg`, `USc/lb`, `USD/ton`.
+2. **An unknown unit renders bare: the stored string alone, no gloss.** Never a
+   guessed or generic one. If a source starts sending `INR/quintal` it appears
+   as an unglossed token, which is honest, rather than a confident wrong
+   sentence. This is the guardrail that keeps the whole approach safe and it is
+   held firmly.
+3. The gloss never contains a number that differs from the stored string's.
+   "for every 50 kg" restates 50. It computes nothing.
+4. Gloss and stored string ship in one component, so a later edit cannot drop
+   the token and leave the gloss standing alone.
 
 **Contract month ordering.** `contract_month` is a free string ("Sept-2026",
 "Dec-2026", "Mar-2027") and there is no sequence column. Alphabetical sorting
@@ -260,7 +284,7 @@ number. This is enforceable by review: `profile.role` appears in
 |---|---|
 | `uiMotion.js` `useUriMotion()` | `m.fadeUp` on each card, `m.stagger` on the card group. No `cardHover`: these cards are not tappable targets as a whole. Reduced-motion handling comes free. |
 | `LoadError.jsx` | The error state for the market hook, identical to how `MerchantsTab` and `CropsTab` use it, including the `onRetry` wiring to `refetch()`. |
-| `constants.js` `formatINR()` | Every rupee figure. Gives `₹21,500` with `en-IN` grouping and no decimals, matching the merchant cards exactly. |
+| `constants.js` `formatINR()` | Rupee figures **only**, and reached through `formatMarketPrice` rather than called directly. Gives `₹21,500` with `en-IN` grouping and no decimals, matching the merchant cards exactly. It is wrong for the eight coffee_board rows: see below. |
 | `constants.js` `formatValidTill()` | `source_date` and `fetched_at` rendering. It already produces the app's canonical "16 Jun 2026" from a `YYYY-MM-DD` prefix with no timezone shift, which is precisely the shape `source_date` has. Reused verbatim, not reimplemented. |
 | `constants.js` `CROP_CATALOG` | Kannada crop labels are lifted from here rather than newly translated, so "ರೊಬಸ್ಟಾ ಚೆರಿ" reads identically in the market strip and the listing autocomplete. |
 | `constants.js` `DELIVERY_POINTS` | The seven Kodagu towns that get weather coordinates. See section 10. |
@@ -276,6 +300,47 @@ Two `qk` additions:
 marketSnapshots: ["market_snapshots", "all"],
 weather: (lat, lon) => ["weather", lat, lon],
 ```
+
+### 6.1 `formatMarketPrice(value, unit)`, and why `formatINR` alone is wrong
+
+Lives in `src/lib/marketCrops.js`, next to the unit gloss map, because the
+number and its unit are one decision. **Every price in this feature goes
+through it. `formatINR` is never called directly from a market component.**
+
+`formatINR` is correct for the six CPA rows and actively wrong for the eight
+coffee_board rows, on two counts at once:
+
+- **Wrong symbol.** It prefixes `₹`. `323.05 USc/lb` is US cents per pound and
+  `3780 USD/ton` is US dollars per tonne. Neither is rupees. Rendering either
+  with a rupee sign is a factual error about what the number is.
+- **Dropped decimals.** It passes `maximumFractionDigits: 0`, so `323.05`
+  becomes `323` and `355.37` becomes `355`. At a scale where the whole quote is
+  three digits, the two decimals carry real meaning and the source published
+  them. Silently rounding them away is a precision loss the reader cannot see.
+
+This is the failure mode worth naming: it would have shipped looking entirely
+plausible. `₹323` beside "ICE, New York" reads fine to anyone not checking the
+currency, and nothing about it looks broken.
+
+Behaviour, switching on the **stored** `unit` string, never on the source or
+the crop_key:
+
+| stored `unit` | rendering | example |
+|---|---|---|
+| `INR/50kg` | delegate to `formatINR`, whole rupees | `₹21,500` |
+| `INR/kg` | delegate to `formatINR`, whole rupees | `₹3,352` |
+| `USc/lb` | two decimals, no currency symbol | `323.05` |
+| `USD/ton` | whole number, `en-IN` grouping, no symbol | `3,780` |
+| anything else | the raw value as stored, unformatted | as given |
+
+The currency is carried by the unit token beside the number (guardrail 1 of
+section 3.5), not by a symbol baked into the figure, which is why the two
+non-rupee rows need no symbol of their own.
+
+The last row is the same fail-safe as unit gloss guardrail 2: an unrecognised
+unit is rendered plainly rather than formatted under a guess. A new unit from
+a source shows up looking unpolished, which is a visible prompt to add it,
+instead of looking correct while being wrong.
 
 ---
 
@@ -319,13 +384,25 @@ We checked this morning, 2 Aug 2026         <- ink-500, smaller
 versus the futures card a few inches below:
 
 ```
-Priced 30 Jul 2026, 3 days ago              <- ink-500, no glyph, fresh
+Priced 30 Jul 2026, 3 days ago              <- ink-500, no glyph, ageing
 Coffee Board of India
 We checked this morning, 2 Aug 2026
 ```
 
 The contrast reads off the day count and the glyph, not off colour. No red, no
 green, no amber anywhere in this feature.
+
+**With today's data nothing is ever fresh, and that is not a bug.** CPA at 47
+days is stale. Coffee Board at 3 and 4 days is ageing. The fresh band is 0 to
+2 days and no live row reaches it, so it will not render in the first weeks
+and may never render for CPA at all. Anyone who sees an all-grey screen and
+concludes the age logic is broken should read this line first.
+
+Note that fresh and ageing share the same `ink-500` treatment (section 3.3),
+so those two bands look identical on screen and only the day count separates
+them. The visible break is ageing to stale, where the glyph and `ink-700`
+appear. The fresh band is therefore unexercised by live data and must be
+verified synthetically, the same as the flagged-row path in section 8.
 
 **"We checked this morning"** is used when `fetched_at` is today, falling back
 to the absolute date otherwise. This is the one place a relative phrase beats
@@ -720,8 +797,25 @@ How each is enforced, so a reviewer can check rather than trust.
 
 ## 14. Build order
 
-1. `marketCrops.js`, `dataAge.js`, `kodaguPlaces.js`. Pure, no React, testable
-   immediately.
+1. **`dataAge.js` alone.** Narrowed deliberately from the three pure modules.
+   `marketCrops.js` and `kodaguPlaces.js` are mostly data tables where an error
+   is visible on inspection; `dataAge.js` is the only one of the three with
+   arithmetic that can be subtly wrong, and the brief calls age the single most
+   important thing on the card. Section 7 already contained a band error in an
+   approved draft, which is the argument for starting exactly here.
+
+   The whole justification is calendar days, not elapsed milliseconds.
+   `source_date` is a `date` column. `Date.parse("2026-06-16")` yields UTC
+   midnight, and diffing that against a local `now` in IST lands 47 on 46 or 48
+   depending on the hour. That silent one-off would make a stale price look
+   fresher than it is, which is the exact failure this feature exists to
+   prevent. `ageInDays` regexes the `YYYY-MM-DD` prefix and builds a local
+   calendar date, the same dodge `formatValidTill` already uses.
+
+   Verify at both band boundaries (2/3 and 14/15), at the three live values
+   (3, 4, 47), at day 0, and across a timezone-sensitive hour.
+1b. `marketCrops.js` (including `formatMarketPrice` and the unit gloss map)
+   and `kodaguPlaces.js`.
 2. `useMarketSnapshots.js` plus the `qk` additions. Verify against the real 14
    rows before any UI exists.
 3. i18n keys into both files. Doing this before the components stops English
@@ -736,6 +830,14 @@ How each is enforced, so a reviewer can check rather than trust.
    state rather than assuming.
 
 Build after each of steps 4, 6 and 7 to confirm it compiles, per CLAUDE.md.
+
+**There is no test runner, checked so the next session does not repeat it.**
+`package.json` `scripts` is `dev`, `build`, `preview` and nothing else, and
+there is no vitest, jest or other test-shaped dependency. Verification of the
+pure modules is therefore a throwaway script in the session scratchpad, run
+with node and deleted afterwards. **Do not add a test framework**; that is a
+project-wide decision nobody has asked for and it does not belong inside this
+feature's diff.
 
 ---
 
@@ -772,15 +874,27 @@ no app crop names and their `app_crop_names` stays null permanently.
 
 ## 16. Open questions
 
-1. **Unit rendering.** Section 3.5. Stored string plus a plain-words gloss, or
-   the stored string alone?
-2. **Kannada review.** Section 11. Who checks the copy before it reaches
+1. **Kannada review.** Section 11. Who checks the copy before it reaches
    farmers?
 
-Question 1 blocks build step 4. Question 2 blocks release, not development.
+That is the only one left, and it blocks release rather than development.
+Nothing in the build order waits on it. Every other question is closed.
 
-Settled and not to be reopened without a decision: `change_amount` and
-`change_direction` are never rendered (3.1), the strip is a noticeboard and
-not a deals strip (3.2), `FreshnessBadge` is not reused (3.3), the ICO key is
-`ico_other_milds` (3.4), and the weather card falls back to a labelled
-Madikeri (10.1).
+Settled and not to be reopened without a decision:
+
+- `change_amount` and `change_direction` are never rendered (3.1)
+- The strip is a noticeboard, not a deals strip (3.2)
+- `FreshnessBadge` is not reused; `dataAge.js` is separate (3.3)
+- The ICO key is `ico_other_milds`, not `ico_arabica` (3.4)
+- Unit rendering is the stored string plus a gloss, under the four guardrails,
+  with an unknown unit rendering bare (3.5)
+- Every price goes through `formatMarketPrice`; `formatINR` is never called
+  directly from a market component (6.1)
+- The weather card falls back to a labelled Madikeri (10.1)
+
+A note on how this section was mis-stated in an earlier draft, since the
+sequencing matters: unit rendering was recorded as blocking build step 4. It
+did not. The `market.unitGloss.*` keys land in step 3 and the unit map and
+`formatMarketPrice` land in step 1b, so the true block was two steps earlier
+than written. Moot now that it is decided, but a reminder that "what does this
+block" is worth checking against the build order rather than estimated.
