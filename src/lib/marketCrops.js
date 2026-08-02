@@ -87,6 +87,48 @@ export function formatMarketPrice(value, unit) {
   }
 }
 
+// Sortable integer for a futures contract month label, or null when the label
+// cannot be parsed.
+//
+// contract_month is free text and there is no sequence column, so the UI has to
+// derive the order. Sorting the labels as strings gives Dec, Mar, Sept, which
+// is the wrong order for Sept-2026, Dec-2026, Mar-2027 and would present the
+// forward curve backwards. year * 12 + monthIndex puts them in real order and
+// keeps working across the year boundary, which a month-only key would not.
+//
+// The source writes the non-standard "Sept". Matching is on the first three
+// letters of an all-alphabetic month token, so Sep, Sept and September all
+// resolve to the same month rather than only the spelling in use today.
+//
+// A label that does not parse returns null. The caller sorts those last by
+// created_at ascending rather than guessing at a position, which is the order
+// the refresh function first inserted them in.
+const CONTRACT_MONTH_INDEX = {
+  jan: 0,
+  feb: 1,
+  mar: 2,
+  apr: 3,
+  may: 4,
+  jun: 5,
+  jul: 6,
+  aug: 7,
+  sep: 8,
+  oct: 9,
+  nov: 10,
+  dec: 11,
+};
+
+export function contractMonthOrder(label) {
+  if (!label) return null;
+  const parts = String(label).trim().match(/^([A-Za-z]+)[\s-]*(\d{4})$/);
+  if (!parts) return null;
+
+  const monthIndex = CONTRACT_MONTH_INDEX[parts[1].slice(0, 3).toLowerCase()];
+  if (monthIndex === undefined) return null;
+
+  return Number(parts[2]) * 12 + monthIndex;
+}
+
 // TEMPORARY. The app and the sources name the same crop differently: a farmer
 // lists "Robusta Cherry EP" and CPA publishes "Robusta Cherry". The
 // market_snapshots.app_crop_names column exists to hold this mapping on the
