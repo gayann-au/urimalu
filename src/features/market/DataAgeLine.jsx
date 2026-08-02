@@ -20,6 +20,12 @@ import { formatValidTill } from "../../lib/constants";
 // i18n keys for the publishing body, keyed on the exact market_snapshots.source
 // value as stored. Two entries today.
 //
+// THIS IS THE SINGLE DEFINITION of which sources this feature can name.
+// MarketPriceCard carried a second copy until it was removed; the two had to be
+// kept in step by hand, and a source added to only one of them made the card
+// pass a row this line then refused to caption, so the price vanished with no
+// explanation. Callers ask canNameSource below rather than keeping a list.
+//
 // Matching is exact and an unknown source renders no line, which is the same
 // refusal to guess that unitGlossKey makes in marketCrops.js. A source we have
 // not been taught has no name we can put our own words to, and inventing one
@@ -28,6 +34,27 @@ const SOURCE_LABEL_KEYS = {
   cpa: "market.source.cpa",
   coffee_board: "market.source.coffeeBoard",
 };
+
+// The i18n key for a stored source value, or null when there is none.
+//
+// hasOwnProperty rather than a bare lookup: source is data, and a row carrying
+// "constructor" or "toString" would otherwise find a function on the prototype
+// and read as a nameable source.
+function labelKeyFor(source) {
+  if (!source) return null;
+  return Object.prototype.hasOwnProperty.call(SOURCE_LABEL_KEYS, source)
+    ? SOURCE_LABEL_KEYS[source]
+    : null;
+}
+
+// Whether this feature has a name for a stored source value.
+//
+// MarketPriceCard's guard uses this to refuse a price it could not attribute.
+// Both that guard and this component read the one map above, so the card and
+// the line cannot disagree about which sources are nameable.
+export function canNameSource(source) {
+  return labelKeyFor(source) !== null;
+}
 
 // Below this the day count is suppressed and the date stands alone.
 //
@@ -88,7 +115,7 @@ export function DataAgeLine({ sourceDate, sourceKey, fetchedAt }) {
   const { t } = useTranslation();
 
   const age = dataAge(sourceDate);
-  const sourceLabelKey = SOURCE_LABEL_KEYS[sourceKey];
+  const sourceLabelKey = labelKeyFor(sourceKey);
   if (!age || !sourceLabelKey) return null;
 
   const pricedOn = t("market.pricedOn", { date: formatValidTill(sourceDate) });

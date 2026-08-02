@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { formatMarketPrice, unitGlossKey } from "../../lib/marketCrops";
 import { dataAge } from "../../lib/dataAge";
-import { DataAgeLine } from "./DataAgeLine";
+import { DataAgeLine, canNameSource } from "./DataAgeLine";
 import { isFlagged } from "./useMarketSnapshots";
 
 // The physical price card: price, unit, age, attribution. No change line.
@@ -11,17 +11,6 @@ import { isFlagged } from "./useMarketSnapshots";
 // render when it cannot state both, but a component that returns null cannot
 // stop its parent printing a price above it. canRenderPrice below is that
 // stop, and the card's first statement is the guard.
-
-// Sources DataAgeLine has a name for. Kept as a set rather than inferred,
-// because the rule is "a source we can name", not "a source that exists".
-//
-// This mirrors SOURCE_LABEL_KEYS inside DataAgeLine.jsx and the two must stay
-// in step: teaching the app a third source means adding it in both places, or
-// this card will pass a row that DataAgeLine then refuses to caption, and the
-// price disappears with no explanation. The durable fix is one exported
-// predicate shared by both files. That is a change to an already committed
-// file and has not been made.
-const NAMEABLE_SOURCES = new Set(["cpa", "coffee_board"]);
 
 // A row must carry a number worth printing. formatMarketPrice renders "-" for
 // a missing value, and a card whose entire content is a dash, correctly dated
@@ -40,13 +29,18 @@ function hasUsablePrice(row) {
 //   unnameable source     DataAgeLine would print no attribution
 //   unusable source_date  dataAge returns null, so there is no age to state
 //
+// The last two ask the same code DataAgeLine asks, canNameSource and dataAge,
+// rather than repeating its rules here. That is the point: this card and that
+// line cannot disagree about whether a row can be captioned, because there is
+// one definition of each answer and both files read it.
+//
 // Exported because MarketStrip has to make the same decision one level up: a
 // row that cannot be rendered is an empty state for that crop, not a gap in
 // the layout. Both callers must ask this function rather than reimplement it.
 export function canRenderPrice(row) {
   if (!row) return false;
   if (!hasUsablePrice(row)) return false;
-  if (!NAMEABLE_SOURCES.has(row.source)) return false;
+  if (!canNameSource(row.source)) return false;
   if (dataAge(row.source_date) === null) return false;
   return true;
 }
