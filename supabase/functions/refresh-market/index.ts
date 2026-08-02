@@ -237,13 +237,15 @@ interface CpaSummary {
   rows_written: number;
   rows_held: number;
   rows_flagged: number;
+  rows_skipped: number;
   error: string | null;
 }
 
 async function runCpa(
   client: SupabaseClient,
   agmarknetPerKg: Map<string, number>,
-  summary: CpaSummary
+  summary: CpaSummary,
+  warnings: string[]
 ): Promise<void> {
   const response = await fetch(CPA_URL, {
     headers: {
@@ -267,16 +269,24 @@ async function runCpa(
   for (const entry of envelope.data) {
     const record = asRecord(entry);
     if (record === null) {
-      console.warn("cpa entry is not an object, skipping");
+      const message = "cpa: skipped an entry that is not an object";
+      console.error(message);
+      warnings.push(message);
+      summary.rows_skipped += 1;
       continue;
     }
 
     const id = toText(record.id);
     if (id === null) {
-      console.warn("cpa entry has no id, skipping");
+      const message = "cpa: skipped an entry with no id";
+      console.error(message);
+      warnings.push(message);
+      summary.rows_skipped += 1;
       continue;
     }
 
+    // An id outside the map is expected rather than a fault, so it stays a
+    // console.warn and is not counted as a skipped row.
     const meta = CPA_CROPS[id];
     if (!meta) {
       console.warn(`cpa id not in the crop map, skipping: ${id}`);
@@ -285,9 +295,10 @@ async function runCpa(
 
     const sourceDate = isoDate(record.date);
     if (sourceDate === null) {
-      console.error(
-        `cpa: unparsable date for id ${id}, raw value ${JSON.stringify(record.date)}, row skipped`
-      );
+      const message = `cpa: skipped ${id}, unparsable date ${JSON.stringify(record.date)}`;
+      console.error(message);
+      warnings.push(message);
+      summary.rows_skipped += 1;
       continue;
     }
 
@@ -299,17 +310,36 @@ async function runCpa(
     let status: ValidationStatus = "ok";
     let note: string | null = null;
 
-    // Step 1, hard band. Always runs.
+    // Step 1, hard band. Always runs. Both bounds are checked when the source
+    // quotes a range. price_max is null when it quotes a single price, and
+    // then only price_min is there to check.
     let perKg: number | null = null;
     if (priceMin === null) {
       status = "held";
       note = `price_min missing for cpa id ${id}`;
     } else {
       perKg = priceMin / meta.kgPerUnit;
+      const failedBounds: string[] = [];
+
       if (perKg < meta.bandMinPerKg || perKg > meta.bandMaxPerKg) {
+        failedBounds.push(
+          `price_min ${priceMin} ${meta.unit} computes to ${round2(perKg)} INR per kg`
+        );
+      }
+
+      if (priceMax !== null) {
+        const maxPerKg = priceMax / meta.kgPerUnit;
+        if (maxPerKg < meta.bandMinPerKg || maxPerKg > meta.bandMaxPerKg) {
+          failedBounds.push(
+            `price_max ${priceMax} ${meta.unit} computes to ${round2(maxPerKg)} INR per kg`
+          );
+        }
+      }
+
+      if (failedBounds.length > 0) {
         status = "held";
         note =
-          `computed ${round2(perKg)} INR per kg from price_min ${priceMin} ${meta.unit}, ` +
+          `${failedBounds.join("; ")}, ` +
           `outside the expected band ${meta.bandMinPerKg} to ${meta.bandMaxPerKg} INR per kg`;
       }
     }
@@ -417,12 +447,14 @@ function spanText(html: string, id: string): string | null {
 interface CoffeeBoardSummary {
   rows_written: number;
   rows_held: number;
+  rows_skipped: number;
   error: string | null;
 }
 
 async function runCoffeeBoard(
   client: SupabaseClient,
-  summary: CoffeeBoardSummary
+  summary: CoffeeBoardSummary,
+  warnings: string[]
 ): Promise<void> {
   const response = await fetch(COFFEE_BOARD_URL, {
     headers: { "User-Agent": "Mozilla/5.0" },
@@ -455,20 +487,29 @@ async function runCoffeeBoard(
 
   for (const row of icoRows) {
     if (icoDate === null) {
-      console.error(
-        `coffee_board: unparsable ICO date from element ${ICO_DATE_ID}, raw value ${JSON.stringify(icoDateRaw)}, ${row.cropKey} row skipped`
-      );
+      const message = `coffee_board: skipped ${row.cropKey}, unparsable ICO date from ${ICO_DATE_ID} ${JSON.stringify(icoDateRaw)}`;
+      console.error(message);
+      warnings.push(message);
+      summary.rows_skipped += 1;
       continue;
     }
 
     const rawValue = spanText(html, row.id);
     const value = toNumber(rawValue);
 
+    // ICO is quoted in the same unit as ICE arabica, so it is held against the
+    // same band. The two are deliberately coupled to one pair of constants so
+    // they cannot drift apart.
     let status: ValidationStatus = "ok";
     let note: string | null = null;
     if (value === null) {
       status = "held";
       note = `element ${row.id} produced no numeric value, page structure may have changed`;
+    } else if (value < ICE_ARABICA_MIN || value > ICE_ARABICA_MAX) {
+      status = "held";
+      note =
+        `element ${row.id} produced ${value} USc/lb, ` +
+        `outside the expected band ${ICE_ARABICA_MIN} to ${ICE_ARABICA_MAX}, page structure may have changed`;
     }
 
     await writeSnapshot(client, {
@@ -525,9 +566,10 @@ async function runCoffeeBoard(
   for (const market of futuresMarkets) {
     for (const month of market.months) {
       if (futuresDate === null) {
-        console.error(
-          `coffee_board: unparsable futures date from element ${FUTURES_DATE_ID}, raw value ${JSON.stringify(futuresDateRaw)}, ${market.cropKey} month row from ${month.labelId} skipped`
-        );
+        const message = `coffee_board: skipped ${market.cropKey} month from ${month.labelId}, unparsable futures date from ${FUTURES_DATE_ID} ${JSON.stringify(futuresDateRaw)}`;
+        console.error(message);
+        warnings.push(message);
+        summary.rows_skipped += 1;
         continue;
       }
 
@@ -535,9 +577,10 @@ async function runCoffeeBoard(
       if (contractMonth === null) {
         // The month label is part of the row key, so without it there is no
         // way to write a distinct row. Reported loudly rather than absorbed.
-        console.error(
-          `coffee board month label element ${month.labelId} is missing, ${market.cropKey} month row not written`
-        );
+        const message = `coffee_board: skipped ${market.cropKey} month, label element ${month.labelId} is missing`;
+        console.error(message);
+        warnings.push(message);
+        summary.rows_skipped += 1;
         continue;
       }
 
@@ -606,14 +649,18 @@ const AGMARKNET_COMMODITIES: Array<{
 
 interface AgmarknetSummary {
   rows_written: number;
+  // skipped means the whole source was skipped because no API key is set.
+  // rows_skipped counts individual rows that could not be written.
   skipped: boolean;
+  rows_skipped: number;
   error: string | null;
 }
 
 async function runAgmarknet(
   client: SupabaseClient,
   perKgByCrop: Map<string, number>,
-  summary: AgmarknetSummary
+  summary: AgmarknetSummary,
+  warnings: string[]
 ): Promise<void> {
   for (const target of AGMARKNET_COMMODITIES) {
     const url =
@@ -658,9 +705,10 @@ async function runAgmarknet(
 
     const medianModal = median(modalPrices);
     if (medianModal === null) {
-      console.log(
-        `agmarknet returned no usable modal_price for ${target.commodity}`
-      );
+      const message = `agmarknet: skipped ${target.cropKey}, ${records.length} records but no usable modal_price`;
+      console.error(message);
+      warnings.push(message);
+      summary.rows_skipped += 1;
       continue;
     }
 
@@ -671,14 +719,35 @@ async function runAgmarknet(
       const rawDates = records
         .map((entry) => asRecord(entry)?.arrival_date)
         .slice(0, 5);
-      console.error(
-        `agmarknet: no parsable arrival_date for ${target.commodity}, first raw values ${JSON.stringify(rawDates)}, row skipped`
-      );
+      const message = `agmarknet: skipped ${target.cropKey}, no parsable arrival_date, first raw values ${JSON.stringify(rawDates)}`;
+      console.error(message);
+      warnings.push(message);
+      summary.rows_skipped += 1;
       continue;
     }
     const sourceDate = arrivalDates.reduce((latest, current) =>
       current > latest ? current : latest
     );
+
+    // The same hard band CPA rows are held against, looked up by crop_key so
+    // there is one definition of each band rather than two that can drift.
+    const band = Object.values(CPA_CROPS).find(
+      (crop) => crop.cropKey === target.cropKey
+    );
+
+    let status: ValidationStatus = "ok";
+    let note: string | null = null;
+    if (band === undefined) {
+      status = "held";
+      note =
+        `no band defined for crop_key ${target.cropKey}, ` +
+        `${round2(perKg)} INR per kg is unverified`;
+    } else if (perKg < band.bandMinPerKg || perKg > band.bandMaxPerKg) {
+      status = "held";
+      note =
+        `median modal price computes to ${round2(perKg)} INR per kg, ` +
+        `outside the expected band ${band.bandMinPerKg} to ${band.bandMaxPerKg} INR per kg`;
+    }
 
     await writeSnapshot(client, {
       source: "agmarknet",
@@ -691,12 +760,15 @@ async function runAgmarknet(
       price_max: null,
       change_amount: null,
       change_direction: null,
-      validation_status: "ok",
-      validation_note: null,
+      validation_status: status,
+      validation_note: note,
       raw: records,
     });
 
-    perKgByCrop.set(target.cropKey, perKg);
+    // Only a value that passed its own band may become the reference the CPA
+    // cross-check judges against. An unchecked number must not judge a checked
+    // one, so a held row is written for audit but kept out of the map.
+    if (status === "ok") perKgByCrop.set(target.cropKey, perKg);
     summary.rows_written += 1;
   }
 }
@@ -724,18 +796,26 @@ Deno.serve(async (req) => {
     rows_written: 0,
     rows_held: 0,
     rows_flagged: 0,
+    rows_skipped: 0,
     error: null,
   };
   const coffeeBoard: CoffeeBoardSummary = {
     rows_written: 0,
     rows_held: 0,
+    rows_skipped: 0,
     error: null,
   };
   const agmarknet: AgmarknetSummary = {
     rows_written: 0,
     skipped: false,
+    rows_skipped: 0,
     error: null,
   };
+
+  // One short line per row that could not be written. Without this a run in
+  // which every date failed to parse would return ok with zero rows and read
+  // as a success.
+  const warnings: string[] = [];
 
   // Source 3 runs first because the CPA cross-check reads its per-kg values.
   // A failure here leaves the map empty, which only means the CPA cross-check
@@ -746,7 +826,7 @@ Deno.serve(async (req) => {
     console.log("DATA_GOV_IN_API_KEY not set, skipping agmarknet");
   } else {
     try {
-      await runAgmarknet(admin, agmarknetPerKg, agmarknet);
+      await runAgmarknet(admin, agmarknetPerKg, agmarknet, warnings);
     } catch (err) {
       agmarknet.error = errorMessage(err);
       console.error("agmarknet source failed:", agmarknet.error);
@@ -754,14 +834,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    await runCpa(admin, agmarknetPerKg, cpa);
+    await runCpa(admin, agmarknetPerKg, cpa, warnings);
   } catch (err) {
     cpa.error = errorMessage(err);
     console.error("cpa source failed:", cpa.error);
   }
 
   try {
-    await runCoffeeBoard(admin, coffeeBoard);
+    await runCoffeeBoard(admin, coffeeBoard, warnings);
   } catch (err) {
     coffeeBoard.error = errorMessage(err);
     console.error("coffee board source failed:", coffeeBoard.error);
@@ -769,6 +849,7 @@ Deno.serve(async (req) => {
 
   // rows_written counts every row written, whatever its validation status.
   // rows_held and rows_flagged are subsets of it, not separate totals.
+  // rows_skipped is disjoint from rows_written: those rows reached no table.
   return json(200, {
     ok: true,
     sources: {
@@ -776,5 +857,6 @@ Deno.serve(async (req) => {
       coffee_board: coffeeBoard,
       agmarknet,
     },
+    warnings,
   });
 });
