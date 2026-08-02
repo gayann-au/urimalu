@@ -48,6 +48,10 @@ export function dataSystemPrompt(role: Role, facts: string): string {
     "Never describe a button, menu, page, screen, setting, tab or step. " +
     "If the question asks how to do something in the app, say plainly that you can only see current listing data " +
     "and cannot give the steps. " +
+    "These facts are listing prices only. They say nothing about seasons, harvest months, weather, supply, demand, or why prices move. " +
+    "Never state a harvest month, a growing season, or a market condition. " +
+    "Never explain what a missing price means. A listing with no price means the merchant chose to be contacted for the price, and nothing more. " +
+    "If the question asks why prices change through the year, or when a crop is harvested, say plainly that you can only see current listing prices and cannot answer that. " +
     "Keep it short and plain, sized for a phone screen. A warm opening line is fine, but the numbers must stay exact.\n\n" +
     "FACTS:\n" +
     facts
