@@ -14,6 +14,7 @@ import { toast } from "../../components/ui/Toast";
 import { useUriMotion } from "../../lib/uiMotion";
 import { WELCOME_FLAG_KEY } from "../../lib/constants";
 import { ReadyToSellCard } from "../sellerLeads/ReadyToSellCard";
+import { MarketStrip } from "../market/MarketStrip";
 
 // Storefront glyph, the soft icon that anchors each merchant card the way the
 // landing step cards are anchored by their icon boxes.
@@ -101,6 +102,14 @@ export default function FeedPage() {
 
       {/* Ready to Sell: farmers only. */}
       {profile?.role === "FARMER" && <ReadyToSellCard profile={profile}/>}
+
+      {/* Market reference prices. Logged in only: the RLS policy is `to
+          authenticated` and would return zero rows for a visitor anyway, so
+          this gate saves a wasted request and an empty card on the public
+          feed. Above the tabs, not inside one, because the strip is neither
+          merchant data nor crop-listing data and would be hidden half the
+          time in either tab. */}
+      {loggedIn && <MarketStrip profile={profile}/>}
 
       {/* Tabs */}
       <div className="bg-white border-b border-ink-100 sticky top-[64px] z-20">
