@@ -14,6 +14,7 @@ import { toast } from "../../components/ui/Toast";
 import { useUriMotion } from "../../lib/uiMotion";
 import { WELCOME_FLAG_KEY } from "../../lib/constants";
 import { ReadyToSellCard } from "../sellerLeads/ReadyToSellCard";
+import { MarketStrip } from "../market/MarketStrip";
 
 // Storefront glyph, the soft icon that anchors each merchant card the way the
 // landing step cards are anchored by their icon boxes.
@@ -79,7 +80,15 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 pb-12 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8 isolate">
+    /* Farmers get extra room at the foot of the page because the Ready to
+       Sell trigger floats over it. Without this the last merchant card sits
+       under the button, which is the one thing a persistent control must never
+       do. Everyone else keeps the original pb-12. */
+    <div
+      className={`flex flex-col flex-1 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8 isolate ${
+        profile?.role === "FARMER" ? "pb-32" : "pb-12"
+      }`}
+    >
       <GlowBackdrop/>
       <Header/>
 
@@ -101,6 +110,16 @@ export default function FeedPage() {
 
       {/* Ready to Sell: farmers only. */}
       {profile?.role === "FARMER" && <ReadyToSellCard profile={profile}/>}
+
+      {/* Today's rates, the weather by town, and the world benchmarks, in that
+          order. Logged in only: the RLS policy on market_snapshots is `to
+          authenticated` and would return zero rows for a visitor anyway, so
+          this gate saves a wasted request and an empty board on the public
+          feed. Above the tabs, not inside one, because none of the three is
+          merchant data or crop-listing data and all would be hidden half the
+          time in either tab. Takes no props: every section runs its own query
+          and none of them reads the reader's role. */}
+      {loggedIn && <MarketStrip/>}
 
       {/* Tabs */}
       <div className="bg-white border-b border-ink-100 sticky top-[64px] z-20">

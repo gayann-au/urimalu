@@ -381,7 +381,10 @@
     "emptyHeading": "No seller leads yet.",
     "emptyBody": "Farmers who are ready to sell will show up here.",
     "unread": "Unread",
-    "waMessage": "Namaste {{name}}, I saw you are ready to sell on Urimalu."
+    "waMessage": "Namaste {{name}}, I saw you are ready to sell on Urimalu.",
+    "floatingLabel": "I am ready to sell",
+    "floatingShort": "Sell",
+    "floatingDismiss": "Make this button smaller"
   },
   "notif": {
     "title": "Notifications",
@@ -503,5 +506,179 @@
     "quiet": {
       "line": "Urimalu is free to use, and it grows around the people who use it. Farmers send in ideas from inside the app, and the best ones get built."
     }
+  },
+  "market": {
+    "heading": "Market reference prices",
+    "intro": "Published by outside bodies. Not a merchant offer.",
+    "pickCrop": "Choose a crop",
+    "crop": {
+      "arabica_parchment": "Arabica Parchment",
+      "arabica_cherry": "Arabica Cherry",
+      "robusta_parchment": "Robusta Parchment",
+      "robusta_cherry": "Robusta Cherry",
+      "pepper": "Pepper",
+      "cardamom": "Cardamom"
+    },
+    "priceRange": "{{min}} to {{max}}",
+    "unitGloss": {
+      "per50kg": "for every 50 kg",
+      "perKg": "for every kg",
+      "uscLb": "US cents for every pound",
+      "usdTon": "US dollars for every tonne"
+    },
+    "pricedOn": "Rate as on {{date}}",
+    "ageDays": "{{count}} days ago",
+    "ageDay": "{{count}} day ago",
+    "ageToday": "today",
+    "checkedToday": "We checked this morning, {{date}}",
+    "checkedOn": "We last checked {{date}}",
+    "source": {
+      "cpa": "Coorg Planters' Association",
+      "coffeeBoard": "Coffee Board of India"
+    },
+    "flaggedLabel": "Note from our check:",
+    "calc": {
+      "heading": "What is your quantity worth?",
+      "bagsLabel": "Number of 50 kg bags",
+      "kgLabel": "Number of kilos",
+      "totalRange": "{{min}} to {{max}}",
+      "boardValue": "Board value",
+      "notWhatYouGet": "This is the board rate multiplied out. Moisture, outturn and grade deductions are not included, so a buyer's figure will differ.",
+      "intro": "Type how much you have. This works it out at the board rate above.",
+      "cropLabel": "Choose a crop",
+      "quantityLabel": {
+        "bags": "How many bags do you have?",
+        "kg": "How many kilos do you have?"
+      },
+      "countUnit": {
+        "bags": "bags of 50 kg",
+        "kg": "kilos"
+      },
+      "placeholder": "e.g. 40",
+      "resultLabel": "Board value",
+      "awaiting": "Type a quantity to see the value.",
+      "note": "This is what the board rate works out to for that quantity. It is not an offer. A buyer may pay a different amount because of moisture, outturn and grade."
+    },
+    "curve": {
+      "heading": "Prices for future months",
+      "explain": "These are the prices buyers on a world exchange are agreeing today for coffee to be delivered in these months. They are not Kodagu prices and not an offer to you.",
+      "exchange": {
+        "ice": "ICE, New York",
+        "liffe": "LIFFE, London"
+      }
+    },
+    "spot": {
+      "heading": "Today's world indicator",
+      "otherMilds": "ICO Other Milds, the group Indian arabica is priced in",
+      "robustas": "ICO Robustas"
+    },
+    "loading": "Loading market prices",
+    "emptyAll": "No market prices have arrived yet. They are collected once each morning.",
+    "emptyCrop": "No price has arrived for {{crop}} yet.",
+    "emptyCurve": "No future month prices have arrived yet.",
+    "today": {
+      "heading": "Today's rates",
+      "eyebrow": "Today"
+    },
+    "world": {
+      "heading": "Global benchmarks",
+      "intro": "Prices agreed on world exchanges. They are not Kodagu prices and not an offer to you.",
+      "londonRobusta": "London Robusta",
+      "iceArabica": "Arabica, ICE New York",
+      "delivery": "For delivery in {{month}}",
+      "empty": "No world benchmark prices have arrived yet.",
+      "eyebrow": "Around the world"
+    },
+    "fx": {
+      "title": "US dollar to rupee",
+      "unit": "rupees for one US dollar",
+      "updated": "Rate as on {{date}}",
+      "source": "ExchangeRate-API",
+      "unavailable": "The dollar rate could not be loaded.",
+      "loading": "Loading the dollar rate"
+    },
+    "explain": {
+      "open": "What is this?",
+      "cpa": "These are the rates the Coorg Planters' Association published for the district on the date shown. A buyer near you may offer more or less than this. Moisture, grade, and how much they need that day all change what a buyer pays.",
+      "londonRobusta": "Robusta is the coffee most of Kodagu grows. On a large market in London, buyers and sellers from around the world agree a price today for Robusta to be delivered in a later month. Exporters and big buyers follow that price, so it feeds into what buyers here offer.",
+      "iceArabica": "Arabica is the other main coffee, grown on higher land. This is the price agreed on a large market in New York for Arabica to be delivered in a later month. It is counted in US cents for one pound, and a pound is a smaller weight than a kilo.",
+      "usdInr": "Coffee is bought and sold between countries in US dollars, not rupees. This line says how many rupees one dollar is worth. When this number moves, the world coffee price comes to a different number of rupees, even if the coffee price itself has not changed.",
+      "weather": "Sun today is how many hours the sun was out. Chance of rain is how likely the weather service thinks rain is today, counted out of a hundred. The two rain figures are how many millimetres fell in the last three days and how much is expected in the next three. Coffee and pepper are dried in the open air, so sun and rain both affect that work.",
+      "storedUnit": "The exact unit recorded from the source is {{unit}}.",
+      "storedUnits": "The exact units recorded from the source are {{units}}."
+    }
+  },
+  "weather": {
+    "heading": "Rain and weather by town",
+    "fallbackNote": "Showing Madikeri",
+    "temp": "Temperature",
+    "humidity": "Humidity",
+    "rainNow": "Rain right now",
+    "rainToday": "Rain today",
+    "rainTomorrow": "Rain tomorrow",
+    "rainDayAfter": "Rain day after",
+    "mm": "{{value}} mm",
+    "noRain": "None expected",
+    "loading": "Loading weather",
+    "error": "Weather could not be loaded",
+    "code": {
+      "clear": "Clear sky",
+      "mainlyClear": "Mostly clear",
+      "partlyCloudy": "Partly cloudy",
+      "overcast": "Cloudy",
+      "fog": "Fog",
+      "rimeFog": "Freezing fog",
+      "drizzleLight": "Light drizzle",
+      "drizzleModerate": "Drizzle",
+      "drizzleDense": "Heavy drizzle",
+      "freezingDrizzleLight": "Light freezing drizzle",
+      "freezingDrizzleDense": "Freezing drizzle",
+      "rainSlight": "Light rain",
+      "rainModerate": "Rain",
+      "rainHeavy": "Heavy rain",
+      "freezingRainLight": "Light freezing rain",
+      "freezingRainHeavy": "Freezing rain",
+      "snowSlight": "Light snow",
+      "snowModerate": "Snow",
+      "snowHeavy": "Heavy snow",
+      "snowGrains": "Snow grains",
+      "showersSlight": "Light showers",
+      "showersModerate": "Showers",
+      "showersViolent": "Heavy showers",
+      "snowShowersSlight": "Light snow showers",
+      "snowShowersHeavy": "Snow showers",
+      "thunderstorm": "Thunderstorm",
+      "thunderstormHailSlight": "Thunderstorm with hail",
+      "thunderstormHailHeavy": "Thunderstorm with heavy hail"
+    },
+    "intro": "Conditions right now, and rain measured over three days.",
+    "empty": "No weather readings have arrived yet.",
+    "source": "Weather readings from Open-Meteo, licensed CC BY 4.0.",
+    "degrees": "{{value}}°C",
+    "noReading": "No reading",
+    "noRainReading": "Not reported",
+    "rainPast": "Rain, last 3 days",
+    "rainNext": "Rain, next 3 days",
+    "rain": {
+      "dry": "None",
+      "light": "Light",
+      "steady": "Steady",
+      "heavy": "Heavy"
+    },
+    "town": {
+      "Madikeri": "Madikeri",
+      "Virajpet": "Virajpet",
+      "Kushalnagar": "Kushalnagar",
+      "Somwarpet": "Somwarpet",
+      "Gonikoppal": "Gonikoppal"
+    },
+    "eyebrow": "Your district",
+    "sunToday": "Sun today",
+    "rainChanceToday": "Chance of rain",
+    "hours": "{{value}} hours",
+    "percent": "{{value}}%",
+    "notReported": "Not reported",
+    "positionOf": "{{current}} of {{total}}",
+    "showTown": "Show {{town}}"
   }
 }

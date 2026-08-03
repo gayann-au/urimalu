@@ -78,6 +78,18 @@ export default {
           950: "#120D0C",
         },
       },
+      // Elevation, copied verbatim from the landing design system's CSS
+      // variables so the app layers the same way the landing page does. These
+      // are the --shadow-* values in LandingPage.css, not Tailwind's defaults,
+      // which are cooler and flatter and read as a different product.
+      boxShadow: {
+        "uri-sm": "0 2px 8px rgba(26,20,19,.06), 0 1px 2px rgba(26,20,19,.05)",
+        "uri-md": "0 10px 28px rgba(26,20,19,.08), 0 2px 6px rgba(26,20,19,.05)",
+        "uri-lg": "0 24px 64px rgba(26,20,19,.14)",
+        // The landing's call to action glow, in chilli rather than crop,
+        // because the sell button is the one chilli action in the app.
+        "uri-chilli": "0 14px 30px rgba(214,38,58,.32)",
+      },
       fontFamily: {
         sans: ['"Hanken Grotesk"', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],
         display: ['"Bricolage Grotesque"', '"Hanken Grotesk"', 'system-ui', 'sans-serif'],
