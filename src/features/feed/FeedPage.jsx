@@ -80,7 +80,15 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 pb-12 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8 isolate">
+    /* Farmers get extra room at the foot of the page because the Ready to
+       Sell trigger floats over it. Without this the last merchant card sits
+       under the button, which is the one thing a persistent control must never
+       do. Everyone else keeps the original pb-12. */
+    <div
+      className={`flex flex-col flex-1 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8 isolate ${
+        profile?.role === "FARMER" ? "pb-32" : "pb-12"
+      }`}
+    >
       <GlowBackdrop/>
       <Header/>
 

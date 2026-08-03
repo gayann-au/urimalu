@@ -120,6 +120,35 @@ export function formatRainMm(mm) {
   });
 }
 
+// Hours of sunshine for display, one decimal, or null when there is none.
+//
+// Open-Meteo publishes sunshine_duration in seconds, which is a unit nobody
+// thinks in. 1978.81 seconds is 0.5 hours, and printing the raw figure would
+// be a number that looks precise and means nothing to the reader.
+const SECONDS_PER_HOUR = 3600;
+
+export function formatSunshineHours(seconds) {
+  if (seconds == null || seconds === "" || isNaN(Number(seconds))) return null;
+  const hours = Number(seconds) / SECONDS_PER_HOUR;
+  if (hours < 0) return null;
+  return hours.toLocaleString("en-IN", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+}
+
+// A rain chance percentage for display, whole numbers, or null.
+//
+// This is the vendor's own probability for the day, passed through and never
+// recomputed. Values outside 0 to 100 are refused rather than clamped, because
+// a percentage outside that range means the field is not what we think it is.
+export function formatRainChance(percent) {
+  if (percent == null || percent === "" || isNaN(Number(percent))) return null;
+  const value = Number(percent);
+  if (value < 0 || value > 100) return null;
+  return String(Math.round(value));
+}
+
 // A temperature for display: whole degrees, or null when there is none.
 // Open-Meteo sends one decimal. A farmer deciding whether to spread coffee on
 // the drying yard does not need the tenth, and dropping it keeps the figure

@@ -273,6 +273,44 @@ function formatDayMonthYear(day, month, year) {
   return `${day} ${label} ${year}`;
 }
 
+const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+// "16 June 2026". The same date formatValidTill renders, with the month
+// written out instead of clipped to three letters.
+//
+// It exists for the market strip, where a date is a load bearing part of the
+// claim rather than a detail on a listing. "Jun" is a fine abbreviation for
+// someone who reads English fluently and is one more small decoding job for
+// someone who does not, and this feature is read by farmers with limited
+// schooling. The abbreviation stays everywhere else, so the rest of the app is
+// unchanged.
+//
+// Shares formatValidTill's YYYY-MM-DD prefix handling exactly, so a date
+// column never gets dragged through a timezone on its way to the screen.
+export function formatLongDate(value) {
+  if (!value) return "";
+  const s = String(value).trim();
+  if (!s) return "";
+
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  let day, month, year;
+  if (iso) {
+    year = Number(iso[1]);
+    month = Number(iso[2]);
+    day = Number(iso[3]);
+  } else {
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return "";
+    day = d.getDate();
+    month = d.getMonth() + 1;
+    year = d.getFullYear();
+  }
+
+  const label = MONTHS_LONG[month - 1];
+  if (!label) return "";
+  return `${day} ${label} ${year}`;
+}
+
 // Crop grade suffixes that are always written fully uppercase in the trade
 // (e.g. "Robusta Cherry EP", "Arabica Cherry OT"). Title-casing them like a
 // normal word would corrupt the canonical spelling, which alerts match on

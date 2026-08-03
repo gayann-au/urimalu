@@ -381,7 +381,10 @@
     "emptyHeading": "No seller leads yet.",
     "emptyBody": "Farmers who are ready to sell will show up here.",
     "unread": "Unread",
-    "waMessage": "Namaste {{name}}, I saw you are ready to sell on Urimalu."
+    "waMessage": "Namaste {{name}}, I saw you are ready to sell on Urimalu.",
+    "floatingLabel": "I am ready to sell",
+    "floatingShort": "Sell",
+    "floatingDismiss": "Make this button smaller"
   },
   "notif": {
     "title": "Notifications",
@@ -523,7 +526,7 @@
       "uscLb": "US cents for every pound",
       "usdTon": "US dollars for every tonne"
     },
-    "pricedOn": "Priced {{date}}",
+    "pricedOn": "Rate as on {{date}}",
     "ageDays": "{{count}} days ago",
     "ageDay": "{{count}} day ago",
     "ageToday": "today",
@@ -560,7 +563,8 @@
     "emptyCrop": "No price has arrived for {{crop}} yet.",
     "emptyCurve": "No future month prices have arrived yet.",
     "today": {
-      "heading": "Today's rates"
+      "heading": "Today's rates",
+      "eyebrow": "Today"
     },
     "world": {
       "heading": "Global benchmarks",
@@ -568,15 +572,24 @@
       "londonRobusta": "London Robusta",
       "iceArabica": "Arabica, ICE New York",
       "delivery": "For delivery in {{month}}",
-      "empty": "No world benchmark prices have arrived yet."
+      "empty": "No world benchmark prices have arrived yet.",
+      "eyebrow": "Around the world"
     },
     "fx": {
       "title": "US dollar to rupee",
       "unit": "rupees for one US dollar",
-      "updated": "Rate from {{date}}",
-      "source": "exchangerate-api.com",
+      "updated": "Rate as on {{date}}",
+      "source": "ExchangeRate-API",
       "unavailable": "The dollar rate could not be loaded.",
       "loading": "Loading the dollar rate"
+    },
+    "explain": {
+      "open": "What is this?",
+      "cpa": "These are the rates the Coorg Planters' Association published for the district on the date shown. A buyer near you may offer more or less than this. Moisture, grade, and how much they need that day all change what a buyer pays.",
+      "londonRobusta": "Robusta is the coffee most of Kodagu grows. On a large market in London, buyers and sellers from around the world agree a price today for Robusta to be delivered in a later month. Exporters and big buyers follow that price, so it feeds into what buyers here offer.",
+      "iceArabica": "Arabica is the other main coffee, grown on higher land. This is the price agreed on a large market in New York for Arabica to be delivered in a later month. It is counted in US cents for one pound, and a pound is a smaller weight than a kilo.",
+      "usdInr": "Coffee is bought and sold between countries in US dollars, not rupees. This line says how many rupees one dollar is worth. When this number moves, the world coffee price comes to a different number of rupees, even if the coffee price itself has not changed.",
+      "weather": "Sun today is how many hours the sun was out. Chance of rain is how likely the weather service thinks rain is today, counted out of a hundred. The two rain figures are how many millimetres fell in the last three days and how much is expected in the next three. Coffee and pepper are dried in the open air, so sun and rain both affect that work."
     }
   },
   "weather": {
@@ -624,7 +637,7 @@
     },
     "intro": "Conditions right now, and rain measured over three days.",
     "empty": "No weather readings have arrived yet.",
-    "source": "Weather readings from Open-Meteo",
+    "source": "Weather readings from Open-Meteo, licensed CC BY 4.0.",
     "degrees": "{{value}}°C",
     "noReading": "No reading",
     "noRainReading": "Not reported",
@@ -642,6 +655,12 @@
       "Kushalnagar": "Kushalnagar",
       "Somwarpet": "Somwarpet",
       "Gonikoppal": "Gonikoppal"
-    }
+    },
+    "eyebrow": "Your district",
+    "sunToday": "Sun today",
+    "rainChanceToday": "Chance of rain",
+    "hours": "{{value}} hours",
+    "percent": "{{value}}%",
+    "notReported": "Not reported"
   }
 }

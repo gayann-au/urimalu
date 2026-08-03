@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { dataAge } from "../../lib/dataAge";
-import { formatValidTill } from "../../lib/constants";
+import { formatLongDate } from "../../lib/constants";
 
 // The age and attribution block that sits under every market number.
 //
@@ -82,7 +82,7 @@ function ClockIcon() {
 //
 // fetched_at is a timestamptz, a real instant, so new Date() is correct for it.
 // That is the opposite of source_date, which is a date column and is handled by
-// dataAge.js and formatValidTill through their YYYY-MM-DD prefix. The two look
+// dataAge.js and formatLongDate through their YYYY-MM-DD prefix. The two look
 // inconsistent side by side and are not: parsing a date column as an instant is
 // the bug dataAge.js exists to avoid, and formatting an instant by its stored
 // prefix is the same bug pointing the other way, because the prefix of
@@ -95,7 +95,7 @@ function localDateParts(value) {
   return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
 }
 
-// "YYYY-MM-DD" for the reader's local calendar day, so formatValidTill renders
+// "YYYY-MM-DD" for the reader's local calendar day, so formatLongDate renders
 // the same day the isSameDay check below reasons about.
 function toLocalIsoDay(parts) {
   const mm = String(parts.month).padStart(2, "0");
@@ -118,7 +118,7 @@ export function DataAgeLine({ sourceDate, sourceKey, fetchedAt }) {
   const sourceLabelKey = labelKeyFor(sourceKey);
   if (!age || !sourceLabelKey) return null;
 
-  const pricedOn = t("market.pricedOn", { date: formatValidTill(sourceDate) });
+  const pricedOn = t("market.pricedOn", { date: formatLongDate(sourceDate) });
   // The comma is untranslated punctuation joining two translated fragments.
   // Kannada takes the same comma, so this holds for both languages today. A
   // language that does not would need a joining key rather than this literal.
@@ -138,7 +138,7 @@ export function DataAgeLine({ sourceDate, sourceKey, fetchedAt }) {
   const today = localDateParts(Date.now());
   const checkedLine = fetched
     ? t(isSameDay(fetched, today) ? "market.checkedToday" : "market.checkedOn", {
-        date: formatValidTill(toLocalIsoDay(fetched)),
+        date: formatLongDate(toLocalIsoDay(fetched)),
       })
     : null;
 

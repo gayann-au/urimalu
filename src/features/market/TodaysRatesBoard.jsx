@@ -1,9 +1,13 @@
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
 import { LoadError } from "../../components/ui/LoadError";
+import { useUriMotion } from "../../lib/uiMotion";
 import { MARKET_CROP_APP_NAMES } from "../../lib/marketCrops";
 import { useMarketSnapshots, latestPerKey } from "./useMarketSnapshots";
 import { MarketPriceRow, canRenderPrice } from "./MarketPriceRow";
 import { DataAgeLine } from "./DataAgeLine";
+import { Explainer } from "./Explainer";
+import { SectionEyebrow } from "./SectionEyebrow";
 
 // SECTION A. Today's rates, all six CPA crops at once.
 //
@@ -14,8 +18,7 @@ import { DataAgeLine } from "./DataAgeLine";
 // them.
 //
 // Farmers and merchants see the same six numbers. Role is not read in this
-// file at all, which is a change from the switcher this replaces: that had to
-// pick an opening crop, and picking meant reading a role near a price.
+// file at all.
 
 // The six crops, in fixed catalogue order, read from the committed map so
 // there is no second list to drift from the first. Object key order is
@@ -45,9 +48,9 @@ function cpaRowsInOrder(rows) {
 
 // Whether one age and attribution line can honestly stand for the whole board.
 //
-// Today all six rows carry source_date 2026-06-16 and source cpa, so the line
-// goes once at section level instead of six times. That is a fact about the
-// data, not a promise, so it is checked rather than assumed: if a later refresh
+// Today all six rows carry one source_date and source cpa, so the line goes
+// once at section level instead of six times. That is a fact about the data,
+// not a promise, so it is checked rather than assumed: if a later refresh
 // leaves the rows on different dates, this returns null and the board falls
 // back to a line under every row. The rule that every number carries its date
 // never bends, only where the date is printed does.
@@ -86,6 +89,7 @@ const BOARD_GRID = "grid grid-cols-2 gap-2.5 sm:grid-cols-3";
 
 export function TodaysRatesBoard() {
   const { t } = useTranslation();
+  const m = useUriMotion();
   const snapshotsQ = useMarketSnapshots();
 
   const rows = snapshotsQ.data;
@@ -93,13 +97,29 @@ export function TodaysRatesBoard() {
   const shared = sharedProvenance(entries);
 
   return (
-    <section className="mt-5" aria-label={t("market.today.heading")}>
-      {/* Heading and intro render in every state, including while loading, so
-          the reader sees the section exists rather than a grey slab. */}
-      <h2 className="font-display text-2xl font-extrabold tracking-tight text-ink-900">
-        {t("market.today.heading")}
-      </h2>
-      <p className="mt-1 text-sm text-ink-500">{t("market.intro")}</p>
+    <motion.section
+      className="mt-5"
+      aria-label={t("market.today.heading")}
+      variants={m.stagger}
+      initial="hidden"
+      // animate, not whileInView. This section mounts already in the viewport
+      // at the top of the feed, and the in-view observer sometimes never fires
+      // in that case, which would leave the whole board stuck at opacity 0.
+      // CropsTab in FeedPage.jsx carries the same note for the same reason.
+      animate="show"
+    >
+      {/* Heading, eyebrow and intro render in every state, including while
+          loading, so the reader sees the section exists rather than a slab. */}
+      <motion.div variants={m.fadeUp}>
+        <SectionEyebrow labelKey="market.today.eyebrow"/>
+        <div className="mt-1.5 flex flex-wrap items-start justify-between gap-x-3">
+          <h2 className="font-display text-[26px] font-extrabold leading-none tracking-tight text-ink-900">
+            {t("market.today.heading")}
+          </h2>
+          <Explainer bodyKey="market.explain.cpa"/>
+        </div>
+        <p className="mt-1.5 text-sm text-ink-500">{t("market.intro")}</p>
+      </motion.div>
 
       <div className="mt-3">
         {snapshotsQ.isLoading ? (
@@ -107,7 +127,7 @@ export function TodaysRatesBoard() {
             {CROP_KEYS.map((cropKey) => (
               <div
                 key={cropKey}
-                className="h-28 animate-pulse rounded-[14px] border border-ink-200 bg-white"
+                className="h-[104px] animate-pulse rounded-[14px] border border-ink-100 bg-white shadow-uri-sm"
               />
             ))}
           </div>
@@ -120,14 +140,16 @@ export function TodaysRatesBoard() {
           // no rows came back or because none of them could state its own date
           // and source. Both are the same thing to a reader: no rates today.
           <div
-            className="rounded-[18px] border border-ink-200 bg-white p-6 text-sm text-ink-500 shadow-sm"
+            className="rounded-[18px] border border-ink-100 bg-white p-6 text-sm text-ink-500 shadow-uri-sm"
             data-state="empty"
           >
             {t("market.emptyAll")}
           </div>
         ) : (
           <div data-state="populated">
-            <div className={BOARD_GRID}>
+            {/* The grid is the stagger parent for the six cards, so they
+                arrive one after another rather than all at once. */}
+            <motion.div className={BOARD_GRID} variants={m.stagger}>
               {entries.map(({ cropKey, row }) => (
                 <MarketPriceRow
                   key={cropKey}
@@ -138,21 +160,23 @@ export function TodaysRatesBoard() {
                   showProvenance={!shared}
                 />
               ))}
-            </div>
+            </motion.div>
 
             {/* One age and attribution block for the whole board, which is
-                what makes the six rows above legible as one set of numbers
+                what makes the six cards above legible as one set of numbers
                 from one body on one day. */}
             {shared && (
-              <DataAgeLine
-                sourceDate={shared.sourceDate}
-                sourceKey={shared.sourceKey}
-                fetchedAt={shared.fetchedAt}
-              />
+              <motion.div variants={m.fadeUp}>
+                <DataAgeLine
+                  sourceDate={shared.sourceDate}
+                  sourceKey={shared.sourceKey}
+                  fetchedAt={shared.fetchedAt}
+                />
+              </motion.div>
             )}
           </div>
         )}
       </div>
-    </section>
+    </motion.section>
   );
 }

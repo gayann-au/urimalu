@@ -59,13 +59,20 @@ const PAST_WINDOW = [0, 3];
 const NEXT_WINDOW = [3, 6];
 const EXPECTED_DAILY_COUNT = 6;
 
+// Index 3 is today, the first of the three forecast days. Sunshine and rain
+// chance are read for today only rather than summed across a window: hours of
+// sun added up over three days is not a figure anyone can picture, and the
+// highest chance of rain across three days would quietly become a claim about
+// a day the reader did not ask about.
+const TODAY_INDEX = 3;
+
 function buildUrl() {
   const coords = WEATHER_TOWNS.map((name) => KODAGU_PLACES[name]);
   const params = new URLSearchParams({
     latitude: coords.map((c) => c.lat).join(","),
     longitude: coords.map((c) => c.lon).join(","),
     current: "temperature_2m,relative_humidity_2m,weather_code",
-    daily: "precipitation_sum",
+    daily: "precipitation_sum,sunshine_duration,precipitation_probability_max",
     past_days: "3",
     forecast_days: "3",
     timezone: "Asia/Kolkata",
@@ -140,6 +147,13 @@ async function fetchKodaguWeather() {
       weatherCode: entry?.current?.weather_code ?? null,
       rainPast3Mm: sumWindow(sums, PAST_WINDOW),
       rainNext3Mm: sumWindow(sums, NEXT_WINDOW),
+      // Today's figures, read straight off the vendor's arrays. Null when the
+      // daily block is the wrong length, same as the rain windows, so a card
+      // drops the line rather than reading off the end of an array.
+      sunshineTodayS: hasDaily ? daily.sunshine_duration?.[TODAY_INDEX] ?? null : null,
+      rainChanceTodayPct: hasDaily
+        ? daily.precipitation_probability_max?.[TODAY_INDEX] ?? null
+        : null,
     };
   });
 }

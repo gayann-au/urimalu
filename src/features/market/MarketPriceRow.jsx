@@ -1,4 +1,6 @@
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
+import { useUriMotion } from "../../lib/uiMotion";
 import { formatMarketPrice, unitGlossKey } from "../../lib/marketCrops";
 import { dataAge } from "../../lib/dataAge";
 import { DataAgeLine, canNameSource } from "./DataAgeLine";
@@ -80,9 +82,13 @@ export function UnitLine({ unit }) {
   const { t } = useTranslation();
   const glossKey = unitGlossKey(unit);
   return (
-    <div className="mt-1">
-      <p className="text-xs text-ink-600">{unit}</p>
-      {glossKey && <p className="text-xs text-ink-500">{t(glossKey)}</p>}
+    <div className="mt-1.5">
+      {/* The gloss leads and the stored token follows in smaller, quieter type.
+          The plain words are the part a farmer reads; "INR/50kg" is the token
+          the source stored, kept on screen so the figure stays checkable
+          against the sheet it came from. */}
+      {glossKey && <p className="text-xs text-ink-600">{t(glossKey)}</p>}
+      <p className="text-[11px] tracking-wide text-ink-500">{unit}</p>
     </div>
   );
 }
@@ -124,15 +130,34 @@ export function FlaggedNote({ row }) {
 // it, and the board decides which.
 export function MarketPriceRow({ row, nameKey, showProvenance = false }) {
   const { t } = useTranslation();
+  const m = useUriMotion();
 
   // No price at all when provenance is missing. Not a price with a caveat, not
   // a price in grey, not a dash where the number should be. Nothing.
   if (!canRenderPrice(row)) return null;
 
   return (
-    <article className="rounded-[14px] border border-ink-200 bg-white p-4">
-      {/* The heading face, matching the merchant cards on this same page. */}
-      <h3 className="font-display text-sm font-extrabold leading-tight tracking-tight text-ink-900">
+    <motion.article
+      variants={m.fadeUp}
+      // btnTap is the committed scale-on-tap, already { scale: 0.97 } and
+      // already undefined under prefers-reduced-motion. Reused rather than a
+      // new cardTap added beside it, so there is one tap reaction in the app.
+      whileTap={m.btnTap}
+      // Depth instead of an outline. A hairline in ink-100 plus the landing's
+      // own small shadow lifts the card off the paper, where the old flat
+      // ink-200 box just drew a rectangle around it. shadow-uri-sm is the
+      // landing's --shadow-sm, copied into the config rather than reinvented.
+      className="rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm"
+    >
+      {/* THE HIERARCHY. The crop name is a quiet label and the price is the
+          card. It was the other way round when both sat near the same weight
+          and the board read as an undifferentiated wall of text. Small caps in
+          ink-500 step the name back without hiding it, since a farmer still
+          has to know which crop they are looking at. */}
+      {/* break-words is load bearing in Kannada, not decoration. "ಅರೇಬಿಕಾ
+          ಪಾರ್ಚ್‌ಮೆಂಟ್" has no break opportunity a 158px column can use, and
+          without this it runs straight out of the card. */}
+      <h3 className="text-[11px] font-bold uppercase leading-tight tracking-wide text-ink-500 break-words">
         {t(nameKey)}
       </h3>
 
@@ -141,7 +166,7 @@ export function MarketPriceRow({ row, nameKey, showProvenance = false }) {
           bad, and there is no change line for one to sit on. break-words lets a
           two-ended range wrap inside a narrow phone column rather than
           overflowing it or being shrunk to fit. */}
-      <p className="mt-2 text-xl font-bold leading-tight text-ink-900 tabular-nums break-words">
+      <p className="mt-1.5 font-display text-[22px] font-extrabold leading-[1.15] tracking-tight text-ink-900 tabular-nums break-words">
         {priceTextFor(row, t)}
       </p>
 
@@ -155,6 +180,6 @@ export function MarketPriceRow({ row, nameKey, showProvenance = false }) {
           fetchedAt={row.fetched_at}
         />
       )}
-    </article>
+    </motion.article>
   );
 }
