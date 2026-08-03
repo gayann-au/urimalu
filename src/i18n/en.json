@@ -558,10 +558,29 @@
     "loading": "Loading market prices",
     "emptyAll": "No market prices have arrived yet. They are collected once each morning.",
     "emptyCrop": "No price has arrived for {{crop}} yet.",
-    "emptyCurve": "No future month prices have arrived yet."
+    "emptyCurve": "No future month prices have arrived yet.",
+    "today": {
+      "heading": "Today's rates"
+    },
+    "world": {
+      "heading": "Global benchmarks",
+      "intro": "Prices agreed on world exchanges. They are not Kodagu prices and not an offer to you.",
+      "londonRobusta": "London Robusta",
+      "iceArabica": "Arabica, ICE New York",
+      "delivery": "For delivery in {{month}}",
+      "empty": "No world benchmark prices have arrived yet."
+    },
+    "fx": {
+      "title": "US dollar to rupee",
+      "unit": "rupees for one US dollar",
+      "updated": "Rate from {{date}}",
+      "source": "exchangerate-api.com",
+      "unavailable": "The dollar rate could not be loaded.",
+      "loading": "Loading the dollar rate"
+    }
   },
   "weather": {
-    "heading": "Weather",
+    "heading": "Rain and weather by town",
     "fallbackNote": "Showing Madikeri",
     "temp": "Temperature",
     "humidity": "Humidity",
@@ -579,12 +598,50 @@
       "partlyCloudy": "Partly cloudy",
       "overcast": "Cloudy",
       "fog": "Fog",
-      "drizzle": "Light drizzle",
-      "rain": "Rain",
-      "heavyRain": "Heavy rain",
-      "showers": "Showers",
+      "rimeFog": "Freezing fog",
+      "drizzleLight": "Light drizzle",
+      "drizzleModerate": "Drizzle",
+      "drizzleDense": "Heavy drizzle",
+      "freezingDrizzleLight": "Light freezing drizzle",
+      "freezingDrizzleDense": "Freezing drizzle",
+      "rainSlight": "Light rain",
+      "rainModerate": "Rain",
+      "rainHeavy": "Heavy rain",
+      "freezingRainLight": "Light freezing rain",
+      "freezingRainHeavy": "Freezing rain",
+      "snowSlight": "Light snow",
+      "snowModerate": "Snow",
+      "snowHeavy": "Heavy snow",
+      "snowGrains": "Snow grains",
+      "showersSlight": "Light showers",
+      "showersModerate": "Showers",
+      "showersViolent": "Heavy showers",
+      "snowShowersSlight": "Light snow showers",
+      "snowShowersHeavy": "Snow showers",
       "thunderstorm": "Thunderstorm",
-      "unknown": "Weather not described"
+      "thunderstormHailSlight": "Thunderstorm with hail",
+      "thunderstormHailHeavy": "Thunderstorm with heavy hail"
+    },
+    "intro": "Conditions right now, and rain measured over three days.",
+    "empty": "No weather readings have arrived yet.",
+    "source": "Weather readings from Open-Meteo",
+    "degrees": "{{value}}°C",
+    "noReading": "No reading",
+    "noRainReading": "Not reported",
+    "rainPast": "Rain, last 3 days",
+    "rainNext": "Rain, next 3 days",
+    "rain": {
+      "dry": "None",
+      "light": "Light",
+      "steady": "Steady",
+      "heavy": "Heavy"
+    },
+    "town": {
+      "Madikeri": "Madikeri",
+      "Virajpet": "Virajpet",
+      "Kushalnagar": "Kushalnagar",
+      "Somwarpet": "Somwarpet",
+      "Gonikoppal": "Gonikoppal"
     }
   }
 }

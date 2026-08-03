@@ -103,13 +103,15 @@ export default function FeedPage() {
       {/* Ready to Sell: farmers only. */}
       {profile?.role === "FARMER" && <ReadyToSellCard profile={profile}/>}
 
-      {/* Market reference prices. Logged in only: the RLS policy is `to
+      {/* Today's rates, the weather by town, and the world benchmarks, in that
+          order. Logged in only: the RLS policy on market_snapshots is `to
           authenticated` and would return zero rows for a visitor anyway, so
-          this gate saves a wasted request and an empty card on the public
-          feed. Above the tabs, not inside one, because the strip is neither
-          merchant data nor crop-listing data and would be hidden half the
-          time in either tab. */}
-      {loggedIn && <MarketStrip profile={profile}/>}
+          this gate saves a wasted request and an empty board on the public
+          feed. Above the tabs, not inside one, because none of the three is
+          merchant data or crop-listing data and all would be hidden half the
+          time in either tab. Takes no props: every section runs its own query
+          and none of them reads the reader's role. */}
+      {loggedIn && <MarketStrip/>}
 
       {/* Tabs */}
       <div className="bg-white border-b border-ink-100 sticky top-[64px] z-20">

@@ -558,10 +558,29 @@
     "loading": "ಮಾರುಕಟ್ಟೆ ದರಗಳು ಬರುತ್ತಿವೆ",
     "emptyAll": "ಇನ್ನೂ ಯಾವುದೇ ಮಾರುಕಟ್ಟೆ ದರ ಬಂದಿಲ್ಲ. ಪ್ರತಿ ಬೆಳಿಗ್ಗೆ ಒಮ್ಮೆ ಇವನ್ನು ಸಂಗ್ರಹಿಸಲಾಗುತ್ತದೆ.",
     "emptyCrop": "{{crop}} ಗೆ ಇನ್ನೂ ದರ ಬಂದಿಲ್ಲ.",
-    "emptyCurve": "ಮುಂದಿನ ತಿಂಗಳುಗಳ ದರಗಳು ಇನ್ನೂ ಬಂದಿಲ್ಲ."
+    "emptyCurve": "ಮುಂದಿನ ತಿಂಗಳುಗಳ ದರಗಳು ಇನ್ನೂ ಬಂದಿಲ್ಲ.",
+    "today": {
+      "heading": "ಇಂದಿನ ದರಗಳು"
+    },
+    "world": {
+      "heading": "ಜಾಗತಿಕ ಮಾನದಂಡ ದರಗಳು",
+      "intro": "ಜಾಗತಿಕ ವಿನಿಮಯ ಕೇಂದ್ರಗಳಲ್ಲಿ ಒಪ್ಪಿಕೊಂಡ ದರಗಳು. ಇವು ಕೊಡಗಿನ ದರಗಳಲ್ಲ ಮತ್ತು ನಿಮಗೆ ನೀಡಿದ ದರವೂ ಅಲ್ಲ.",
+      "londonRobusta": "ಲಂಡನ್ ರೊಬಸ್ಟಾ",
+      "iceArabica": "ಅರೇಬಿಕಾ, ಐಸಿಇ ನ್ಯೂಯಾರ್ಕ್",
+      "delivery": "{{month}} ತಿಂಗಳ ವಿತರಣೆಗೆ",
+      "empty": "ಜಾಗತಿಕ ಮಾನದಂಡ ದರಗಳು ಇನ್ನೂ ಬಂದಿಲ್ಲ."
+    },
+    "fx": {
+      "title": "ಅಮೆರಿಕನ್ ಡಾಲರ್ ಮತ್ತು ರೂಪಾಯಿ",
+      "unit": "ಒಂದು ಅಮೆರಿಕನ್ ಡಾಲರ್‌ಗೆ ರೂಪಾಯಿ",
+      "updated": "{{date}} ರ ದರ",
+      "source": "exchangerate-api.com",
+      "unavailable": "ಡಾಲರ್ ದರ ಸಿಗಲಿಲ್ಲ.",
+      "loading": "ಡಾಲರ್ ದರ ಬರುತ್ತಿದೆ"
+    }
   },
   "weather": {
-    "heading": "ಹವಾಮಾನ",
+    "heading": "ಊರುವಾರು ಮಳೆ ಮತ್ತು ಹವಾಮಾನ",
     "fallbackNote": "ಮಡಿಕೇರಿಯ ಮಾಹಿತಿ ತೋರಿಸಲಾಗಿದೆ",
     "temp": "ಉಷ್ಣಾಂಶ",
     "humidity": "ತೇವಾಂಶ",
@@ -579,12 +598,50 @@
       "partlyCloudy": "ಭಾಗಶಃ ಮೋಡ",
       "overcast": "ಮೋಡ ಕವಿದಿದೆ",
       "fog": "ಮಂಜು",
-      "drizzle": "ತುಂತುರು ಮಳೆ",
-      "rain": "ಮಳೆ",
-      "heavyRain": "ಭಾರೀ ಮಳೆ",
-      "showers": "ಸೋನೆ ಮಳೆ",
+      "rimeFog": "ಹಿಮ ಮಂಜು",
+      "drizzleLight": "ಸಣ್ಣ ತುಂತುರು ಮಳೆ",
+      "drizzleModerate": "ತುಂತುರು ಮಳೆ",
+      "drizzleDense": "ದಟ್ಟ ತುಂತುರು ಮಳೆ",
+      "freezingDrizzleLight": "ಸಣ್ಣ ಹಿಮ ತುಂತುರು ಮಳೆ",
+      "freezingDrizzleDense": "ಹಿಮ ತುಂತುರು ಮಳೆ",
+      "rainSlight": "ಸಣ್ಣ ಮಳೆ",
+      "rainModerate": "ಮಳೆ",
+      "rainHeavy": "ಭಾರೀ ಮಳೆ",
+      "freezingRainLight": "ಸಣ್ಣ ಹಿಮ ಮಳೆ",
+      "freezingRainHeavy": "ಹಿಮ ಮಳೆ",
+      "snowSlight": "ಸಣ್ಣ ಹಿಮಪಾತ",
+      "snowModerate": "ಹಿಮಪಾತ",
+      "snowHeavy": "ಭಾರೀ ಹಿಮಪಾತ",
+      "snowGrains": "ಹಿಮ ಕಣಗಳು",
+      "showersSlight": "ಸಣ್ಣ ಸೋನೆ ಮಳೆ",
+      "showersModerate": "ಸೋನೆ ಮಳೆ",
+      "showersViolent": "ಭಾರೀ ಸೋನೆ ಮಳೆ",
+      "snowShowersSlight": "ಸಣ್ಣ ಹಿಮ ಸೋನೆ",
+      "snowShowersHeavy": "ಹಿಮ ಸೋನೆ",
       "thunderstorm": "ಗುಡುಗು ಸಹಿತ ಮಳೆ",
-      "unknown": "ಹವಾಮಾನ ವಿವರಿಸಿಲ್ಲ"
+      "thunderstormHailSlight": "ಆಲಿಕಲ್ಲು ಸಹಿತ ಗುಡುಗು ಮಳೆ",
+      "thunderstormHailHeavy": "ಭಾರೀ ಆಲಿಕಲ್ಲು ಸಹಿತ ಗುಡುಗು ಮಳೆ"
+    },
+    "intro": "ಈಗಿನ ಹವಾಮಾನ, ಮತ್ತು ಮೂರು ದಿನಗಳಲ್ಲಿ ಅಳೆದ ಮಳೆ.",
+    "empty": "ಇನ್ನೂ ಯಾವುದೇ ಹವಾಮಾನ ಮಾಹಿತಿ ಬಂದಿಲ್ಲ.",
+    "source": "ಹವಾಮಾನ ಮಾಹಿತಿ ಓಪನ್-ಮೆಟಿಯೊದಿಂದ",
+    "degrees": "{{value}}°C",
+    "noReading": "ಮಾಹಿತಿ ಇಲ್ಲ",
+    "noRainReading": "ವರದಿಯಾಗಿಲ್ಲ",
+    "rainPast": "ಕಳೆದ 3 ದಿನಗಳ ಮಳೆ",
+    "rainNext": "ಮುಂದಿನ 3 ದಿನಗಳ ಮಳೆ",
+    "rain": {
+      "dry": "ಇಲ್ಲ",
+      "light": "ಕಡಿಮೆ",
+      "steady": "ಸಾಧಾರಣ",
+      "heavy": "ಹೆಚ್ಚು"
+    },
+    "town": {
+      "Madikeri": "ಮಡಿಕೇರಿ",
+      "Virajpet": "ವೀರಾಜಪೇಟೆ",
+      "Kushalnagar": "ಕುಶಾಲನಗರ",
+      "Somwarpet": "ಸೋಮವಾರಪೇಟೆ",
+      "Gonikoppal": "ಗೋಣಿಕೊಪ್ಪಲು"
     }
   }
 }

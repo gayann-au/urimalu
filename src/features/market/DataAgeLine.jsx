@@ -21,8 +21,8 @@ import { formatValidTill } from "../../lib/constants";
 // value as stored. Two entries today.
 //
 // THIS IS THE SINGLE DEFINITION of which sources this feature can name.
-// MarketPriceCard carried a second copy until it was removed; the two had to be
-// kept in step by hand, and a source added to only one of them made the card
+// The price component carried a second copy until it was removed; the two had
+// to be kept in step by hand, and a source added to only one of them made it
 // pass a row this line then refused to caption, so the price vanished with no
 // explanation. Callers ask canNameSource below rather than keeping a list.
 //
@@ -49,9 +49,9 @@ function labelKeyFor(source) {
 
 // Whether this feature has a name for a stored source value.
 //
-// MarketPriceCard's guard uses this to refuse a price it could not attribute.
-// Both that guard and this component read the one map above, so the card and
-// the line cannot disagree about which sources are nameable.
+// canRenderPrice in MarketPriceRow uses this to refuse a price it could not
+// attribute. Both that guard and this component read the one map above, so the
+// row and the line cannot disagree about which sources are nameable.
 export function canNameSource(source) {
   return labelKeyFor(source) !== null;
 }
