@@ -4,30 +4,39 @@ import { LoadError } from "../../components/ui/LoadError";
 import { formatLongDate } from "../../lib/constants";
 import { useUriMotion } from "../../lib/uiMotion";
 import { useMarketSnapshots, curveRowsForCrop } from "./useMarketSnapshots";
-import { canRenderPrice, priceTextFor, UnitLine, FlaggedNote } from "./MarketPriceRow";
+import {
+  canRenderPrice,
+  priceTextFor,
+  UnitLine,
+  FlaggedNote,
+  storedUnitNote,
+} from "./MarketPriceRow";
 import { DataAgeLine } from "./DataAgeLine";
 import { useUsdInr } from "./useUsdInr";
-import { Explainer } from "./Explainer";
+import { useExplainer, ExplainerButton, ExplainerPanel } from "./Explainer";
 import { SectionEyebrow } from "./SectionEyebrow";
 
 // SECTION C. The world numbers. Smaller than the two above it, and last.
 //
 // Order and size are the argument here. A Kodagu farmer is not paid in US
 // cents, so these come after the rates they are actually paid and after the
-// weather on their own land, and they are set smaller so the page does not
-// read as though London matters more than the CPA sheet does.
+// weather on their own land, and the section heading is set smaller so the
+// page does not read as though London matters more than the CPA sheet does.
 //
-// Within the section London Robusta is first and largest, because Robusta is
-// what Kodagu grows and the London contract is the benchmark the district
-// tracks. Arabica and the dollar rate follow it.
-//
-// These carry their own dates, and that is worth seeing next to Section A. The
-// Coffee Board rows are days old where the CPA sheet is weeks old, and putting
-// both on one page with both dates visible is the honest way to show it. No
-// text anywhere compares them or draws a conclusion from the gap.
+// THE CARDS ARE THE SAME OBJECT AS THE BOARD'S. They were full width blocks
+// that ran title, contract month, a three line paragraph, and only then the
+// number, which left the explanation sitting above the thing it explained and
+// the figure as the smallest element on the card. They are now the same
+// compact card in the same two column grid as Today's rates: label, number,
+// unit, with the explanation collapsed behind the question mark and opening
+// underneath the number it describes.
 
 const CROP_LIFFE_ROBUSTA = "liffe_robusta";
 const CROP_ICE_ARABICA = "ice_arabica";
+
+// Same grid as TodaysRatesBoard, deliberately. The two sections are the same
+// kind of thing and had stopped looking like it.
+const BENCH_GRID = "grid grid-cols-2 gap-2.5";
 
 // The nearest contract month for a futures crop, or null.
 //
@@ -41,67 +50,102 @@ function frontMonthRow(rows, cropKey) {
   return canRenderPrice(first) ? first : null;
 }
 
-// One exchange benchmark: name, delivery month, price, unit, date, source.
+// Whether one line can honestly caption both coffee benchmarks, so two compact
+// cards do not each carry three lines of provenance.
 //
-// size "lead" is London Robusta, "quiet" is Arabica. The difference is the type
-// scale and a chilli rule along the top edge. No colour touches the figure
-// itself and neither card is marked as the one to watch beyond the order they
-// sit in.
-function BenchmarkCard({ row, titleKey, explainKey, size }) {
-  const { t } = useTranslation();
-  const m = useUriMotion();
-  const isLead = size === "lead";
+// Checked, never assumed, exactly as the board does it: same source and same
+// source_date or nothing. fetched_at is the older of the two, because "we last
+// checked" has to be true of both numbers above it.
+function sharedProvenance(rows) {
+  const present = rows.filter(Boolean);
+  if (present.length === 0) return null;
 
+  const first = present[0];
+  let oldestFetchedAt = first.fetched_at;
+  for (const row of present) {
+    if (row.source !== first.source) return null;
+    if (row.source_date !== first.source_date) return null;
+    const current = Date.parse(row.fetched_at);
+    const oldest = Date.parse(oldestFetchedAt);
+    if (!isNaN(current) && (isNaN(oldest) || current < oldest)) {
+      oldestFetchedAt = row.fetched_at;
+    }
+  }
+  return {
+    sourceDate: first.source_date,
+    sourceKey: first.source,
+    fetchedAt: oldestFetchedAt,
+  };
+}
+
+// The shared shell every card in this section uses, so the three cannot drift
+// apart. isLead adds the chilli rule along the top edge: an edge accent
+// marking which one reads first, nowhere near the figure, saying "this one
+// first" and never "this price is good".
+function BenchCard({ isLead = false, children }) {
+  const m = useUriMotion();
   return (
     <motion.article
       variants={m.fadeUp}
       whileTap={m.btnTap}
-      className="overflow-hidden rounded-[18px] border border-ink-100 bg-white shadow-uri-md"
+      className="overflow-hidden rounded-[14px] border border-ink-100 bg-white shadow-uri-sm"
     >
-      {/* The chilli rule is an edge accent marking the lead card of the
-          section. It is a 3px line at the top of the card, nowhere near the
-          figure, and it says "this one first", never "this price is good". */}
       {isLead && <div aria-hidden="true" className="h-[3px] bg-chilli-500"/>}
-
-      <div className="p-5">
-        <div className="flex flex-wrap items-start justify-between gap-x-3">
-          <div className="min-w-0">
-            <h3 className="font-display text-base font-extrabold leading-tight tracking-tight text-ink-900">
-              {t(titleKey)}
-            </h3>
-            {/* contract_month is free text from the source, rendered as
-                stored. It is an exchange's own label for a delivery month and
-                translating it would mean inventing a Kannada month name the
-                exchange does not use. */}
-            {row.contract_month && (
-              <p className="mt-0.5 text-xs text-ink-500">
-                {t("market.world.delivery", { month: row.contract_month })}
-              </p>
-            )}
-          </div>
-          <Explainer bodyKey={explainKey}/>
-        </div>
-
-        <p
-          className={`mt-2.5 font-display font-extrabold leading-none tracking-tight text-ink-900 tabular-nums break-words ${
-            isLead ? "text-[38px]" : "text-3xl"
-          }`}
-        >
-          {priceTextFor(row, t)}
-        </p>
-
-        <UnitLine unit={row.unit}/>
-        <FlaggedNote row={row}/>
-
-        {/* Its own date and its own source, not the section's. This is the
-            contrast the section exists to make visible. */}
-        <DataAgeLine
-          sourceDate={row.source_date}
-          sourceKey={row.source}
-          fetchedAt={row.fetched_at}
-        />
-      </div>
+      <div className="p-3.5">{children}</div>
     </motion.article>
+  );
+}
+
+// The label and the question mark, on one line above the number. Identical in
+// all three cards.
+function BenchHead({ titleKey, subtitle, explainer }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <h3 className="text-[11px] font-bold uppercase leading-tight tracking-wide text-ink-500 break-words">
+          {t(titleKey)}
+        </h3>
+        {subtitle && (
+          <p className="mt-0.5 text-[11px] leading-tight text-ink-500">{subtitle}</p>
+        )}
+      </div>
+      <ExplainerButton {...explainer}/>
+    </div>
+  );
+}
+
+function BenchmarkCard({ row, titleKey, explainKey, isLead }) {
+  const { t } = useTranslation();
+  const explainer = useExplainer();
+
+  return (
+    <BenchCard isLead={isLead}>
+      <BenchHead
+        titleKey={titleKey}
+        // contract_month is free text from the source, rendered as stored. It
+        // is an exchange's own label for a delivery month and translating it
+        // would mean inventing a Kannada month name the exchange does not use.
+        subtitle={row.contract_month ? t("market.world.delivery", { month: row.contract_month }) : null}
+        explainer={explainer}
+      />
+
+      {/* THE NUMBER DOMINATES. Same size and same face as a board card, so a
+          reader moving down the page meets one kind of figure, not two. */}
+      <p className="mt-1.5 font-display text-[22px] font-extrabold leading-[1.15] tracking-tight text-ink-900 tabular-nums break-words">
+        {priceTextFor(row, t)}
+      </p>
+
+      <UnitLine unit={row.unit}/>
+      <FlaggedNote row={row}/>
+
+      {/* Opens below the number it explains, not above it. */}
+      <ExplainerPanel
+        {...explainer}
+        bodyKey={explainKey}
+        extra={storedUnitNote(row.unit, t)}
+      />
+    </BenchCard>
   );
 }
 
@@ -117,16 +161,18 @@ function formatRate(rate) {
 }
 
 // The dollar to rupee rate. Its own query, so a failure here leaves the two
-// coffee benchmarks beside it standing.
+// coffee benchmarks beside it standing, and its own provenance inside the
+// card, because it comes from a different provider on a different day than
+// they do.
 function UsdInrCard() {
   const { t } = useTranslation();
-  const m = useUriMotion();
+  const explainer = useExplainer();
   const fxQ = useUsdInr();
 
   if (fxQ.isLoading) {
     return (
       <div
-        className="h-44 animate-pulse rounded-[18px] border border-ink-100 bg-white shadow-uri-md"
+        className="h-40 animate-pulse rounded-[14px] border border-ink-200 bg-paper-2"
         aria-label={t("market.fx.loading")}
         data-state="loading"
       />
@@ -134,26 +180,22 @@ function UsdInrCard() {
   }
 
   // A failed rate is one missing number, not a broken section. It says so in
-  // one quiet line and offers the retry, rather than taking the LoadError card
-  // and shouting louder than the benchmarks that did load.
+  // words and offers the retry, rather than leaving a gap.
   if (fxQ.isError || !fxQ.data) {
     return (
-      <article
-        className="rounded-[18px] border border-ink-100 bg-white p-5 shadow-uri-md"
-        data-state="error"
-      >
-        <h3 className="font-display text-base font-extrabold leading-tight tracking-tight text-ink-900">
+      <BenchCard>
+        <h3 className="text-[11px] font-bold uppercase leading-tight tracking-wide text-ink-500">
           {t("market.fx.title")}
         </h3>
-        <p className="mt-2 text-sm text-ink-500">{t("market.fx.unavailable")}</p>
+        <p className="mt-1.5 text-sm text-ink-500">{t("market.fx.unavailable")}</p>
         <button
           type="button"
           onClick={() => fxQ.refetch()}
-          className="mt-3 inline-flex min-h-[44px] items-center justify-center rounded-[14px] border-2 border-chilli-600 bg-white px-4 text-sm font-bold text-chilli-700 transition-colors hover:bg-chilli-50"
+          className="mt-2 inline-flex min-h-[44px] items-center rounded-[12px] border-2 border-chilli-600 bg-white px-3 text-xs font-bold text-chilli-700 transition-colors hover:bg-chilli-50"
         >
           {t("common.retry")}
         </button>
-      </article>
+      </BenchCard>
     );
   }
 
@@ -167,40 +209,27 @@ function UsdInrCard() {
     : null;
 
   return (
-    <motion.article
-      variants={m.fadeUp}
-      whileTap={m.btnTap}
-      className="rounded-[18px] border border-ink-100 bg-white p-5 shadow-uri-md"
-      data-state="populated"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-x-3">
-        <h3 className="font-display text-base font-extrabold leading-tight tracking-tight text-ink-900">
-          {t("market.fx.title")}
-        </h3>
-        <Explainer bodyKey="market.explain.usdInr"/>
-      </div>
+    <BenchCard>
+      <BenchHead titleKey="market.fx.title" explainer={explainer}/>
 
-      <p className="mt-2.5 font-display text-3xl font-extrabold leading-none tracking-tight text-ink-900 tabular-nums break-words">
+      <p className="mt-1.5 font-display text-[22px] font-extrabold leading-[1.15] tracking-tight text-ink-900 tabular-nums break-words">
         {formatRate(rate)}
       </p>
       <p className="mt-1.5 text-xs text-ink-600">{t("market.fx.unit")}</p>
 
-      {/* This number is not from our database and not from a body DataAgeLine
-          knows how to name, so it states its own date and its own source here
-          rather than borrowing that component.
-          The provider's raw RFC 1123 stamp used to print underneath. It is
-          gone: "Mon, 03 Aug 2026 00:02:32 +0000" is a machine's way of writing
-          a date and this feature is read by farmers with limited schooling.
-          The same instant now renders as one plain sentence. */}
-      <div className="mt-3 space-y-0.5">
+      {/* Not from our database and not from a body DataAgeLine knows how to
+          name, so it states its own date and its own source here. */}
+      <div className="mt-2 space-y-0.5">
         {localIsoDay && (
-          <p className="text-sm text-ink-500">
+          <p className="text-xs text-ink-500">
             {t("market.fx.updated", { date: formatLongDate(localIsoDay) })}
           </p>
         )}
-        <p className="text-sm text-ink-500">{t("market.fx.source")}</p>
+        <p className="text-xs text-ink-500">{t("market.fx.source")}</p>
       </div>
-    </motion.article>
+
+      <ExplainerPanel {...explainer} bodyKey="market.explain.usdInr"/>
+    </BenchCard>
   );
 }
 
@@ -212,6 +241,7 @@ export function GlobalBenchmarks() {
   const rows = snapshotsQ.data;
   const robusta = rows ? frontMonthRow(rows, CROP_LIFFE_ROBUSTA) : null;
   const arabica = rows ? frontMonthRow(rows, CROP_ICE_ARABICA) : null;
+  const shared = sharedProvenance([robusta, arabica]);
 
   return (
     <motion.section
@@ -219,8 +249,10 @@ export function GlobalBenchmarks() {
       aria-label={t("market.world.heading")}
       variants={m.stagger}
       initial="hidden"
-      whileInView="show"
-      viewport={m.inView}
+      // animate, not whileInView. See the long note in WeatherByTown.jsx: a
+      // one-shot in-view trigger left this whole section at opacity 0 while
+      // holding its height, which reads as a broken app.
+      animate="show"
     >
       <motion.div variants={m.fadeUp}>
         <SectionEyebrow labelKey="market.world.eyebrow"/>
@@ -232,11 +264,14 @@ export function GlobalBenchmarks() {
         <p className="mt-1.5 text-sm text-ink-500">{t("market.world.intro")}</p>
       </motion.div>
 
-      <div className="mt-3 space-y-3">
+      <div className="mt-3">
         {snapshotsQ.isLoading ? (
-          <div className="space-y-3" aria-label={t("market.loading")} data-state="loading">
-            <div className="h-52 animate-pulse rounded-[18px] border border-ink-100 bg-white shadow-uri-md"/>
-            <div className="h-44 animate-pulse rounded-[18px] border border-ink-100 bg-white shadow-uri-md"/>
+          <div data-state="loading">
+            <p className="mb-2 text-sm text-ink-500">{t("market.loading")}</p>
+            <div className={BENCH_GRID}>
+              <div className="h-40 animate-pulse rounded-[14px] border border-ink-200 bg-paper-2"/>
+              <div className="h-40 animate-pulse rounded-[14px] border border-ink-200 bg-paper-2"/>
+            </div>
           </div>
         ) : snapshotsQ.isError ? (
           <div data-state="error">
@@ -244,31 +279,56 @@ export function GlobalBenchmarks() {
           </div>
         ) : !robusta && !arabica ? (
           <div
-            className="rounded-[18px] border border-ink-100 bg-white p-6 text-sm text-ink-500 shadow-uri-sm"
+            className="rounded-[14px] border border-ink-100 bg-white p-5 text-sm text-ink-500 shadow-uri-sm"
             data-state="empty"
           >
             {t("market.world.empty")}
           </div>
         ) : (
-          <div className="space-y-3" data-state="populated">
-            {/* London first and largest. Each card is dropped on its own when
-                its row cannot state a date and a source, so a missing Arabica
-                row does not take Robusta down with it. */}
-            {robusta && (
-              <BenchmarkCard
-                row={robusta}
-                titleKey="market.world.londonRobusta"
-                explainKey="market.explain.londonRobusta"
-                size="lead"
-              />
-            )}
-            {arabica && (
-              <BenchmarkCard
-                row={arabica}
-                titleKey="market.world.iceArabica"
-                explainKey="market.explain.iceArabica"
-                size="quiet"
-              />
+          <div data-state="populated">
+            {/* London first and marked by the chilli edge, Arabica beside it.
+                Each is dropped on its own when its row cannot state a date and
+                a source, so a missing Arabica does not take Robusta down. */}
+            <motion.div className={BENCH_GRID} variants={m.stagger}>
+              {robusta && (
+                <BenchmarkCard
+                  row={robusta}
+                  titleKey="market.world.londonRobusta"
+                  explainKey="market.explain.londonRobusta"
+                  isLead
+                />
+              )}
+              {arabica && (
+                <BenchmarkCard
+                  row={arabica}
+                  titleKey="market.world.iceArabica"
+                  explainKey="market.explain.iceArabica"
+                />
+              )}
+            </motion.div>
+
+            {/* One line for both coffee cards when they genuinely agree, which
+                keeps them compact. Falls back to a line per card when they do
+                not. */}
+            {shared ? (
+              <motion.div variants={m.fadeUp}>
+                <DataAgeLine
+                  sourceDate={shared.sourceDate}
+                  sourceKey={shared.sourceKey}
+                  fetchedAt={shared.fetchedAt}
+                />
+              </motion.div>
+            ) : (
+              <motion.div variants={m.fadeUp} className="mt-1 space-y-1">
+                {[robusta, arabica].filter(Boolean).map((row) => (
+                  <DataAgeLine
+                    key={row.crop_key}
+                    sourceDate={row.source_date}
+                    sourceKey={row.source}
+                    fetchedAt={row.fetched_at}
+                  />
+                ))}
+              </motion.div>
             )}
           </div>
         )}
@@ -276,7 +336,9 @@ export function GlobalBenchmarks() {
         {/* Outside the snapshot branch entirely, because it is a different
             query with a different provider. The database being down has
             nothing to say about whether the dollar rate loaded. */}
-        <UsdInrCard/>
+        <motion.div className={`${BENCH_GRID} mt-3`} variants={m.stagger}>
+          <UsdInrCard/>
+        </motion.div>
       </div>
     </motion.section>
   );

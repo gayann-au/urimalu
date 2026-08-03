@@ -589,7 +589,9 @@
       "londonRobusta": "Robusta is the coffee most of Kodagu grows. On a large market in London, buyers and sellers from around the world agree a price today for Robusta to be delivered in a later month. Exporters and big buyers follow that price, so it feeds into what buyers here offer.",
       "iceArabica": "Arabica is the other main coffee, grown on higher land. This is the price agreed on a large market in New York for Arabica to be delivered in a later month. It is counted in US cents for one pound, and a pound is a smaller weight than a kilo.",
       "usdInr": "Coffee is bought and sold between countries in US dollars, not rupees. This line says how many rupees one dollar is worth. When this number moves, the world coffee price comes to a different number of rupees, even if the coffee price itself has not changed.",
-      "weather": "Sun today is how many hours the sun was out. Chance of rain is how likely the weather service thinks rain is today, counted out of a hundred. The two rain figures are how many millimetres fell in the last three days and how much is expected in the next three. Coffee and pepper are dried in the open air, so sun and rain both affect that work."
+      "weather": "Sun today is how many hours the sun was out. Chance of rain is how likely the weather service thinks rain is today, counted out of a hundred. The two rain figures are how many millimetres fell in the last three days and how much is expected in the next three. Coffee and pepper are dried in the open air, so sun and rain both affect that work.",
+      "storedUnit": "The exact unit recorded from the source is {{unit}}.",
+      "storedUnits": "The exact units recorded from the source are {{units}}."
     }
   },
   "weather": {

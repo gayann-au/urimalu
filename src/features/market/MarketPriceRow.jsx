@@ -78,19 +78,33 @@ export function priceTextFor(row, t) {
 // drop the gloss and leave the bare token, or the reverse. An unglossed unit is
 // one this app has not been taught; it shows the token alone rather than a
 // guessed sentence.
+// The plain-words unit, and only that.
+//
+// The raw stored token used to print underneath the gloss, so every card said
+// its unit twice: "for every 50 kg" and then "INR/50kg". The second one is
+// notation, and notation earns no space on a card read by farmers with limited
+// schooling. The token now lives in the explainer panel instead, where the
+// exact unit the source published is still on record.
+//
+// An unglossed unit is the one case the token still shows. That means a unit
+// this app has not been taught, and printing the raw token is better than
+// printing nothing at all: a number with no unit anywhere is not reportable.
 export function UnitLine({ unit }) {
   const { t } = useTranslation();
   const glossKey = unitGlossKey(unit);
   return (
-    <div className="mt-1.5">
-      {/* The gloss leads and the stored token follows in smaller, quieter type.
-          The plain words are the part a farmer reads; "INR/50kg" is the token
-          the source stored, kept on screen so the figure stays checkable
-          against the sheet it came from. */}
-      {glossKey && <p className="text-xs text-ink-600">{t(glossKey)}</p>}
-      <p className="text-[11px] tracking-wide text-ink-500">{unit}</p>
-    </div>
+    <p className="mt-1.5 text-xs text-ink-600">
+      {glossKey ? t(glossKey) : unit}
+    </p>
   );
+}
+
+// The stored token, for the explainer panel. Null when there is no gloss,
+// because in that case UnitLine is already showing the token on the face and
+// repeating it here would put it on screen twice again.
+export function storedUnitNote(unit, t) {
+  if (!unit || !unitGlossKey(unit)) return null;
+  return t("market.explain.storedUnit", { unit });
 }
 
 // A flagged row is a fact with a caveat, not a failure. The number renders

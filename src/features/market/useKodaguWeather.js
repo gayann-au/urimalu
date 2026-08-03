@@ -125,8 +125,17 @@ function assertShape(payload) {
   return list;
 }
 
+// A hung request is worse here than a failed one. fetch has no timeout of its
+// own, so a connection that opens and then stalls, which is an ordinary
+// afternoon on a hill network, leaves the query pending forever and the
+// section showing its loading state with no end. Twelve seconds turns that
+// into an error the section can put into words.
+const WEATHER_TIMEOUT_MS = 12_000;
+
 async function fetchKodaguWeather() {
-  const res = await fetch(buildUrl());
+  const res = await fetch(buildUrl(), {
+    signal: AbortSignal.timeout(WEATHER_TIMEOUT_MS),
+  });
   if (!res.ok) {
     throw new Error(`Open-Meteo responded ${res.status}`);
   }

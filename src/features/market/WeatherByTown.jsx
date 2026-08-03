@@ -167,8 +167,20 @@ export function WeatherByTown() {
       aria-label={t("weather.heading")}
       variants={m.stagger}
       initial="hidden"
-      whileInView="show"
-      viewport={m.inView}
+      // THIS IS THE BUG THAT MADE THE SECTION BLANK. It was whileInView with
+      // viewport={{ once: true, amount: 0.2 }}. Every child here carries the
+      // fadeUp variant, whose hidden state is opacity 0, so until that trigger
+      // fires the entire section is invisible while still holding its full
+      // height. When it does not fire, and a one-shot observer against a
+      // threshold has several ways not to, the result is a tall silent gap
+      // with the heading, the five cards and their data all present in the DOM
+      // at opacity 0. Measured in the browser: state "populated", five
+      // articles, 304px tall each, opacity 0.
+      //
+      // animate is a standing instruction rather than an event, so there is no
+      // trigger left to miss. TodaysRatesBoard has always used it, which is
+      // exactly why that section never showed this failure.
+      animate="show"
     >
       <motion.div variants={m.fadeUp}>
         <SectionEyebrow labelKey="weather.eyebrow"/>
@@ -183,16 +195,22 @@ export function WeatherByTown() {
 
       <div className="mt-3">
         {weatherQ.isLoading ? (
-          // The skeleton is the same scroll row, so the layout does not jump
-          // when the data lands.
-          <ScrollRow ariaLabel={t("weather.loading")} state="loading">
-            {WEATHER_TOWNS.map((name) => (
-              <div
-                key={name}
-                className={`snap-start shrink-0 ${CARD_WIDTH} h-[290px] animate-pulse rounded-[18px] border border-ink-100 bg-white shadow-uri-md`}
-              />
-            ))}
-          </ScrollRow>
+          // NEVER A SILENT GAP. The skeleton used to be five textless white
+          // cards on near-white paper, which is indistinguishable from empty
+          // space, so a slow or stalled request read as a broken app rather
+          // than as waiting. It says what it is doing now, in words, above the
+          // same scroll row so the layout still does not jump when data lands.
+          <div data-state="loading">
+            <p className="mb-2 text-sm text-ink-500">{t("weather.loading")}</p>
+            <ScrollRow ariaLabel={t("weather.loading")} state="loading">
+              {WEATHER_TOWNS.map((name) => (
+                <div
+                  key={name}
+                  className={`snap-start shrink-0 ${CARD_WIDTH} h-[290px] animate-pulse rounded-[18px] border border-ink-200 bg-paper-2`}
+                />
+              ))}
+            </ScrollRow>
+          </div>
         ) : weatherQ.isError ? (
           <div data-state="error">
             <LoadError onRetry={() => weatherQ.refetch()}/>

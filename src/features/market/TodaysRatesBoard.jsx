@@ -81,6 +81,18 @@ function sharedProvenance(entries) {
   };
 }
 
+// The stored unit tokens behind the six cards, for the explainer panel.
+//
+// The board's explainer is one panel for all six crops, and those crops do not
+// share a unit: coffee is quoted per 50 kg and pepper and cardamom per kg. So
+// this lists the distinct tokens rather than naming one, which would be true
+// of four cards and wrong about two.
+function storedUnitsNote(entries, t) {
+  const units = [...new Set(entries.map((e) => e.row.unit).filter(Boolean))];
+  if (units.length === 0) return null;
+  return t("market.explain.storedUnits", { units: units.join(", ") });
+}
+
 // Two columns on a phone. These are short numbers and six of them fit in a
 // glance at this width, which is the entire point of the section. It stays two
 // wide up to sm and goes three wide on a tablet, so a desktop reader does not
@@ -116,7 +128,7 @@ export function TodaysRatesBoard() {
           <h2 className="font-display text-[26px] font-extrabold leading-none tracking-tight text-ink-900">
             {t("market.today.heading")}
           </h2>
-          <Explainer bodyKey="market.explain.cpa"/>
+          <Explainer bodyKey="market.explain.cpa" extra={storedUnitsNote(entries, t)}/>
         </div>
         <p className="mt-1.5 text-sm text-ink-500">{t("market.intro")}</p>
       </motion.div>
