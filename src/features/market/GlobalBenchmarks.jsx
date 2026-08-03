@@ -23,20 +23,35 @@ import { SectionEyebrow } from "./SectionEyebrow";
 // weather on their own land, and the section heading is set smaller so the
 // page does not read as though London matters more than the CPA sheet does.
 //
-// THE CARDS ARE THE SAME OBJECT AS THE BOARD'S. They were full width blocks
-// that ran title, contract month, a three line paragraph, and only then the
-// number, which left the explanation sitting above the thing it explained and
-// the figure as the smallest element on the card. They are now the same
-// compact card in the same two column grid as Today's rates: label, number,
-// unit, with the explanation collapsed behind the question mark and opening
-// underneath the number it describes.
+// ONE UNBROKEN GRID. All three cards sit in a single grid with nothing
+// between them. An earlier version pulled the two Coffee Board cards' shared
+// date and source out into a band between the rows, which saved a few lines
+// of repetition and cost the layout its shape: the band ended the first row,
+// so the dollar card started a new one on its own with dead space beside it.
+// Each card carries its own provenance inside it now. The two Coffee Board
+// cards repeating one source and one date is a small redundancy; an orphaned
+// card is a broken grid.
+//
+// NO COLOUR MARKS THE LEAD CARD. London Robusta had a chilli rule along its
+// top edge. A red bar across the top of a price card reads as a warning about
+// that price, which is exactly the reading this feature exists to prevent, so
+// it is gone. Robusta leads by position: it is first in the grid, because it
+// is what Kodagu grows. Nothing else sets it apart, and nothing needs to.
 
 const CROP_LIFFE_ROBUSTA = "liffe_robusta";
 const CROP_ICE_ARABICA = "ice_arabica";
 
-// Same grid as TodaysRatesBoard, deliberately. The two sections are the same
-// kind of thing and had stopped looking like it.
-const BENCH_GRID = "grid grid-cols-2 gap-2.5";
+// Two across on a phone, matching TodaysRatesBoard, and three across from sm
+// so all three benchmarks sit on one row on a tablet or a desktop.
+const BENCH_GRID = "grid grid-cols-2 gap-2.5 sm:grid-cols-3";
+
+// The last card fills the row when there is an odd number of them, so a lone
+// trailing card is never stranded beside dead space at phone width. From sm
+// the grid is three wide and the natural placement is already right.
+function spanClassFor(index, total) {
+  const isLastAndOdd = index === total - 1 && total % 2 === 1;
+  return isLastAndOdd ? "col-span-2 sm:col-span-1" : "";
+}
 
 // The nearest contract month for a futures crop, or null.
 //
@@ -50,48 +65,17 @@ function frontMonthRow(rows, cropKey) {
   return canRenderPrice(first) ? first : null;
 }
 
-// Whether one line can honestly caption both coffee benchmarks, so two compact
-// cards do not each carry three lines of provenance.
-//
-// Checked, never assumed, exactly as the board does it: same source and same
-// source_date or nothing. fetched_at is the older of the two, because "we last
-// checked" has to be true of both numbers above it.
-function sharedProvenance(rows) {
-  const present = rows.filter(Boolean);
-  if (present.length === 0) return null;
-
-  const first = present[0];
-  let oldestFetchedAt = first.fetched_at;
-  for (const row of present) {
-    if (row.source !== first.source) return null;
-    if (row.source_date !== first.source_date) return null;
-    const current = Date.parse(row.fetched_at);
-    const oldest = Date.parse(oldestFetchedAt);
-    if (!isNaN(current) && (isNaN(oldest) || current < oldest)) {
-      oldestFetchedAt = row.fetched_at;
-    }
-  }
-  return {
-    sourceDate: first.source_date,
-    sourceKey: first.source,
-    fetchedAt: oldestFetchedAt,
-  };
-}
-
 // The shared shell every card in this section uses, so the three cannot drift
-// apart. isLead adds the chilli rule along the top edge: an edge accent
-// marking which one reads first, nowhere near the figure, saying "this one
-// first" and never "this price is good".
-function BenchCard({ isLead = false, children }) {
+// apart. No accent bar, no tinted edge, no border colour that varies by card.
+function BenchCard({ className = "", children }) {
   const m = useUriMotion();
   return (
     <motion.article
       variants={m.fadeUp}
       whileTap={m.btnTap}
-      className="overflow-hidden rounded-[14px] border border-ink-100 bg-white shadow-uri-sm"
+      className={`rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm ${className}`}
     >
-      {isLead && <div aria-hidden="true" className="h-[3px] bg-chilli-500"/>}
-      <div className="p-3.5">{children}</div>
+      {children}
     </motion.article>
   );
 }
@@ -115,12 +99,12 @@ function BenchHead({ titleKey, subtitle, explainer }) {
   );
 }
 
-function BenchmarkCard({ row, titleKey, explainKey, isLead }) {
+function BenchmarkCard({ row, titleKey, explainKey, className }) {
   const { t } = useTranslation();
   const explainer = useExplainer();
 
   return (
-    <BenchCard isLead={isLead}>
+    <BenchCard className={className}>
       <BenchHead
         titleKey={titleKey}
         // contract_month is free text from the source, rendered as stored. It
@@ -145,6 +129,13 @@ function BenchmarkCard({ row, titleKey, explainKey, isLead }) {
         bodyKey={explainKey}
         extra={storedUnitNote(row.unit, t)}
       />
+
+      {/* This card's own date and source, inside this card. */}
+      <DataAgeLine
+        sourceDate={row.source_date}
+        sourceKey={row.source}
+        fetchedAt={row.fetched_at}
+      />
     </BenchCard>
   );
 }
@@ -162,9 +153,8 @@ function formatRate(rate) {
 
 // The dollar to rupee rate. Its own query, so a failure here leaves the two
 // coffee benchmarks beside it standing, and its own provenance inside the
-// card, because it comes from a different provider on a different day than
-// they do.
-function UsdInrCard() {
+// card, because it comes from a different provider on a different day.
+function UsdInrCard({ className }) {
   const { t } = useTranslation();
   const explainer = useExplainer();
   const fxQ = useUsdInr();
@@ -172,7 +162,7 @@ function UsdInrCard() {
   if (fxQ.isLoading) {
     return (
       <div
-        className="h-40 animate-pulse rounded-[14px] border border-ink-200 bg-paper-2"
+        className={`h-44 animate-pulse rounded-[14px] border border-ink-200 bg-paper-2 ${className}`}
         aria-label={t("market.fx.loading")}
         data-state="loading"
       />
@@ -183,7 +173,7 @@ function UsdInrCard() {
   // words and offers the retry, rather than leaving a gap.
   if (fxQ.isError || !fxQ.data) {
     return (
-      <BenchCard>
+      <BenchCard className={className}>
         <h3 className="text-[11px] font-bold uppercase leading-tight tracking-wide text-ink-500">
           {t("market.fx.title")}
         </h3>
@@ -209,13 +199,15 @@ function UsdInrCard() {
     : null;
 
   return (
-    <BenchCard>
+    <BenchCard className={className}>
       <BenchHead titleKey="market.fx.title" explainer={explainer}/>
 
       <p className="mt-1.5 font-display text-[22px] font-extrabold leading-[1.15] tracking-tight text-ink-900 tabular-nums break-words">
         {formatRate(rate)}
       </p>
       <p className="mt-1.5 text-xs text-ink-600">{t("market.fx.unit")}</p>
+
+      <ExplainerPanel {...explainer} bodyKey="market.explain.usdInr"/>
 
       {/* Not from our database and not from a body DataAgeLine knows how to
           name, so it states its own date and its own source here. */}
@@ -227,8 +219,6 @@ function UsdInrCard() {
         )}
         <p className="text-xs text-ink-500">{t("market.fx.source")}</p>
       </div>
-
-      <ExplainerPanel {...explainer} bodyKey="market.explain.usdInr"/>
     </BenchCard>
   );
 }
@@ -241,7 +231,43 @@ export function GlobalBenchmarks() {
   const rows = snapshotsQ.data;
   const robusta = rows ? frontMonthRow(rows, CROP_LIFFE_ROBUSTA) : null;
   const arabica = rows ? frontMonthRow(rows, CROP_ICE_ARABICA) : null;
-  const shared = sharedProvenance([robusta, arabica]);
+
+  const showLoading = snapshotsQ.isLoading;
+  const showError = !showLoading && snapshotsQ.isError;
+  const showEmpty = !showLoading && !showError && !robusta && !arabica;
+
+  // The grid's contents, assembled before rendering so the span rule can see
+  // how many cards there actually are. Robusta first: that position is the
+  // only thing marking it as the one Kodagu tracks.
+  const cards = [];
+  if (robusta) {
+    cards.push({
+      key: "robusta",
+      render: (className) => (
+        <BenchmarkCard
+          row={robusta}
+          titleKey="market.world.londonRobusta"
+          explainKey="market.explain.londonRobusta"
+          className={className}
+        />
+      ),
+    });
+  }
+  if (arabica) {
+    cards.push({
+      key: "arabica",
+      render: (className) => (
+        <BenchmarkCard
+          row={arabica}
+          titleKey="market.world.iceArabica"
+          explainKey="market.explain.iceArabica"
+          className={className}
+        />
+      ),
+    });
+  }
+  // Always present, whatever the database did. Its own query, its own states.
+  cards.push({ key: "fx", render: (className) => <UsdInrCard className={className}/> });
 
   return (
     <motion.section
@@ -264,82 +290,42 @@ export function GlobalBenchmarks() {
         <p className="mt-1.5 text-sm text-ink-500">{t("market.world.intro")}</p>
       </motion.div>
 
-      <div className="mt-3">
-        {snapshotsQ.isLoading ? (
-          <div data-state="loading">
-            <p className="mb-2 text-sm text-ink-500">{t("market.loading")}</p>
-            <div className={BENCH_GRID}>
-              <div className="h-40 animate-pulse rounded-[14px] border border-ink-200 bg-paper-2"/>
-              <div className="h-40 animate-pulse rounded-[14px] border border-ink-200 bg-paper-2"/>
-            </div>
-          </div>
-        ) : snapshotsQ.isError ? (
-          <div data-state="error">
-            <LoadError onRetry={() => snapshotsQ.refetch()}/>
-          </div>
-        ) : !robusta && !arabica ? (
-          <div
-            className="rounded-[14px] border border-ink-100 bg-white p-5 text-sm text-ink-500 shadow-uri-sm"
-            data-state="empty"
-          >
-            {t("market.world.empty")}
-          </div>
+      {/* The failure and empty notices sit above the grid rather than inside
+          it, so they never take a cell and never break the run of cards. */}
+      {showError && (
+        <div className="mt-3" data-state="error">
+          <LoadError onRetry={() => snapshotsQ.refetch()}/>
+        </div>
+      )}
+      {showEmpty && (
+        <div
+          className="mt-3 rounded-[14px] border border-ink-100 bg-white p-5 text-sm text-ink-500 shadow-uri-sm"
+          data-state="empty"
+        >
+          {t("market.world.empty")}
+        </div>
+      )}
+
+      {/* ONE GRID, NOTHING BETWEEN THE CARDS. */}
+      <motion.div
+        className={`mt-3 ${BENCH_GRID}`}
+        variants={m.stagger}
+        data-state={showLoading ? "loading" : "populated"}
+      >
+        {showLoading ? (
+          <>
+            <div className="h-44 animate-pulse rounded-[14px] border border-ink-200 bg-paper-2"/>
+            <div className="h-44 animate-pulse rounded-[14px] border border-ink-200 bg-paper-2"/>
+            <UsdInrCard className={spanClassFor(2, 3)}/>
+          </>
         ) : (
-          <div data-state="populated">
-            {/* London first and marked by the chilli edge, Arabica beside it.
-                Each is dropped on its own when its row cannot state a date and
-                a source, so a missing Arabica does not take Robusta down. */}
-            <motion.div className={BENCH_GRID} variants={m.stagger}>
-              {robusta && (
-                <BenchmarkCard
-                  row={robusta}
-                  titleKey="market.world.londonRobusta"
-                  explainKey="market.explain.londonRobusta"
-                  isLead
-                />
-              )}
-              {arabica && (
-                <BenchmarkCard
-                  row={arabica}
-                  titleKey="market.world.iceArabica"
-                  explainKey="market.explain.iceArabica"
-                />
-              )}
-            </motion.div>
-
-            {/* One line for both coffee cards when they genuinely agree, which
-                keeps them compact. Falls back to a line per card when they do
-                not. */}
-            {shared ? (
-              <motion.div variants={m.fadeUp}>
-                <DataAgeLine
-                  sourceDate={shared.sourceDate}
-                  sourceKey={shared.sourceKey}
-                  fetchedAt={shared.fetchedAt}
-                />
-              </motion.div>
-            ) : (
-              <motion.div variants={m.fadeUp} className="mt-1 space-y-1">
-                {[robusta, arabica].filter(Boolean).map((row) => (
-                  <DataAgeLine
-                    key={row.crop_key}
-                    sourceDate={row.source_date}
-                    sourceKey={row.source}
-                    fetchedAt={row.fetched_at}
-                  />
-                ))}
-              </motion.div>
-            )}
-          </div>
+          cards.map((card, i) => (
+            <div key={card.key} className="contents">
+              {card.render(spanClassFor(i, cards.length))}
+            </div>
+          ))
         )}
-
-        {/* Outside the snapshot branch entirely, because it is a different
-            query with a different provider. The database being down has
-            nothing to say about whether the dollar rate loaded. */}
-        <motion.div className={`${BENCH_GRID} mt-3`} variants={m.stagger}>
-          <UsdInrCard/>
-        </motion.div>
-      </div>
+      </motion.div>
     </motion.section>
   );
 }
