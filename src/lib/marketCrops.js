@@ -87,6 +87,28 @@ export function formatMarketPrice(value, unit) {
   }
 }
 
+// What a farmer counts for a given stored unit, or null when this app cannot
+// say. "bags" means the price is per 50 kg sack, "kg" means it is per kilo.
+//
+// Keyed on the same exact unit strings as the gloss map above, and unknown
+// units get null rather than a guess, for the same reason: multiplying a
+// quantity by a price whose unit we have not been taught would produce a
+// confident total that is wrong by whatever factor the unit actually is.
+//
+// The two US units are deliberately absent. They are exchange quotes in
+// foreign money for delivery months, not something a Kodagu farmer has a
+// quantity of, and offering to multiply them would invite a total that means
+// nothing to anybody.
+const QUANTITY_UNITS = {
+  "INR/50kg": "bags",
+  "INR/kg": "kg",
+};
+
+export function quantityUnitFor(unit) {
+  if (!unit) return null;
+  return QUANTITY_UNITS[unit] ?? null;
+}
+
 // Sortable integer for a futures contract month label, or null when the label
 // cannot be parsed.
 //

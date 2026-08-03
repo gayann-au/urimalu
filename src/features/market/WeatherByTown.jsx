@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { LoadError } from "../../components/ui/LoadError";
@@ -38,7 +39,7 @@ const CARD_WIDTH = "w-[76%] max-w-[264px] sm:w-[248px]";
 // One town. Six facts, in the order a reader asks for them: where, what it is
 // like now, how much sun and how likely rain today, then what has already
 // fallen and what is coming.
-function TownCard({ reading }) {
+function TownCard({ reading, index }) {
   const { t } = useTranslation();
   const m = useUriMotion();
 
@@ -51,6 +52,9 @@ function TownCard({ reading }) {
     <motion.article
       variants={m.fadeUp}
       whileTap={m.btnTap}
+      // Read by the observer and the dots above, so position is derived from
+      // the real DOM order rather than from a second list kept in step.
+      data-town-index={index}
       className={`snap-start shrink-0 ${CARD_WIDTH} overflow-hidden rounded-[18px] border border-ink-100 bg-white shadow-uri-md`}
     >
       {/* The town name sits on its own warm band, so a reader scanning a row of
@@ -154,12 +158,131 @@ function RainLine({ labelKey, mm }) {
   );
 }
 
+// The dots under the row: which town of five, and a way to jump to any of
+// them.
+//
+// WHY THIS EXISTS. All five cards were present and reachable, but nothing on
+// screen said so. A farmer who does not think to swipe sees Madikeri and part
+// of Virajpet and reasonably concludes that is the whole list. The peek at the
+// right edge hints at it; this states it.
+//
+// The count is spelled out in words as well as dots, because five dots are a
+// convention a reader has to already know, and "1 of 5" is not.
+function TownDots({ towns, activeIndex, onSelect }) {
+  const { t } = useTranslation();
+  if (towns.length < 2) return null;
+
+  return (
+    <div className="mt-2 flex items-center gap-2.5">
+      <div className="flex items-center gap-1.5">
+        {towns.map((name, i) => {
+          const active = i === activeIndex;
+          return (
+            <button
+              key={name}
+              type="button"
+              onClick={() => onSelect(i)}
+              aria-label={t("weather.showTown", { town: t(`weather.town.${name}`) })}
+              aria-current={active ? "true" : undefined}
+              // The visible dot is 6px and 8px; the tap target around it is a
+              // full 44px tall so a thumb can hit it. Chilli marks position,
+              // never a value: this is which card you are on, and there is no
+              // number anywhere near it.
+              className="grid h-11 w-4 place-items-center"
+            >
+              <span
+                className={`block rounded-full transition-all ${
+                  active ? "h-2 w-2 bg-chilli-600" : "h-1.5 w-1.5 bg-ink-300"
+                }`}
+              />
+            </button>
+          );
+        })}
+      </div>
+      <span className="text-xs text-ink-500 tabular-nums">
+        {t("weather.positionOf", { current: activeIndex + 1, total: towns.length })}
+      </span>
+    </div>
+  );
+}
+
 export function WeatherByTown() {
   const { t } = useTranslation();
   const m = useUriMotion();
   const weatherQ = useKodaguWeather();
 
   const readings = weatherQ.data;
+
+  const scrollerRef = useRef(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Which card is currently in front, computed from the row's own scroll
+  // offset: the card whose resting position is nearest to where the row has
+  // been scrolled to. Deterministic in both directions and independent of how
+  // the scroll was started, whether by a thumb or by tapping a dot.
+  //
+  // NOT AN INTERSECTION OBSERVER, though that was the obvious choice and was
+  // tried first. Two things ruled it out. It reported the wrong town on
+  // backward jumps, because several cards cross a threshold in one callback
+  // and the entry order is the browser's, not the row's. And it depends on the
+  // page compositing frames, so in a window that is not painting it delivers
+  // nothing at all and the indicator silently freezes on the first town. A
+  // position control that quietly lies is worse than none.
+  //
+  // The scroll listener is passive and coalesced to one frame, so a swipe does
+  // arithmetic over five offsets once per frame rather than on every event.
+  useEffect(() => {
+    const root = scrollerRef.current;
+    if (!root || !readings) return;
+
+    let frame = 0;
+
+    const update = () => {
+      frame = 0;
+      const cards = Array.from(root.querySelectorAll("[data-town-index]"));
+      if (cards.length === 0) return;
+
+      const x = root.scrollLeft;
+      let best = 0;
+      let bestDistance = Infinity;
+      for (const card of cards) {
+        const distance = Math.abs(card.offsetLeft - root.offsetLeft - x);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = Number(card.dataset.townIndex);
+        }
+      }
+      setActiveIndex(best);
+    };
+
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+
+    update();
+    root.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      root.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [readings]);
+
+  // Jump the row to a town.
+  //
+  // scrollTo on the row itself, and instant rather than smooth, both for the
+  // same reason. scrollIntoView with behavior "smooth" was measured moving the
+  // row forwards and refusing to move it backwards: snap-mandatory re-snaps to
+  // the nearest point mid-animation, so a short leftward glide gets pulled
+  // back to where it started and tapping dot 1 from dot 3 did nothing.
+  // Setting the offset outright lands exactly on a snap point every time, in
+  // both directions, which is what a position control has to do.
+  function goToTown(index) {
+    const root = scrollerRef.current;
+    if (!root) return;
+    const card = root.querySelector(`[data-town-index="${index}"]`);
+    if (!card) return;
+    root.scrollTo({ left: card.offsetLeft - root.offsetLeft, behavior: "auto" });
+  }
 
   return (
     <motion.section
@@ -223,11 +346,23 @@ export function WeatherByTown() {
             {t("weather.empty")}
           </div>
         ) : (
-          <ScrollRow ariaLabel={t("weather.heading")} state="populated" stagger={m.stagger}>
-            {readings.map((reading) => (
-              <TownCard key={reading.name} reading={reading}/>
-            ))}
-          </ScrollRow>
+          <div data-state="populated">
+            <ScrollRow
+              ariaLabel={t("weather.heading")}
+              state="populated"
+              stagger={m.stagger}
+              scrollerRef={scrollerRef}
+            >
+              {readings.map((reading, i) => (
+                <TownCard key={reading.name} reading={reading} index={i}/>
+              ))}
+            </ScrollRow>
+            <TownDots
+              towns={readings.map((r) => r.name)}
+              activeIndex={activeIndex}
+              onSelect={goToTown}
+            />
+          </div>
         )}
       </div>
 
@@ -266,9 +401,10 @@ export function WeatherByTown() {
 // The negative margin and matching padding let the row bleed to both screen
 // edges inside a padded page, so the first card starts flush with the heading
 // and the last one can scroll fully into view.
-function ScrollRow({ children, ariaLabel, state, stagger }) {
+function ScrollRow({ children, ariaLabel, state, stagger, scrollerRef }) {
   return (
     <div
+      ref={scrollerRef}
       className="-mx-4 overflow-x-auto px-4 no-scrollbar snap-x snap-mandatory"
       aria-label={ariaLabel}
       data-state={state}

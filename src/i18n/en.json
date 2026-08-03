@@ -538,12 +538,26 @@
     },
     "flaggedLabel": "Note from our check:",
     "calc": {
-      "heading": "Work out a total",
+      "heading": "What is your quantity worth?",
       "bagsLabel": "Number of 50 kg bags",
       "kgLabel": "Number of kilos",
       "totalRange": "{{min}} to {{max}}",
       "boardValue": "Board value",
-      "notWhatYouGet": "This is the board rate multiplied out. Moisture, outturn and grade deductions are not included, so a buyer's figure will differ."
+      "notWhatYouGet": "This is the board rate multiplied out. Moisture, outturn and grade deductions are not included, so a buyer's figure will differ.",
+      "intro": "Type how much you have. This works it out at the board rate above.",
+      "cropLabel": "Choose a crop",
+      "quantityLabel": {
+        "bags": "How many bags do you have?",
+        "kg": "How many kilos do you have?"
+      },
+      "countUnit": {
+        "bags": "bags of 50 kg",
+        "kg": "kilos"
+      },
+      "placeholder": "e.g. 40",
+      "resultLabel": "Board value",
+      "awaiting": "Type a quantity to see the value.",
+      "note": "This is what the board rate works out to for that quantity. It is not an offer. A buyer may pay a different amount because of moisture, outturn and grade."
     },
     "curve": {
       "heading": "Prices for future months",
@@ -663,6 +677,8 @@
     "rainChanceToday": "Chance of rain",
     "hours": "{{value}} hours",
     "percent": "{{value}}%",
-    "notReported": "Not reported"
+    "notReported": "Not reported",
+    "positionOf": "{{current}} of {{total}}",
+    "showTown": "Show {{town}}"
   }
 }

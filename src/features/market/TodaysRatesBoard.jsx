@@ -8,6 +8,7 @@ import { MarketPriceRow, canRenderPrice } from "./MarketPriceRow";
 import { DataAgeLine } from "./DataAgeLine";
 import { Explainer } from "./Explainer";
 import { SectionEyebrow } from "./SectionEyebrow";
+import { QuantityCalculator } from "./QuantityCalculator";
 
 // SECTION A. Today's rates, all six CPA crops at once.
 //
@@ -173,6 +174,11 @@ export function TodaysRatesBoard() {
                 />
               ))}
             </motion.div>
+
+            {/* Sits between the rates and their provenance on purpose, so the
+                board's date and source below cover the multiplied total as
+                well as the six rates it was worked out from. */}
+            <QuantityCalculator entries={entries}/>
 
             {/* One age and attribution block for the whole board, which is
                 what makes the six cards above legible as one set of numbers
