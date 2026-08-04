@@ -34,6 +34,12 @@ const SOURCE_LABEL_KEYS = {
   cpa: "market.source.cpa",
   coffee_board: "market.source.coffeeBoard",
   spices_board: "market.source.spicesBoard",
+  // agmarknet rows have been written since the mandi source was added, and
+  // until this entry existed every one of them was unrenderable: canNameSource
+  // returned false, canRenderPrice refused the row, and the price never reached
+  // a screen. Exactly the failure the note above describes, and the reason a
+  // source must be added here at the same time as it starts writing rows.
+  agmarknet: "market.source.agmarknet",
 };
 
 // The i18n key for a stored source value, or null when there is none.

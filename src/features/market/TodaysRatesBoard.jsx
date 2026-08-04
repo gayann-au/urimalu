@@ -5,8 +5,11 @@ import { useUriMotion } from "../../lib/uiMotion";
 import { MARKET_CROP_APP_NAMES } from "../../lib/marketCrops";
 import { useMarketSnapshots, latestPerKey } from "./useMarketSnapshots";
 import { useCardamomAuction, latestAuctionRow } from "./useCardamomAuction";
+import { useMandiPrices, mandiPepperRow, arecanutRows } from "./useMandiPrices";
 import { MarketPriceRow, canRenderPrice } from "./MarketPriceRow";
 import { CardamomAuctionRow } from "./CardamomAuctionRow";
+import { MandiPepperRow } from "./MandiPepperRow";
+import { ArecanutMandiCard } from "./ArecanutMandiCard";
 import { DataAgeLine } from "./DataAgeLine";
 import { Explainer } from "./Explainer";
 import { SectionEyebrow } from "./SectionEyebrow";
@@ -40,8 +43,13 @@ const SOURCE_CPA = "cpa";
 // substitution below and the explainer note read off the same constant.
 const CARDAMOM_CROP_KEY = "cardamom";
 
+// The other crop with two possible sources. Named once here so the substitution
+// below reads off the same constant the rest of the file does.
+const PEPPER_CROP_KEY = "pepper";
+
 const KIND_CPA = "cpa";
 const KIND_AUCTION = "auction";
+const KIND_MANDI = "mandi";
 
 // The rows for the six crops, in catalogue order, keeping only the ones that
 // can be shown with their date and source. Crops with no row are simply absent:
@@ -69,7 +77,7 @@ const KIND_AUCTION = "auction";
 // forty kilos are worth what the best lot in the district made, which is a
 // number nobody is going to pay them. So the flag says whether price_max is a
 // band end, and the calculator asks that rather than inspecting the source.
-function boardEntriesInOrder(rows, auctionRow) {
+function boardEntriesInOrder(rows, auctionRow, pepperMandiRow) {
   const latest = latestPerKey(rows);
   const byCrop = new Map();
   for (const row of latest) {
@@ -86,6 +94,24 @@ function boardEntriesInOrder(rows, auctionRow) {
         // crop label. The auction is for Small Cardamom specifically, and Large
         // Cardamom is a different crop grown in other states.
         nameKey: "market.crop.cardamom_auction",
+        hasPriceBand: false,
+      };
+    }
+    // Pepper prefers the government market yard rate and falls back to CPA,
+    // the same shape as cardamom above. The yard publishes daily from Kodagu's
+    // own two markets, which is a nearer fact than a district average, and the
+    // card that renders it says on its face which geography it came from.
+    //
+    // hasPriceBand is false because the row carries no band: price_min is the
+    // median modal rate and price_max is null. The calculator reads this flag
+    // rather than inspecting the source, so it multiplies the one figure and
+    // prints a single total instead of a range built from a missing end.
+    if (cropKey === PEPPER_CROP_KEY && canRenderPrice(pepperMandiRow)) {
+      return {
+        cropKey,
+        row: pepperMandiRow,
+        kind: KIND_MANDI,
+        nameKey: `market.crop.${cropKey}`,
         hasPriceBand: false,
       };
     }
@@ -188,22 +214,28 @@ export function TodaysRatesBoard() {
   const m = useUriMotion();
   const snapshotsQ = useMarketSnapshots();
   const auctionQ = useCardamomAuction();
+  const mandiQ = useMandiPrices();
 
   const rows = snapshotsQ.data;
   const auctionRow = latestAuctionRow(auctionQ.data);
-  const entries = rows ? boardEntriesInOrder(rows, auctionRow) : [];
+  const pepperMandiRow = mandiPepperRow(mandiQ.data);
+  const arecanut = arecanutRows(mandiQ.data);
+  const entries = rows
+    ? boardEntriesInOrder(rows, auctionRow, pepperMandiRow)
+    : [];
 
   // Only the CPA cards are candidates for the one shared line beneath the
   // board. The auction card prints its own.
   const shared = sharedProvenance(entries.filter((e) => e.kind === KIND_CPA));
   const hasAuction = entries.some((e) => e.kind === KIND_AUCTION);
 
-  // The auction query is allowed to fail on its own. A board that refused to
-  // render because one of two sources was unreachable would be worse than a
-  // board showing the CPA cardamom figure, which is exactly what the fallback
-  // in boardEntriesInOrder is for. Only the snapshots query, which every card
-  // depends on, can put the section into its error state.
-  const isLoading = snapshotsQ.isLoading || auctionQ.isLoading;
+  // The auction and market yard queries are allowed to fail on their own. A
+  // board that refused to render because one of three sources was unreachable
+  // would be worse than a board showing the CPA figure, which is exactly what
+  // the two fallbacks in boardEntriesInOrder are for. Only the snapshots query,
+  // which every card depends on, can put the section into its error state.
+  const isLoading =
+    snapshotsQ.isLoading || auctionQ.isLoading || mandiQ.isLoading;
 
   // The calculator sits above the board's shared date and source line, which is
   // what covers the total it works out. That line only speaks for the cards it
@@ -213,7 +245,11 @@ export function TodaysRatesBoard() {
   // fallen out of step and there is no shared line at all.
   const calcEntries = entries.map((entry) => ({
     ...entry,
-    ownProvenance: entry.kind === KIND_AUCTION || !shared,
+    // Any card that is not a CPA card is outside what the shared line speaks
+    // for, so it carries its own. Written as "not CPA" rather than a list of
+    // the other kinds, so a fourth source added later cannot quietly inherit a
+    // caption that was never true of it.
+    ownProvenance: entry.kind !== KIND_CPA || !shared,
   }));
 
   return (
@@ -273,10 +309,18 @@ export function TodaysRatesBoard() {
             {/* The grid is the stagger parent for the six cards, so they
                 arrive one after another rather than all at once. */}
             <motion.div className={BOARD_GRID} variants={m.stagger}>
-              {entries.map(({ cropKey, row, kind, nameKey }) =>
-                kind === KIND_AUCTION ? (
-                  <CardamomAuctionRow key={cropKey} row={row} nameKey={nameKey}/>
-                ) : (
+              {entries.map(({ cropKey, row, kind, nameKey }) => {
+                if (kind === KIND_AUCTION) {
+                  return (
+                    <CardamomAuctionRow key={cropKey} row={row} nameKey={nameKey}/>
+                  );
+                }
+                if (kind === KIND_MANDI) {
+                  return (
+                    <MandiPepperRow key={cropKey} row={row} nameKey={nameKey}/>
+                  );
+                }
+                return (
                   <MarketPriceRow
                     key={cropKey}
                     row={row}
@@ -285,8 +329,8 @@ export function TodaysRatesBoard() {
                     // sharedProvenance above.
                     showProvenance={!shared}
                   />
-                )
-              )}
+                );
+              })}
             </motion.div>
 
             {/* Sits between the rates and their provenance on purpose, so the
@@ -306,6 +350,13 @@ export function TodaysRatesBoard() {
                 />
               </motion.div>
             )}
+
+            {/* Below the board and its provenance, not inside the grid. This is
+                a crop from another district, so it sits after the Kodagu rates
+                rather than among them, and it carries its own heading and its
+                own date and source. It renders nothing at all on a day the
+                bordering district published no arecanut. */}
+            <ArecanutMandiCard rows={arecanut}/>
           </div>
         )}
       </div>

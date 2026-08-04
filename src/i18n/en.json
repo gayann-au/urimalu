@@ -536,7 +536,20 @@
     "source": {
       "cpa": "Coorg Planters' Association",
       "coffeeBoard": "Coffee Board of India",
-      "spicesBoard": "Spices Board of India"
+      "spicesBoard": "Spices Board of India",
+      "agmarknet": "Agricultural Marketing Directorate, Government of India"
+    },
+    "mandi": {
+      "pepper": {
+        "kodagu": "Market yard rate at {{markets}}, here in Kodagu.",
+        "karnataka": "Market yard rate from elsewhere in Karnataka. This is not a Kodagu rate.",
+        "india": "Market yard rate from elsewhere in India. This is not a Kodagu rate."
+      },
+      "arecanut": {
+        "heading": "Arecanut",
+        "where": "Sulya market yard, Dakshina Kannada district. This is not a Kodagu rate.",
+        "note": "No market yard in Kodagu publishes an arecanut rate. Sulya is the nearest one that does, just over the district border."
+      }
     },
     "flaggedLabel": "Note from our check:",
     "calc": {

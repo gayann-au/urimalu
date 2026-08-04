@@ -681,14 +681,87 @@ const AGMARKNET_RESOURCE =
 // Prices in this dataset are quoted per quintal.
 const KG_PER_QUINTAL = 100;
 
+// Cardamom used to sit in this list and was removed deliberately.
+//
+// The query filters on commodity.keyword alone with no variety filter, so
+// "Cardamom" returns Small and Large Cardamom together. Those are two different
+// crops selling at very different prices, and a median across them is a number
+// describing neither. That median was then handed to runCpa as the reference
+// the CPA cross-check judges against, where it could mark a perfectly correct
+// CPA cardamom row as flagged.
+//
+// Cardamom is served by the Spices Board auction now, which publishes Small
+// Cardamom specifically and daily. The cross-check logic itself is untouched:
+// with cardamom out of this list the map simply never gains a cardamom entry,
+// so the check does not fire for that crop.
 const AGMARKNET_COMMODITIES: Array<{
   commodity: string;
   cropKey: string;
   displayName: string;
 }> = [
   { commodity: "Black pepper", cropKey: "pepper", displayName: "Pepper" },
-  { commodity: "Cardamom", cropKey: "cardamom", displayName: "Cardamom" },
 ];
+
+// How wide a net the pepper query cast to find a price. Recorded on the row and
+// returned in the HTTP summary, because level 1 and the two below it are
+// different claims: one is a Kodagu price and the others explicitly are not.
+type GeographyLevel = "kodagu" | "karnataka" | "india";
+
+// The ladder, tried in order, stopping at the first level that returns records.
+//
+// "Kodagu" is the only district spelling this dataset answers to. Coorg,
+// Madikeri and Kodagu(Coorg) were all checked against the live resource on
+// 4 August 2026 and every one of them returned zero records, so none of them
+// belongs here as an alternate spelling to try.
+const PEPPER_GEOGRAPHY_LADDER: Array<{
+  level: GeographyLevel;
+  filters: Record<string, string>;
+}> = [
+  { level: "kodagu", filters: { "filters[district.keyword]": "Kodagu" } },
+  { level: "karnataka", filters: { "filters[state.keyword]": "Karnataka" } },
+  { level: "india", filters: {} },
+];
+
+// The exact commodity string the dataset publishes. The parentheses are part of
+// the value: a plain "Arecanut" returns zero records.
+const ARECANUT_COMMODITY = "Arecanut(Betelnut/Supari)";
+
+// Arecanut is pulled state-wide and then narrowed to this one district in code,
+// because the dataset has no filter for a taluk.
+//
+// Sulya taluk in Dakshina Kannada shares a border with Kodagu. The only other
+// Karnataka district publishing arecanut is Shivamogga, whose market is
+// Thirthahalli, two districts away with Chikkamagaluru and Hassan in between.
+// A Thirthahalli price is not a near-Kodagu price and is discarded rather than
+// shown, so this never silently widens when Dakshina Kannada is quiet.
+const ARECANUT_DISTRICT = "Dakshina Kannada";
+
+const ARECANUT_CROP_KEY_PREFIX = "arecanut_";
+
+// Arecanut has no CPA entry, and it must not gain a fake one: CPA_CROPS is the
+// record of what the Coorg Planters' Association publishes, and inventing a row
+// there would put a crop in that body's mouth. So the band lives here, beside
+// the lookup that would otherwise return undefined and hold every arecanut row.
+//
+// Wide on purpose. It is a sanity bound catching a decimal slip or a per-quintal
+// figure that escaped the divide, not a forecast. The four varieties seen on
+// 4 August 2026 ran from 136 to 430 INR per kg.
+const ARECANUT_BAND_MIN_PER_KG = 100;
+const ARECANUT_BAND_MAX_PER_KG = 3000;
+
+// The response carries up to this many records. Raised from 100, which was low
+// enough that an all-India pepper query was silently reading a fraction of the
+// day and calling its median the national price.
+const AGMARKNET_LIMIT = 1000;
+
+// A bounded slice of the response kept in raw for audit.
+//
+// raw used to hold the entire records array. At limit 100 that was already the
+// heaviest column in the table, and at 1000 it would be ten times that, stored
+// once per crop per day forever. The summary fields around it carry what the
+// card actually reads, so the sample exists only to make a stored row traceable
+// back to the response it came from.
+const AGMARKNET_RAW_SAMPLE = 20;
 
 interface AgmarknetSummary {
   rows_written: number;
@@ -696,7 +769,101 @@ interface AgmarknetSummary {
   // rows_skipped counts individual rows that could not be written.
   skipped: boolean;
   rows_skipped: number;
+  // Which rung of the ladder pepper resolved to, and the markets behind it.
+  // Null when pepper produced no row at all.
+  pepper_geography_level: GeographyLevel | null;
+  pepper_markets: string[];
+  // Arecanut is counted apart from pepper because it is a different crop from a
+  // different district, and a caller reading rows_written alone could not tell
+  // which of the two produced them.
+  arecanut_rows_written: number;
+  arecanut_varieties: string[];
+  arecanut_error: string | null;
   error: string | null;
+}
+
+// One request against the resource, returning the records and the total the
+// envelope reported.
+//
+// records.length and total are both returned rather than one being trusted,
+// because they answer different questions: total is how many rows the dataset
+// holds for this filter, records.length is how many arrived. A gap means the
+// limit truncated the response and every median below it is computed on a
+// slice, which is exactly the failure that made an all-India pepper median look
+// authoritative at limit 100. It warns rather than throws: a truncated answer is
+// still an answer, and a named warning lets a reader of the summary judge it.
+async function fetchAgmarknet(
+  label: string,
+  filters: Record<string, string>,
+  warnings: string[]
+): Promise<{ records: unknown[]; total: number | null }> {
+  const params = new URLSearchParams();
+  params.set("api-key", DATA_GOV_IN_API_KEY);
+  params.set("format", "json");
+  params.set("limit", String(AGMARKNET_LIMIT));
+  for (const [key, value] of Object.entries(filters)) params.set(key, value);
+
+  const response = await fetch(`${AGMARKNET_RESOURCE}?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(
+      `agmarknet responded ${response.status} ${response.statusText} for ${label}`
+    );
+  }
+
+  const payload: unknown = await response.json();
+  const envelope = asRecord(payload);
+  if (envelope === null || !Array.isArray(envelope.records)) {
+    const shape =
+      envelope === null ? typeof payload : Object.keys(envelope).join(", ");
+    throw new Error(
+      `agmarknet returned an unexpected shape for ${label}, expected an object with a records array, got keys: ${shape}`
+    );
+  }
+
+  const records = envelope.records;
+  const total = toNumber(envelope.total);
+
+  if (total !== null && total !== records.length) {
+    const message =
+      `agmarknet: ${label} returned ${records.length} records but the response ` +
+      `total field says ${total}, at limit ${AGMARKNET_LIMIT}`;
+    console.warn(message);
+    warnings.push(message);
+  }
+
+  return { records, total };
+}
+
+// The distinct non-empty values of one field, in first-seen order.
+function distinctField(records: unknown[], field: string): string[] {
+  const seen: string[] = [];
+  for (const entry of records) {
+    const value = toText(asRecord(entry)?.[field]);
+    if (value !== null && !seen.includes(value)) seen.push(value);
+  }
+  return seen;
+}
+
+// The newest parsable arrival_date across a set of records, or null when none
+// of them carries one. Several markets report on the same pull, so a row is
+// dated by the most recent date present rather than the first.
+function latestArrivalDate(records: unknown[]): string | null {
+  let latest: string | null = null;
+  for (const entry of records) {
+    const arrival = dmyToIsoDate(asRecord(entry)?.arrival_date);
+    if (arrival === null) continue;
+    if (latest === null || arrival > latest) latest = arrival;
+  }
+  return latest;
+}
+
+function modalPricesOf(records: unknown[]): number[] {
+  const prices: number[] = [];
+  for (const entry of records) {
+    const modal = toNumber(asRecord(entry)?.modal_price);
+    if (modal !== null) prices.push(modal);
+  }
+  return prices;
 }
 
 async function runAgmarknet(
@@ -706,49 +873,48 @@ async function runAgmarknet(
   warnings: string[]
 ): Promise<void> {
   for (const target of AGMARKNET_COMMODITIES) {
-    const url =
-      `${AGMARKNET_RESOURCE}?api-key=${encodeURIComponent(DATA_GOV_IN_API_KEY)}` +
-      `&format=json&limit=100` +
-      `&filters[commodity.keyword]=${encodeURIComponent(target.commodity)}`;
+    // THE FALLBACK LADDER. Kodagu first, then Karnataka, then no geography
+    // filter at all, stopping at the first level that returns anything.
+    //
+    // The level travels with the row because the three are not interchangeable.
+    // A Kodagu price is the price at the reader's own two markets. A Karnataka
+    // or all-India median is a different fact wearing the same clothes, and the
+    // card has to be able to say which one it is holding.
+    let level: GeographyLevel | null = null;
+    let records: unknown[] = [];
+    let total: number | null = null;
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(
-        `agmarknet responded ${response.status} ${response.statusText} for ${target.commodity}`
+    for (const rung of PEPPER_GEOGRAPHY_LADDER) {
+      const label = `${target.commodity} at ${rung.level}`;
+      const result = await fetchAgmarknet(
+        label,
+        {
+          "filters[commodity.keyword]": target.commodity,
+          ...rung.filters,
+        },
+        warnings
       );
+      if (result.records.length > 0) {
+        level = rung.level;
+        records = result.records;
+        total = result.total;
+        break;
+      }
+      console.log(`agmarknet returned no records for ${label}`);
     }
 
-    const payload: unknown = await response.json();
-    const envelope = asRecord(payload);
-    if (envelope === null || !Array.isArray(envelope.records)) {
-      const shape =
-        envelope === null ? typeof payload : Object.keys(envelope).join(", ");
-      throw new Error(
-        `agmarknet returned an unexpected shape for ${target.commodity}, expected an object with a records array, got keys: ${shape}`
+    if (level === null) {
+      // Normal on Sundays and public holidays, and now only reached when even
+      // the unfiltered query is empty.
+      console.log(
+        `agmarknet returned no records for ${target.commodity} at any geography level`
       );
-    }
-
-    const records = envelope.records;
-    if (records.length === 0) {
-      // Normal on Sundays and public holidays.
-      console.log(`agmarknet returned no records for ${target.commodity}`);
       continue;
     }
 
-    const modalPrices: number[] = [];
-    const arrivalDates: string[] = [];
-    for (const entry of records) {
-      const record = asRecord(entry);
-      if (record === null) continue;
-      const modal = toNumber(record.modal_price);
-      if (modal !== null) modalPrices.push(modal);
-      const arrival = dmyToIsoDate(record.arrival_date);
-      if (arrival !== null) arrivalDates.push(arrival);
-    }
-
-    const medianModal = median(modalPrices);
+    const medianModal = median(modalPricesOf(records));
     if (medianModal === null) {
-      const message = `agmarknet: skipped ${target.cropKey}, ${records.length} records but no usable modal_price`;
+      const message = `agmarknet: skipped ${target.cropKey}, ${records.length} records at ${level} but no usable modal_price`;
       console.error(message);
       warnings.push(message);
       summary.rows_skipped += 1;
@@ -756,9 +922,8 @@ async function runAgmarknet(
     }
 
     const perKg = medianModal / KG_PER_QUINTAL;
-    // Several markets report on the same pull, so the row is dated by the most
-    // recent arrival_date present in the response.
-    if (arrivalDates.length === 0) {
+    const sourceDate = latestArrivalDate(records);
+    if (sourceDate === null) {
       const rawDates = records
         .map((entry) => asRecord(entry)?.arrival_date)
         .slice(0, 5);
@@ -768,9 +933,8 @@ async function runAgmarknet(
       summary.rows_skipped += 1;
       continue;
     }
-    const sourceDate = arrivalDates.reduce((latest, current) =>
-      current > latest ? current : latest
-    );
+
+    const markets = distinctField(records, "market");
 
     // The same hard band CPA rows are held against, looked up by crop_key so
     // there is one definition of each band rather than two that can drift.
@@ -805,14 +969,200 @@ async function runAgmarknet(
       change_direction: null,
       validation_status: status,
       validation_note: note,
-      raw: records,
+      // A summary plus a bounded sample, not the whole response. The card reads
+      // geography_level and markets from here, so those two are stored as
+      // fields rather than left to be re-derived by scanning the sample, which
+      // would be wrong the moment the sample truncated.
+      raw: {
+        geography_level: level,
+        markets,
+        districts: distinctField(records, "district"),
+        record_count: records.length,
+        total,
+        limit: AGMARKNET_LIMIT,
+        sample: records.slice(0, AGMARKNET_RAW_SAMPLE),
+      },
     });
+
+    summary.pepper_geography_level = level;
+    summary.pepper_markets = markets;
 
     // Only a value that passed its own band may become the reference the CPA
     // cross-check judges against. An unchecked number must not judge a checked
     // one, so a held row is written for audit but kept out of the map.
     if (status === "ok") perKgByCrop.set(target.cropKey, perKg);
     summary.rows_written += 1;
+  }
+
+  // Arecanut runs inside its own try/catch rather than sharing the source's.
+  //
+  // Pepper feeds perKgByCrop, which the CPA cross-check reads, and pepper has
+  // already been written by this point. Letting an arecanut failure throw out
+  // of here would discard that reference and weaken a check on a different
+  // crop, for a fault that has nothing to do with it.
+  try {
+    await runArecanut(client, summary, warnings);
+  } catch (err) {
+    summary.arecanut_error = errorMessage(err);
+    console.error("agmarknet arecanut failed:", summary.arecanut_error);
+  }
+}
+
+// crop_key for a variety: the prefix plus the variety lowercased with every
+// run of non-alphanumeric characters collapsed to a single underscore.
+//
+//   "New Variety" -> arecanut_new_variety
+//   "Cqca"        -> arecanut_cqca
+//
+// Trailing underscores are trimmed so a variety ending in punctuation does not
+// produce a key ending in one. A variety that reduces to nothing at all returns
+// null and the caller skips it, because a bare "arecanut_" key would collide
+// with the next such variety and the two would overwrite each other.
+function arecanutCropKey(variety: string): string | null {
+  const slug = variety
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return slug === "" ? null : `${ARECANUT_CROP_KEY_PREFIX}${slug}`;
+}
+
+// Arecanut from the one district that borders Kodagu, one row per variety.
+//
+// ONE ROW PER VARIETY, never a single arecanut median. On 4 August 2026 the two
+// Sulya varieties were 43,000 and 28,000 per quintal, 15,000 apart. A median
+// across them is 35,500, a price no one paid for anything, and it would sit on
+// the card looking exactly as solid as a real one.
+//
+// A variety with a single record is kept. Sulya published n=1 per variety, so
+// any minimum-count rule would delete the entire crop rather than improve it.
+async function runArecanut(
+  client: SupabaseClient,
+  summary: AgmarknetSummary,
+  warnings: string[]
+): Promise<void> {
+  const { records, total } = await fetchAgmarknet(
+    `${ARECANUT_COMMODITY} in Karnataka`,
+    {
+      "filters[commodity.keyword]": ARECANUT_COMMODITY,
+      "filters[state.keyword]": "Karnataka",
+    },
+    warnings
+  );
+
+  // Narrowed in code, because the dataset has no taluk filter. Everything
+  // outside the bordering district is discarded here and never reaches a row.
+  const local = records.filter(
+    (entry) => toText(asRecord(entry)?.district) === ARECANUT_DISTRICT
+  );
+
+  if (local.length === 0) {
+    // Nothing is written and no card renders. This does NOT widen to another
+    // district: the whole reason arecanut is shown at all is that Sulya is next
+    // door, and a Shivamogga price standing in for it would quietly answer a
+    // question the reader did not ask.
+    console.log(
+      `agmarknet: no arecanut rows for ${ARECANUT_DISTRICT}, ` +
+        `${records.length} Karnataka records seen, writing nothing`
+    );
+    return;
+  }
+
+  // Group by the variety string exactly as returned, so the display name is the
+  // publisher's own word and not a tidied version of it.
+  const byVariety = new Map<string, unknown[]>();
+  for (const entry of local) {
+    const variety = toText(asRecord(entry)?.variety);
+    if (variety === null) {
+      const message = "agmarknet: skipped an arecanut record with no variety";
+      console.error(message);
+      warnings.push(message);
+      summary.rows_skipped += 1;
+      continue;
+    }
+    const group = byVariety.get(variety) ?? [];
+    group.push(entry);
+    byVariety.set(variety, group);
+  }
+
+  for (const [variety, group] of byVariety) {
+    const cropKey = arecanutCropKey(variety);
+    if (cropKey === null) {
+      const message = `agmarknet: skipped arecanut variety ${JSON.stringify(variety)}, no usable crop_key`;
+      console.error(message);
+      warnings.push(message);
+      summary.rows_skipped += 1;
+      continue;
+    }
+
+    // Median within the variety, which is the variety's own price when there is
+    // one record, as there was on every variety seen so far. It is a median
+    // across markets reporting the same variety, never across varieties.
+    const medianModal = median(modalPricesOf(group));
+    if (medianModal === null) {
+      const message = `agmarknet: skipped ${cropKey}, ${group.length} records but no usable modal_price`;
+      console.error(message);
+      warnings.push(message);
+      summary.rows_skipped += 1;
+      continue;
+    }
+
+    const sourceDate = latestArrivalDate(group);
+    if (sourceDate === null) {
+      const message = `agmarknet: skipped ${cropKey}, no parsable arrival_date`;
+      console.error(message);
+      warnings.push(message);
+      summary.rows_skipped += 1;
+      continue;
+    }
+
+    const perKg = medianModal / KG_PER_QUINTAL;
+    const markets = distinctField(group, "market");
+
+    // The band defined at the top of this section, not a CPA_CROPS lookup. That
+    // lookup searches by cropKey and would return undefined for every arecanut
+    // key, holding every row it wrote.
+    let status: ValidationStatus = "ok";
+    let note: string | null = null;
+    if (perKg < ARECANUT_BAND_MIN_PER_KG || perKg > ARECANUT_BAND_MAX_PER_KG) {
+      status = "held";
+      note =
+        `modal price computes to ${round2(perKg)} INR per kg, ` +
+        `outside the expected band ${ARECANUT_BAND_MIN_PER_KG} to ${ARECANUT_BAND_MAX_PER_KG} INR per kg`;
+    }
+
+    await writeSnapshot(client, {
+      source: "agmarknet",
+      crop_key: cropKey,
+      display_name: variety,
+      unit: "INR/kg",
+      contract_month: "",
+      source_date: sourceDate,
+      price_min: perKg,
+      price_max: null,
+      change_amount: null,
+      change_direction: null,
+      validation_status: status,
+      validation_note: note,
+      raw: {
+        commodity: ARECANUT_COMMODITY,
+        district: ARECANUT_DISTRICT,
+        variety,
+        markets,
+        record_count: group.length,
+        karnataka_record_count: records.length,
+        total,
+        limit: AGMARKNET_LIMIT,
+        sample: group.slice(0, AGMARKNET_RAW_SAMPLE),
+      },
+    });
+
+    // DELIBERATELY NOT ADDED TO perKgByCrop. That map is the reference the CPA
+    // cross-check judges CPA rows against, and CPA publishes no arecanut. An
+    // entry here would be a price with nothing to compare it to at best, and at
+    // worst a key collision with a crop that does have a CPA row.
+    summary.rows_written += 1;
+    summary.arecanut_rows_written += 1;
+    summary.arecanut_varieties.push(variety);
   }
 }
 
@@ -1113,6 +1463,11 @@ Deno.serve(async (req) => {
     rows_written: 0,
     skipped: false,
     rows_skipped: 0,
+    pepper_geography_level: null,
+    pepper_markets: [],
+    arecanut_rows_written: 0,
+    arecanut_varieties: [],
+    arecanut_error: null,
     error: null,
   };
   const spicesBoard: SpicesBoardSummary = {
