@@ -5,7 +5,12 @@ import { useUriMotion } from "../../lib/uiMotion";
 import { MARKET_CROP_APP_NAMES } from "../../lib/marketCrops";
 import { useMarketSnapshots, latestPerKey } from "./useMarketSnapshots";
 import { useCardamomAuction, latestAuctionRow } from "./useCardamomAuction";
-import { useMandiPrices, mandiPepperRow, arecanutRows } from "./useMandiPrices";
+import {
+  useMandiPrices,
+  pepperMarketRows,
+  arecanutRows,
+  hasRealRange,
+} from "./useMandiPrices";
 import { MarketPriceRow, canRenderPrice } from "./MarketPriceRow";
 import { CardamomAuctionRow } from "./CardamomAuctionRow";
 import { MandiPepperRow } from "./MandiPepperRow";
