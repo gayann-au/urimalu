@@ -124,10 +124,12 @@ export function QuantityCalculator({ entries }) {
                   : "border-ink-200 bg-white text-ink-700 hover:bg-paper-2"
               }`}
             >
-              {/* The board's own label for the crop, carried on the entry so a
-                  chip and the card above it can never name the same crop two
-                  different things. */}
-              {t(o.nameKey)}
+              {/* The board's own label for the entry, carried on it so a chip
+                  and the card above it can never name the same thing two
+                  different ways. A resolved string rather than a key, because a
+                  pepper entry names its market yard as well as its crop and
+                  that yard's name comes from the data, not from i18n. */}
+              {o.label}
             </button>
           );
         })}

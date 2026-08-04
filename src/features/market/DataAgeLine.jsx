@@ -99,7 +99,27 @@ function localDateParts(value) {
   if (!value) return null;
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return null;
-  return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
+  return {
+    year: d.getFullYear(),
+    month: d.getMonth() + 1,
+    day: d.getDate(),
+    hour: d.getHours(),
+    minute: d.getMinutes(),
+  };
+}
+
+// "12:06 PM" for a set of local parts.
+//
+// Hand rolled rather than toLocaleTimeString, for the same reason
+// formatLongDate is hand rolled: the runtime's answer varies by locale and by
+// ICU version, giving "12:06 pm" on one browser and "12:06 PM" on another, and
+// a Kannada locale can render the digits in a numeral set the rest of this app
+// never uses. Every other number on the board is Latin digits in a fixed shape,
+// and the fetch time has no business being the exception.
+function formatClockTime(parts) {
+  const suffix = parts.hour < 12 ? "AM" : "PM";
+  const hour12 = parts.hour % 12 === 0 ? 12 : parts.hour % 12;
+  return `${hour12}:${String(parts.minute).padStart(2, "0")} ${suffix}`;
 }
 
 // "YYYY-MM-DD" for the reader's local calendar day, so formatLongDate renders
@@ -110,9 +130,6 @@ function toLocalIsoDay(parts) {
   return `${parts.year}-${mm}-${dd}`;
 }
 
-function isSameDay(a, b) {
-  return a.year === b.year && a.month === b.month && a.day === b.day;
-}
 
 // CALLER CONTRACT. This returns null when it cannot state both the date and the
 // source, which means a caller must not render the price either. A number
@@ -141,11 +158,23 @@ export function DataAgeLine({ sourceDate, sourceKey, fetchedAt }) {
   // "when did we last look", a separate question from the date and source that
   // the number itself has to carry, so losing it costs a reassurance and not
   // the attribution.
+  // The exact moment of the fetch, to the minute, never "this morning".
+  //
+  // "We checked this morning" and "we checked at 12:06 PM" are not the same
+  // claim: the first is true of anything from midnight to noon and tells a
+  // reader nothing about whether a price was pulled before or after the market
+  // moved. The date is printed alongside the time and not collapsed into
+  // "today", so this line never depends on when it happens to be read.
+  //
+  // Deliberately still a separate sentence from the priced line above. That one
+  // says the day the market published; this one says the moment we looked. Two
+  // different facts, and merging them is the confusion this component exists to
+  // prevent.
   const fetched = localDateParts(fetchedAt);
-  const today = localDateParts(Date.now());
   const checkedLine = fetched
-    ? t(isSameDay(fetched, today) ? "market.checkedToday" : "market.checkedOn", {
+    ? t("market.lastChecked", {
         date: formatLongDate(toLocalIsoDay(fetched)),
+        time: formatClockTime(fetched),
       })
     : null;
 

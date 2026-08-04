@@ -77,51 +77,63 @@ const KIND_MANDI = "mandi";
 // forty kilos are worth what the best lot in the district made, which is a
 // number nobody is going to pay them. So the flag says whether price_max is a
 // band end, and the calculator asks that rather than inspecting the source.
-function boardEntriesInOrder(rows, auctionRow, pepperMandiRow) {
+function boardEntriesInOrder(rows, auctionRow, pepperRows, t) {
   const latest = latestPerKey(rows);
   const byCrop = new Map();
   for (const row of latest) {
     if (row.source === SOURCE_CPA) byCrop.set(row.crop_key, row);
   }
 
-  return CROP_KEYS.map((cropKey) => {
+  // flatMap rather than map, because pepper is no longer one card. One crop in
+  // the catalogue can now produce several entries, one per market yard.
+  return CROP_KEYS.flatMap((cropKey) => {
     if (cropKey === CARDAMOM_CROP_KEY && canRenderPrice(auctionRow)) {
-      return {
-        cropKey,
-        row: auctionRow,
-        kind: KIND_AUCTION,
-        // Named for what the Spices Board publishes rather than the board's own
-        // crop label. The auction is for Small Cardamom specifically, and Large
-        // Cardamom is a different crop grown in other states.
-        nameKey: "market.crop.cardamom_auction",
-        hasPriceBand: false,
-      };
+      return [
+        {
+          cropKey,
+          row: auctionRow,
+          kind: KIND_AUCTION,
+          // Named for what the Spices Board publishes rather than the board's
+          // own crop label. The auction is for Small Cardamom specifically, and
+          // Large Cardamom is a different crop grown in other states.
+          nameKey: "market.crop.cardamom_auction",
+          label: t("market.crop.cardamom_auction"),
+          hasPriceBand: false,
+        },
+      ];
     }
-    // Pepper prefers the government market yard rate and falls back to CPA,
-    // the same shape as cardamom above. The yard publishes daily from Kodagu's
-    // own two markets, which is a nearer fact than a district average, and the
-    // card that renders it says on its face which geography it came from.
+
+    // PEPPER EXPANDS INTO ONE ENTRY PER MARKET YARD, and falls back to the
+    // single CPA row when the yards published nothing.
     //
-    // hasPriceBand is false because the row carries no band: price_min is the
-    // median modal rate and price_max is null. The calculator reads this flag
-    // rather than inspecting the source, so it multiplies the one figure and
-    // prints a single total instead of a range built from a missing end.
-    if (cropKey === PEPPER_CROP_KEY && canRenderPrice(pepperMandiRow)) {
-      return {
-        cropKey,
-        row: pepperMandiRow,
+    // Each entry keeps that yard's own published figures. hasPriceBand is asked
+    // per row rather than assumed for the crop: a yard that quoted one price
+    // gets false, so the calculator multiplies that figure alone instead of
+    // stretching a total across a spread the source never showed.
+    if (cropKey === PEPPER_CROP_KEY && pepperRows.length > 0) {
+      return pepperRows.map((row) => ({
+        // The row's own key, so two yards cannot collide as React children.
+        cropKey: row.crop_key,
+        row,
         kind: KIND_MANDI,
         nameKey: `market.crop.${cropKey}`,
-        hasPriceBand: false,
-      };
+        // Crop first, then the yard. A calculator chip reading only
+        // "Gonikappal APMC" would not say what is being priced.
+        label: `${t(`market.crop.${cropKey}`)}, ${row.display_name}`,
+        hasPriceBand: hasRealRange(row),
+      }));
     }
-    return {
-      cropKey,
-      row: byCrop.get(cropKey),
-      kind: KIND_CPA,
-      nameKey: `market.crop.${cropKey}`,
-      hasPriceBand: true,
-    };
+
+    return [
+      {
+        cropKey,
+        row: byCrop.get(cropKey),
+        kind: KIND_CPA,
+        nameKey: `market.crop.${cropKey}`,
+        label: t(`market.crop.${cropKey}`),
+        hasPriceBand: true,
+      },
+    ];
   }).filter((entry) => canRenderPrice(entry.row));
 }
 
@@ -218,10 +230,10 @@ export function TodaysRatesBoard() {
 
   const rows = snapshotsQ.data;
   const auctionRow = latestAuctionRow(auctionQ.data);
-  const pepperMandiRow = mandiPepperRow(mandiQ.data);
+  const pepperRows = pepperMarketRows(mandiQ.data);
   const arecanut = arecanutRows(mandiQ.data);
   const entries = rows
-    ? boardEntriesInOrder(rows, auctionRow, pepperMandiRow)
+    ? boardEntriesInOrder(rows, auctionRow, pepperRows, t)
     : [];
 
   // Only the CPA cards are candidates for the one shared line beneath the
@@ -331,6 +343,15 @@ export function TodaysRatesBoard() {
                   />
                 );
               })}
+
+              {/* In the grid with the crops, spanning every column. It sat
+                  below the calculator and the board's date line until it was
+                  found that nobody scrolled that far, which on a phone is most
+                  of a screen past the rates. A crop from the next district
+                  still has to be met while a farmer is reading today's
+                  prices. It renders nothing on a day the bordering district
+                  published no arecanut. */}
+              <ArecanutMandiCard rows={arecanut}/>
             </motion.div>
 
             {/* Sits between the rates and their provenance on purpose, so the
@@ -350,13 +371,6 @@ export function TodaysRatesBoard() {
                 />
               </motion.div>
             )}
-
-            {/* Below the board and its provenance, not inside the grid. This is
-                a crop from another district, so it sits after the Kodagu rates
-                rather than among them, and it carries its own heading and its
-                own date and source. It renders nothing at all on a day the
-                bordering district published no arecanut. */}
-            <ArecanutMandiCard rows={arecanut}/>
           </div>
         )}
       </div>

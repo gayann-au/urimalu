@@ -24,12 +24,20 @@ import { canRenderPrice } from "./MarketPriceRow";
 // covering every number on the card, which is honest only because the selector
 // that builds these rows takes a single day and only that day.
 
-// Full width, below the two column grid rather than inside it. A card carrying
-// a heading, two sentences and a variable length list does not belong in a slot
-// sized for one number, and putting it there would stretch whatever sits beside
-// it to match.
+// Inside the board grid, spanning every column.
+//
+// It used to sit below the grid, after the quantity calculator and the board's
+// shared date line. It rendered correctly there and nobody ever saw it: on a
+// 360px phone that is a full calculator's height below the rates. A farmer
+// scanning today's prices has to meet arecanut with everything else, so it is
+// in the grid now.
+//
+// Full width rather than a single cell, because a card carrying a heading, two
+// sentences and a variable length list does not fit a slot sized for one
+// number, and putting it in one would stretch whatever sat beside it to match.
+// No top margin: the grid's own gap spaces it.
 const CARD =
-  "mt-3 rounded-[18px] border border-ink-100 bg-white p-4 shadow-uri-sm";
+  "col-span-2 sm:col-span-3 rounded-[18px] border border-ink-100 bg-white p-4 shadow-uri-sm";
 
 // One variety and its rate. Name on the left, price on the right, which is the
 // one place in this feature a label and a number share a line: this card is full

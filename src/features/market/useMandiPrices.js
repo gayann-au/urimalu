@@ -16,7 +16,12 @@ import { useAuth } from "../auth/useAuth";
 // into them, so nothing renders twice.
 
 const SOURCE_AGMARKNET = "agmarknet";
-const CROP_KEY_PEPPER = "pepper";
+// One row per market now, so pepper rows are matched by prefix exactly as the
+// arecanut variety rows are. The bare "pepper" key belonged to the old single
+// combined row and is deliberately NOT matched: that figure was a median across
+// markets, a number no government page shows, and any such row still sitting in
+// the table must never reach a card again.
+const PEPPER_PREFIX = "pepper_";
 const ARECANUT_PREFIX = "arecanut_";
 
 const STATUS_HELD = "held";
@@ -66,61 +71,29 @@ export function useMandiPrices() {
 // Pure selectors. No React, no network, testable on plain arrays.
 // ---------------------------------------------------------------------------
 
+// Every row from the newest day present whose crop_key carries a prefix, one
+// row per crop_key.
+//
+// Restricted to a single source_date on purpose. Markets and varieties do not
+// all trade every day, so a card set built from whatever is newest per key could
+// put Tuesday's market beside Friday's under a single date line, and a reader
+// would have no way to tell. Taking the newest day and only that day means one
+// date line is true of every row shown.
+//
 // source_date is a date column, compared as a string on purpose: YYYY-MM-DD
 // sorts lexicographically in exact calendar order, and parsing it into a
 // timestamp would drag a timezone into a comparison that has no time in it. The
 // same reasoning as compareSourceDateDesc in useMarketSnapshots.
-function isNewer(row, current) {
-  if (current === null) return true;
-  return String(row.source_date) > String(current.source_date);
-}
-
-// The newest market yard pepper row, or null.
-export function mandiPepperRow(rows) {
-  let newest = null;
-  for (const row of rows || []) {
-    if (!row || !row.source_date) continue;
-    if (row.crop_key !== CROP_KEY_PEPPER) continue;
-    if (isNewer(row, newest)) newest = row;
-  }
-  return newest;
-}
-
-// How wide a net the pepper rate came from: "kodagu", "karnataka" or "india".
 //
-// Null when the row does not say. A row written before this field existed has
-// no level, and guessing "kodagu" for it would put the strongest of the three
-// claims on screen with nothing behind it. The card renders no geography line
-// at all in that case rather than an assumed one.
-export function mandiGeographyLevel(row) {
-  const level = row?.raw?.geography_level;
-  return typeof level === "string" && level !== "" ? level : null;
-}
-
-// The market yards behind a row, as an array. Empty when the row does not say.
-export function mandiMarkets(row) {
-  const markets = row?.raw?.markets;
-  if (!Array.isArray(markets)) return [];
-  return markets.filter((m) => typeof m === "string" && m !== "");
-}
-
-// Every arecanut variety row from the newest day present, one per variety.
-//
-// Restricted to a single source_date on purpose. Varieties do not all trade
-// every day, so a card built from whatever is newest per variety could show one
-// variety from Tuesday beside another from Friday under a single date line, and
-// a reader would have no way to tell. Taking the newest day and only that day
-// means the card's one date is true of every row on it.
-//
-// Ordered by display_name, never by price. Sorting these by what they are worth
-// would rank varieties for the reader, which is a verdict, and this feature
+// Ordered by display_name, never by price. Sorting by what a market or variety
+// is worth would rank them for the reader, which is a verdict, and this feature
 // does not give verdicts.
-export function arecanutRows(rows) {
+function newestDayRowsByPrefix(rows, prefix) {
   const candidates = [];
   for (const row of rows || []) {
     if (!row || !row.source_date) continue;
     if (typeof row.crop_key !== "string") continue;
-    if (!row.crop_key.startsWith(ARECANUT_PREFIX)) continue;
+    if (!row.crop_key.startsWith(prefix)) continue;
     candidates.push(row);
   }
   if (candidates.length === 0) return [];
@@ -142,4 +115,39 @@ export function arecanutRows(rows) {
   return [...byCropKey.values()].sort((a, b) =>
     String(a.display_name ?? "").localeCompare(String(b.display_name ?? ""))
   );
+}
+
+// One pepper row per market yard, from the newest day published.
+export function pepperMarketRows(rows) {
+  return newestDayRowsByPrefix(rows, PEPPER_PREFIX);
+}
+
+// One arecanut row per variety, from the newest day published.
+export function arecanutRows(rows) {
+  return newestDayRowsByPrefix(rows, ARECANUT_PREFIX);
+}
+
+// The market's own usual price, its modal_price as published, in rupees per kg.
+//
+// Null when the row does not carry one. It is neither end of the range, so it
+// has no column of its own and lives in raw. A card that cannot read it drops
+// that one line rather than showing a guess or repeating an end of the range.
+export function mandiModalPerKg(row) {
+  const value = row?.raw?.modal_per_kg;
+  if (value == null || value === "" || isNaN(Number(value))) return null;
+  return Number(value);
+}
+
+// Whether a row carries two genuinely different ends.
+//
+// A market whose min and max are the same published one price, and printing
+// "350 to 350" would invent a spread the source does not show. Callers use this
+// both to pick the price text and to decide whether a quantity may be
+// multiplied across a range.
+export function hasRealRange(row) {
+  const min = row?.price_min;
+  const max = row?.price_max;
+  if (max == null || max === "" || isNaN(Number(max))) return false;
+  if (min == null || min === "" || isNaN(Number(min))) return false;
+  return Number(max) !== Number(min);
 }

@@ -531,8 +531,7 @@
     "ageDays": "{{count}} days ago",
     "ageDay": "{{count}} day ago",
     "ageToday": "today",
-    "checkedToday": "We checked this morning, {{date}}",
-    "checkedOn": "We last checked {{date}}",
+    "lastChecked": "Last checked {{date}}, {{time}}",
     "source": {
       "cpa": "Coorg Planters' Association",
       "coffeeBoard": "Coffee Board of India",
@@ -541,14 +540,12 @@
     },
     "mandi": {
       "pepper": {
-        "kodagu": "Market yard rate at {{markets}}, here in Kodagu.",
-        "karnataka": "Market yard rate from elsewhere in Karnataka. This is not a Kodagu rate.",
-        "india": "Market yard rate from elsewhere in India. This is not a Kodagu rate."
+        "usual": "Usual price {{price}}"
       },
       "arecanut": {
         "heading": "Arecanut",
-        "where": "Sulya market yard, Dakshina Kannada district. This is not a Kodagu rate.",
-        "note": "No market yard in Kodagu publishes an arecanut rate. Sulya is the nearest one that does, just over the district border."
+        "where": "Sulya market, Dakshina Kannada district. This is not a Kodagu price.",
+        "note": "No market in Kodagu gives a price for arecanut. Sulya is the closest market that does. It is just over the district line. The two names below are different kinds of arecanut, and they sell at different prices."
       }
     },
     "flaggedLabel": "Note from our check:",

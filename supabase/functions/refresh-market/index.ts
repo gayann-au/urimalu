@@ -773,6 +773,9 @@ interface AgmarknetSummary {
   // Null when pepper produced no row at all.
   pepper_geography_level: GeographyLevel | null;
   pepper_markets: string[];
+  // One row is written per market, so this is the market count that actually
+  // reached the table rather than the number of markets the response named.
+  pepper_rows_written: number;
   // Arecanut is counted apart from pepper because it is a different crop from a
   // different district, and a caller reading rows_written alone could not tell
   // which of the two produced them.
@@ -857,13 +860,41 @@ function latestArrivalDate(records: unknown[]): string | null {
   return latest;
 }
 
-function modalPricesOf(records: unknown[]): number[] {
-  const prices: number[] = [];
+// Every usable numeric value of one field across a set of records.
+function numericField(records: unknown[], field: string): number[] {
+  const values: number[] = [];
   for (const entry of records) {
-    const modal = toNumber(asRecord(entry)?.modal_price);
-    if (modal !== null) prices.push(modal);
+    const value = toNumber(asRecord(entry)?.[field]);
+    if (value !== null) values.push(value);
   }
-  return prices;
+  return values;
+}
+
+// The median of one price field, already converted to rupees per kilogram.
+// Null when no record carried a usable value for that field.
+function medianPerKg(records: unknown[], field: string): number | null {
+  const value = median(numericField(records, field));
+  return value === null ? null : value / KG_PER_QUINTAL;
+}
+
+// Both ends of a range against the band, as one list of failures.
+//
+// price_max is checked only when it exists, so a row carrying a single price is
+// judged on that price alone rather than being held for a missing end.
+function bandFailures(
+  minPerKg: number,
+  maxPerKg: number | null,
+  bandMin: number,
+  bandMax: number
+): string[] {
+  const failures: string[] = [];
+  if (minPerKg < bandMin || minPerKg > bandMax) {
+    failures.push(`low end computes to ${round2(minPerKg)} INR per kg`);
+  }
+  if (maxPerKg !== null && (maxPerKg < bandMin || maxPerKg > bandMax)) {
+    failures.push(`high end computes to ${round2(maxPerKg)} INR per kg`);
+  }
+  return failures;
 }
 
 async function runAgmarknet(
@@ -912,29 +943,9 @@ async function runAgmarknet(
       continue;
     }
 
-    const medianModal = median(modalPricesOf(records));
-    if (medianModal === null) {
-      const message = `agmarknet: skipped ${target.cropKey}, ${records.length} records at ${level} but no usable modal_price`;
-      console.error(message);
-      warnings.push(message);
-      summary.rows_skipped += 1;
-      continue;
-    }
-
-    const perKg = medianModal / KG_PER_QUINTAL;
-    const sourceDate = latestArrivalDate(records);
-    if (sourceDate === null) {
-      const rawDates = records
-        .map((entry) => asRecord(entry)?.arrival_date)
-        .slice(0, 5);
-      const message = `agmarknet: skipped ${target.cropKey}, no parsable arrival_date, first raw values ${JSON.stringify(rawDates)}`;
-      console.error(message);
-      warnings.push(message);
-      summary.rows_skipped += 1;
-      continue;
-    }
-
     const markets = distinctField(records, "market");
+    summary.pepper_geography_level = level;
+    summary.pepper_markets = markets;
 
     // The same hard band CPA rows are held against, looked up by crop_key so
     // there is one definition of each band rather than two that can drift.
@@ -942,56 +953,164 @@ async function runAgmarknet(
       (crop) => crop.cropKey === target.cropKey
     );
 
-    let status: ValidationStatus = "ok";
-    let note: string | null = null;
-    if (band === undefined) {
-      status = "held";
-      note =
-        `no band defined for crop_key ${target.cropKey}, ` +
-        `${round2(perKg)} INR per kg is unverified`;
-    } else if (perKg < band.bandMinPerKg || perKg > band.bandMaxPerKg) {
-      status = "held";
-      note =
-        `median modal price computes to ${round2(perKg)} INR per kg, ` +
-        `outside the expected band ${band.bandMinPerKg} to ${band.bandMaxPerKg} INR per kg`;
+    // THE CROSS-CHECK REFERENCE, and the one derived number left in this file.
+    //
+    // It is the median of the markets' modal prices, exactly as before. That is
+    // legitimate here and nowhere else: this figure never reaches a screen. It
+    // is an internal sanity check that asks whether the CPA quote and the mandi
+    // quotes are in the same world, and a middle value is the right shape for
+    // that question. Nothing a farmer reads is built from it.
+    const referencePerKg = medianPerKg(records, "modal_price");
+    if (
+      referencePerKg !== null &&
+      band !== undefined &&
+      referencePerKg >= band.bandMinPerKg &&
+      referencePerKg <= band.bandMaxPerKg
+    ) {
+      // Only a value that passed its own band may become the reference the CPA
+      // cross-check judges against. An unchecked number must not judge a
+      // checked one.
+      perKgByCrop.set(target.cropKey, referencePerKg);
     }
 
-    await writeSnapshot(client, {
-      source: "agmarknet",
-      crop_key: target.cropKey,
-      display_name: target.displayName,
-      unit: "INR/kg",
-      contract_month: "",
-      source_date: sourceDate,
-      price_min: perKg,
-      price_max: null,
-      change_amount: null,
-      change_direction: null,
-      validation_status: status,
-      validation_note: note,
-      // A summary plus a bounded sample, not the whole response. The card reads
-      // geography_level and markets from here, so those two are stored as
-      // fields rather than left to be re-derived by scanning the sample, which
-      // would be wrong the moment the sample truncated.
-      raw: {
-        geography_level: level,
-        markets,
-        districts: distinctField(records, "district"),
-        record_count: records.length,
-        total,
-        limit: AGMARKNET_LIMIT,
-        sample: records.slice(0, AGMARKNET_RAW_SAMPLE),
-      },
-    });
+    // ONE ROW PER MARKET, never one row for the crop.
+    //
+    // Every figure written below is a number the government published for that
+    // one market, carried through unchanged but for the divide by 100 that
+    // turns a quintal price into a kilo price. No median, no average, no lowest
+    // across markets and no highest across markets. A farmer must be able to
+    // open the official source and find the exact figures on their card, and
+    // that is impossible for any number we computed ourselves.
+    if (level !== "kodagu") {
+      // Publishing per-market rows at a wider level would put hundreds of
+      // markets on a Kodagu farmer's board, and the alternative, combining them
+      // into one figure, is the thing this section no longer does. So nothing
+      // is written and the board falls back to the CPA pepper row, which is
+      // what it showed before this source existed.
+      const message =
+        `agmarknet: pepper resolved to ${level}, not kodagu, so no per-market ` +
+        `rows were written; ${markets.length} markets seen`;
+      console.warn(message);
+      warnings.push(message);
+      continue;
+    }
 
-    summary.pepper_geography_level = level;
-    summary.pepper_markets = markets;
+    const byMarket = new Map<string, unknown[]>();
+    for (const entry of records) {
+      const market = toText(asRecord(entry)?.market);
+      if (market === null) {
+        const message = "agmarknet: skipped a pepper record with no market";
+        console.error(message);
+        warnings.push(message);
+        summary.rows_skipped += 1;
+        continue;
+      }
+      const group = byMarket.get(market) ?? [];
+      group.push(entry);
+      byMarket.set(market, group);
+    }
 
-    // Only a value that passed its own band may become the reference the CPA
-    // cross-check judges against. An unchecked number must not judge a checked
-    // one, so a held row is written for audit but kept out of the map.
-    if (status === "ok") perKgByCrop.set(target.cropKey, perKg);
-    summary.rows_written += 1;
+    for (const [market, group] of byMarket) {
+      const cropKey = slugCropKey(`${target.cropKey}_`, market);
+      if (cropKey === null) {
+        const message = `agmarknet: skipped pepper market ${JSON.stringify(market)}, no usable crop_key`;
+        console.error(message);
+        warnings.push(message);
+        summary.rows_skipped += 1;
+        continue;
+      }
+
+      // One record per market is what this dataset returns. If a market ever
+      // reports twice in a day the first is used verbatim and the rest are
+      // named in a warning, because merging them would be combining figures
+      // again, just inside one market instead of across two.
+      if (group.length > 1) {
+        const message =
+          `agmarknet: ${market} returned ${group.length} pepper records, ` +
+          `using the first verbatim and ignoring the rest`;
+        console.warn(message);
+        warnings.push(message);
+      }
+      const record = asRecord(group[0]);
+      if (record === null) continue;
+
+      const minRaw = toNumber(record.min_price);
+      const maxRaw = toNumber(record.max_price);
+      const modalRaw = toNumber(record.modal_price);
+      if (minRaw === null) {
+        const message = `agmarknet: skipped ${cropKey}, no usable min_price`;
+        console.error(message);
+        warnings.push(message);
+        summary.rows_skipped += 1;
+        continue;
+      }
+
+      const sourceDate = dmyToIsoDate(record.arrival_date);
+      if (sourceDate === null) {
+        const message = `agmarknet: skipped ${cropKey}, unparsable arrival_date ${JSON.stringify(record.arrival_date)}`;
+        console.error(message);
+        warnings.push(message);
+        summary.rows_skipped += 1;
+        continue;
+      }
+
+      const minPerKg = minRaw / KG_PER_QUINTAL;
+      const maxPerKg = maxRaw === null ? null : maxRaw / KG_PER_QUINTAL;
+
+      let status: ValidationStatus = "ok";
+      let note: string | null = null;
+      if (band === undefined) {
+        status = "held";
+        note =
+          `no band defined for crop_key ${target.cropKey}, ` +
+          `${round2(minPerKg)} INR per kg is unverified`;
+      } else {
+        const failures = bandFailures(
+          minPerKg,
+          maxPerKg,
+          band.bandMinPerKg,
+          band.bandMaxPerKg
+        );
+        if (failures.length > 0) {
+          status = "held";
+          note =
+            `${failures.join("; ")}, ` +
+            `outside the expected band ${band.bandMinPerKg} to ${band.bandMaxPerKg} INR per kg`;
+        }
+      }
+
+      await writeSnapshot(client, {
+        source: "agmarknet",
+        crop_key: cropKey,
+        // The market's own name, as returned. This is the card's heading, so it
+        // is the publisher's spelling and not a tidied version of it.
+        display_name: market,
+        unit: "INR/kg",
+        contract_month: "",
+        source_date: sourceDate,
+        price_min: minPerKg,
+        price_max: maxPerKg,
+        change_amount: null,
+        change_direction: null,
+        validation_status: status,
+        validation_note: note,
+        raw: {
+          geography_level: level,
+          market,
+          district: toText(record.district),
+          state: toText(record.state),
+          grade: toText(record.grade),
+          variety: toText(record.variety),
+          // The usual price for this market, its own modal_price. Kept here
+          // rather than in a column because it is neither end of the range.
+          modal_per_kg: modalRaw === null ? null : modalRaw / KG_PER_QUINTAL,
+          record,
+        },
+      });
+
+      summary.rows_written += 1;
+      summary.pepper_rows_written += 1;
+    }
   }
 
   // Arecanut runs inside its own try/catch rather than sharing the source's.
@@ -1018,12 +1137,12 @@ async function runAgmarknet(
 // produce a key ending in one. A variety that reduces to nothing at all returns
 // null and the caller skips it, because a bare "arecanut_" key would collide
 // with the next such variety and the two would overwrite each other.
-function arecanutCropKey(variety: string): string | null {
-  const slug = variety
+function slugCropKey(prefix: string, text: string): string | null {
+  const slug = text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
-  return slug === "" ? null : `${ARECANUT_CROP_KEY_PREFIX}${slug}`;
+  return slug === "" ? null : `${prefix}${slug}`;
 }
 
 // Arecanut from the one district that borders Kodagu, one row per variety.
@@ -1085,7 +1204,7 @@ async function runArecanut(
   }
 
   for (const [variety, group] of byVariety) {
-    const cropKey = arecanutCropKey(variety);
+    const cropKey = slugCropKey(ARECANUT_CROP_KEY_PREFIX, variety);
     if (cropKey === null) {
       const message = `agmarknet: skipped arecanut variety ${JSON.stringify(variety)}, no usable crop_key`;
       console.error(message);
@@ -1097,7 +1216,7 @@ async function runArecanut(
     // Median within the variety, which is the variety's own price when there is
     // one record, as there was on every variety seen so far. It is a median
     // across markets reporting the same variety, never across varieties.
-    const medianModal = median(modalPricesOf(group));
+    const medianModal = median(numericField(group, "modal_price"));
     if (medianModal === null) {
       const message = `agmarknet: skipped ${cropKey}, ${group.length} records but no usable modal_price`;
       console.error(message);
@@ -1148,6 +1267,8 @@ async function runArecanut(
         district: ARECANUT_DISTRICT,
         variety,
         markets,
+        market: markets[0] ?? null,
+        grade: toText(asRecord(group[0])?.grade),
         record_count: group.length,
         karnataka_record_count: records.length,
         total,
@@ -1465,6 +1586,7 @@ Deno.serve(async (req) => {
     rows_skipped: 0,
     pepper_geography_level: null,
     pepper_markets: [],
+    pepper_rows_written: 0,
     arecanut_rows_written: 0,
     arecanut_varieties: [],
     arecanut_error: null,
