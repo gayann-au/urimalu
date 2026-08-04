@@ -51,7 +51,9 @@ function UsualPrice({ row }) {
   );
 }
 
-export function MandiPepperRow({ row, nameKey }) {
+// className carries the board's stranding rule. See spanClassFor in
+// TodaysRatesBoard.jsx.
+export function MandiPepperRow({ row, nameKey, className = "" }) {
   const { t } = useTranslation();
   const m = useUriMotion();
 
@@ -63,7 +65,9 @@ export function MandiPepperRow({ row, nameKey }) {
     <motion.article
       variants={m.fadeUp}
       whileTap={m.btnTap}
-      className="rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm"
+      // flex h-full flex-col so a stretched grid row can give this card height
+      // without it looking truncated. See BOARD_GRID in TodaysRatesBoard.jsx.
+      className={`flex h-full flex-col rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm ${className}`}
     >
       <h3 className="text-[11px] font-bold uppercase leading-tight tracking-wide text-ink-500 break-words">
         {t(nameKey)}
@@ -92,12 +96,16 @@ export function MandiPepperRow({ row, nameKey }) {
       {/* Always on the card, never deferred to the board's shared line. That
           line speaks for the CPA rows, which come from a different body on a
           different day, and a caption covering both would have to be vague
-          enough to be true of either. */}
-      <DataAgeLine
-        sourceDate={row.source_date}
-        sourceKey={row.source}
-        fetchedAt={row.fetched_at}
-      />
+          enough to be true of either.
+          mt-auto holds it against the bottom edge, so a row stretched to a
+          taller neighbour opens space above this block rather than below it. */}
+      <div className="mt-auto">
+        <DataAgeLine
+          sourceDate={row.source_date}
+          sourceKey={row.source}
+          fetchedAt={row.fetched_at}
+        />
+      </div>
     </motion.article>
   );
 }

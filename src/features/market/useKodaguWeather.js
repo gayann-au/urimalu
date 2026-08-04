@@ -2,46 +2,67 @@ import { useQuery } from "@tanstack/react-query";
 import { qk } from "../../lib/queryClient";
 import { KODAGU_PLACES } from "../../lib/kodaguPlaces";
 
-// Current conditions and three day rain for five Kodagu towns, in one request.
+// Current conditions and three day rain for every Kodagu town we have a
+// verified coordinate for, in one request.
 //
 // Free and keyless, so there is no secret here and nothing to rotate. It is
 // also not our data: it is Open-Meteo's, and the card that renders it says so.
 //
-// ONE REQUEST, NOT FIVE. Verified against the live endpoint on 3 August 2026
-// before this file was written, because the multi-location form is the part of
-// the vendor's API that is easiest to assume and easiest to get wrong:
+// ONE REQUEST, NOT SEVENTEEN. Verified against the live endpoint on 3 August
+// 2026 at five towns and again on 4 August 2026 at all seventeen, because the
+// multi-location form is the part of the vendor's API that is easiest to assume
+// and easiest to get wrong:
 //
-//   curl "https://api.open-meteo.com/v1/forecast?latitude=<5 comma separated>
-//         &longitude=<5 comma separated>&current=temperature_2m,
+//   curl "https://api.open-meteo.com/v1/forecast?latitude=<17 comma separated>
+//         &longitude=<17 comma separated>&current=temperature_2m,
 //         relative_humidity_2m,weather_code&daily=precipitation_sum
 //         &past_days=3&forecast_days=3&timezone=Asia/Kolkata"
 //
-// It returned a JSON array of five objects in request order, each with six
-// daily.time entries. So there is no parallel five request fallback in this
-// file: the single request works, and a fallback for a path that does not fail
-// is untested code standing in a hot path. If the vendor ever changes the
-// shape, assertShape below throws and the section shows its error state rather
-// than quietly mislabelling a town.
+// It returned a JSON array of seventeen objects in request order, each with six
+// daily.time entries, from a URL 613 characters long. So there is no split
+// request path and no parallel per town fallback in this file: the single
+// request works, and a fallback for a path that does not fail is untested code
+// standing in a hot path. If the vendor ever changes the shape, assertShape
+// below throws and the section shows its error state rather than quietly
+// mislabelling a town.
 //
 // The objects from index 1 onward carry location_id equal to their index, and
 // index 0 carries none. That is the vendor's own numbering, checked below where
 // it is present, but the mapping is by array position because position is what
 // the vendor documents.
 
-// The five towns, in the order the section renders them. Coordinates come from
-// the committed KODAGU_PLACES table so there is one set of numbers in the
-// client, not a second copy drifting from the first.
+// The towns, in the order the section renders them. Coordinates come from the
+// committed KODAGU_PLACES table so there is one set of numbers in the client,
+// not a second copy drifting from the first.
 //
-// This list is deliberately shorter than KODAGU_PLACES. Ponnampet and
-// Suntikoppa have coordinates there for the town lookup and are not shown here,
-// because five cards is what fits a phone's scroll without becoming a list
-// nobody reaches the end of.
+// The first five are the ones this section shipped with, kept first and in
+// their original order so a reader who already knew where their town sat still
+// finds it there. The rest follow in the order they resolved.
+//
+// SEVENTEEN, NOT TWENTY. Twenty-two names were put to the geocoding API and
+// five could not be resolved to a point inside Kodagu: Talacauvery, Murnad,
+// Shanivarsanthe, Chettalli and Balele return nothing from that vendor under
+// any spelling tried. They are absent rather than approximated. A coordinate
+// typed from memory to round this list up to twenty would put one valley's
+// rainfall under another valley's name, and nothing on screen would look wrong.
 export const WEATHER_TOWNS = [
   "Madikeri",
   "Virajpet",
   "Kushalnagar",
   "Somwarpet",
   "Gonikoppal",
+  "Ponnampet",
+  "Suntikoppa",
+  "Napoklu",
+  "Bhagamandala",
+  "Srimangala",
+  "Kutta",
+  "Kodlipet",
+  "Titimati",
+  "Kakkabe",
+  "Hudikeri",
+  "Siddapur",
+  "Ammathi",
 ];
 
 // Open-Meteo refreshes roughly every fifteen minutes and this is a hills app on
@@ -101,10 +122,13 @@ function sumWindow(values, [start, end]) {
   return Math.round(total * 100) / 100;
 }
 
-// Throws unless the payload is the five-entry array this file was written
-// against. Mapping by index onto the wrong length would print one town's
-// weather under another town's name, which is the exact failure kodaguPlaces.js
-// warns about: never show numbers under a name they are not for.
+// Throws unless the payload has exactly one entry per requested town. Mapping
+// by index onto the wrong length would print one town's weather under another
+// town's name, which is the exact failure kodaguPlaces.js warns about: never
+// show numbers under a name they are not for.
+//
+// The check is against WEATHER_TOWNS.length rather than a written-in number, so
+// adding a town to the list above cannot leave this guard behind.
 function assertShape(payload) {
   const list = Array.isArray(payload) ? payload : [payload];
   if (list.length !== WEATHER_TOWNS.length) {
@@ -139,9 +163,29 @@ async function fetchKodaguWeather() {
   if (!res.ok) {
     throw new Error(`Open-Meteo responded ${res.status}`);
   }
-  const list = assertShape(await res.json());
+  const payload = await res.json();
 
-  return list.map((entry, index) => {
+  // WHEN THE VENDOR ANSWERED, not when a component rendered.
+  //
+  // This is the whole reason the hook returns an object rather than the array
+  // it used to. The section prints this back to the reader as "Last checked",
+  // the same sentence every price card carries, and that sentence has to name
+  // the moment the reading actually arrived. Taken in the queryFn, so it is
+  // stamped once per real network round trip and then held by react-query for
+  // the life of the cache entry: a re-render does not move it, and neither does
+  // a component mounting an hour later against a cached response. An hour old
+  // reading then says so, which is the point.
+  //
+  // Read after res.json() resolves, so a large body that takes time to parse is
+  // counted as part of the fetch rather than excluded from it.
+  //
+  // Nothing is stored. This lives in the query cache alongside the readings and
+  // dies with them; no past value is written anywhere.
+  const fetchedAt = Date.now();
+
+  const list = assertShape(payload);
+
+  const readings = list.map((entry, index) => {
     const daily = entry?.daily ?? {};
     // A daily block of the wrong length makes both windows meaningless, so
     // both are dropped together rather than one being summed off the end.
@@ -165,11 +209,17 @@ async function fetchKodaguWeather() {
         : null,
     };
   });
+
+  return { readings, fetchedAt };
 }
 
 // No auth gate on this one. Unlike market_snapshots there is no RLS policy in
 // play, but the section it feeds only mounts on the logged-in feed, so it does
 // not fire for a visitor either.
+//
+// data is { readings, fetchedAt }, never a bare array. readings is one entry per
+// WEATHER_TOWNS name in that order; fetchedAt is the epoch millisecond the
+// vendor's response finished parsing. A caller must read data.readings.
 export function useKodaguWeather() {
   return useQuery({
     queryKey: qk.kodaguWeather,

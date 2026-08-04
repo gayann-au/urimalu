@@ -218,13 +218,60 @@ function explainerNotes(entries, hasAuction, t) {
 // glance at this width, which is the entire point of the section. It stays two
 // wide up to sm and goes three wide on a tablet, so a desktop reader does not
 // get six columns of mostly whitespace.
-// items-start stops a grid row stretching every card to the height of the
-// tallest one in it. The five CPA cards are the same height as each other, so
-// this changed nothing until the cardamom auction card arrived carrying three
-// numbers and its own date and source. Without it that card stretches whatever
-// sits beside it to match, and a Pepper card holding one price grows two
-// hundred pixels of blank white and reads as a card that failed to load.
-const BOARD_GRID = "grid grid-cols-2 items-start gap-2.5 sm:grid-cols-3";
+//
+// items-stretch, WHICH REVERSES AN EARLIER DECISION IN THIS FILE, so the old
+// reasoning is kept rather than deleted.
+//
+// This was items-start, added when the cardamom auction card arrived carrying
+// three numbers and its own date and source. Letting a row stretch to its
+// tallest card meant a Pepper card holding one price grew a couple of hundred
+// pixels of blank white below its number and read as a card that had failed to
+// load. items-start fixed that card and created a worse problem one level up:
+// cards stopped ending on a common line, so a short card left dead space under
+// it inside its own row. Once pepper became one card per market yard, each
+// carrying its own date and source and standing far taller than a coffee card,
+// that dead space became the large empty areas this board was reported for.
+//
+// The answer is not to pick one of the two. It is to stretch the cards AND give
+// them somewhere to put the height: every card in this grid is a flex column
+// now and its date and source block is pushed to the bottom edge with mt-auto,
+// so a short card reads as spaced rather than truncated, ends on the same line
+// as its neighbours, and leaves no hole in its row.
+//
+// A masonry column flow was the other option offered and was rejected. CSS
+// multi-column fills top to bottom and then across, so at three columns the
+// first line of the screen would read Arabica Parchment, Robusta Cherry,
+// Pepper. The crops would be in order down each column and in the wrong order
+// across the screen, which is a reordering by any reading a farmer would give
+// it, and the coffee crops have to keep their order.
+//
+// Holds at 360, 768 and 1280: two columns below sm, three from sm, with the
+// span rule below handling the one card that would otherwise sit alone on the
+// last row.
+const BOARD_GRID = "grid grid-cols-2 items-stretch gap-2.5 sm:grid-cols-3";
+
+// The last card widens to fill its row when it would otherwise sit alone.
+//
+// Without this a total of seven leaves one card at three columns with two empty
+// cells beside it, which is the stranding this section was reported for. Asked
+// per breakpoint because the column count changes: alone at two columns means
+// an odd total, alone at three means a total leaving a remainder of one. A
+// remainder of two at three columns puts two cards on the last row, which is a
+// pair rather than a stranded card, so it is left as it is.
+//
+// sm:col-span-1 is stated on the other branch rather than left off, because
+// col-span-2 would otherwise carry into the three column layout and make the
+// last card double width for no reason.
+//
+// The arecanut card is not counted here. It spans every column at both widths
+// and always starts its own row, so it neither strands nor is stranded.
+function spanClassFor(index, total) {
+  if (index !== total - 1) return "";
+  const aloneAtTwo = total % 2 === 1;
+  const aloneAtThree = total % 3 === 1;
+  const wide = aloneAtTwo ? "col-span-2" : "";
+  return `${wide} ${aloneAtThree ? "sm:col-span-3" : "sm:col-span-1"}`.trim();
+}
 
 export function TodaysRatesBoard() {
   const { t } = useTranslation();
@@ -326,15 +373,29 @@ export function TodaysRatesBoard() {
             {/* The grid is the stagger parent for the six cards, so they
                 arrive one after another rather than all at once. */}
             <motion.div className={BOARD_GRID} variants={m.stagger}>
-              {entries.map(({ cropKey, row, kind, nameKey }) => {
+              {entries.map(({ cropKey, row, kind, nameKey }, i) => {
+                // Computed once per card and handed to whichever component
+                // renders it, so the stranding rule lives in one place rather
+                // than in three card files that would have to agree.
+                const span = spanClassFor(i, entries.length);
                 if (kind === KIND_AUCTION) {
                   return (
-                    <CardamomAuctionRow key={cropKey} row={row} nameKey={nameKey}/>
+                    <CardamomAuctionRow
+                      key={cropKey}
+                      row={row}
+                      nameKey={nameKey}
+                      className={span}
+                    />
                   );
                 }
                 if (kind === KIND_MANDI) {
                   return (
-                    <MandiPepperRow key={cropKey} row={row} nameKey={nameKey}/>
+                    <MandiPepperRow
+                      key={cropKey}
+                      row={row}
+                      nameKey={nameKey}
+                      className={span}
+                    />
                   );
                 }
                 return (
@@ -342,6 +403,7 @@ export function TodaysRatesBoard() {
                     key={cropKey}
                     row={row}
                     nameKey={nameKey}
+                    className={span}
                     // Only when the CPA rows disagree about their date. See
                     // sharedProvenance above.
                     showProvenance={!shared}

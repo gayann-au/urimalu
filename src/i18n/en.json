@@ -670,7 +670,7 @@
       "thunderstormHailSlight": "Thunderstorm with hail",
       "thunderstormHailHeavy": "Thunderstorm with heavy hail"
     },
-    "intro": "Conditions right now, and rain measured over three days.",
+    "intro": "The latest reading from the weather service, and rain measured over three days.",
     "empty": "No weather readings have arrived yet.",
     "source": "Weather readings from Open-Meteo, licensed CC BY 4.0.",
     "degrees": "{{value}}°C",
@@ -689,7 +689,19 @@
       "Virajpet": "Virajpet",
       "Kushalnagar": "Kushalnagar",
       "Somwarpet": "Somwarpet",
-      "Gonikoppal": "Gonikoppal"
+      "Gonikoppal": "Gonikoppal",
+      "Ponnampet": "Ponnampet",
+      "Suntikoppa": "Suntikoppa",
+      "Napoklu": "Napoklu",
+      "Bhagamandala": "Bhagamandala",
+      "Srimangala": "Srimangala",
+      "Kutta": "Kutta",
+      "Kodlipet": "Kodlipet",
+      "Titimati": "Titimati",
+      "Kakkabe": "Kakkabe",
+      "Hudikeri": "Hudikeri",
+      "Siddapur": "Siddapur",
+      "Ammathi": "Ammathi"
     },
     "eyebrow": "Your district",
     "sunToday": "Sun today",
@@ -697,7 +709,14 @@
     "hours": "{{value}} hours",
     "percent": "{{value}}%",
     "notReported": "Not reported",
-    "positionOf": "{{current}} of {{total}}",
-    "showTown": "Show {{town}}"
+    "filterLabel": "Find a town",
+    "filterPlaceholder": "Type a town name",
+    "filterClear": "Clear",
+    "filterMatch": "{{shown}} of {{total}} towns match.",
+    "filterNoMatch": "No town matches that name.",
+    "swipeHint": "{{towns}} towns. Swipe to see more.",
+    "oneTown": "One town.",
+    "scrollLeft": "Show the previous town",
+    "scrollRight": "Show the next town"
   }
 }

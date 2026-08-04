@@ -55,7 +55,9 @@ function AuctionFact({ label, value }) {
   );
 }
 
-export function CardamomAuctionRow({ row, nameKey }) {
+// className carries the board's stranding rule. See spanClassFor in
+// TodaysRatesBoard.jsx.
+export function CardamomAuctionRow({ row, nameKey, className = "" }) {
   const { t } = useTranslation();
   const m = useUriMotion();
 
@@ -69,7 +71,9 @@ export function CardamomAuctionRow({ row, nameKey }) {
     <motion.article
       variants={m.fadeUp}
       whileTap={m.btnTap}
-      className="rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm"
+      // flex h-full flex-col so a stretched grid row can give this card height
+      // without it looking truncated. See BOARD_GRID in TodaysRatesBoard.jsx.
+      className={`flex h-full flex-col rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm ${className}`}
     >
       <h3 className="text-[11px] font-bold uppercase leading-tight tracking-wide text-ink-500 break-words">
         {t(nameKey)}
@@ -113,11 +117,15 @@ export function CardamomAuctionRow({ row, nameKey }) {
           beneath them all; this one comes from a different body on a different
           day, and saying so on the card is the only way a reader can tell which
           number they are looking at. */}
-      <DataAgeLine
-        sourceDate={row.source_date}
-        sourceKey={row.source}
-        fetchedAt={row.fetched_at}
-      />
+      {/* mt-auto holds it against the bottom edge, so a row stretched to a
+          taller neighbour opens space above this block rather than below it. */}
+      <div className="mt-auto">
+        <DataAgeLine
+          sourceDate={row.source_date}
+          sourceKey={row.source}
+          fetchedAt={row.fetched_at}
+        />
+      </div>
     </motion.article>
   );
 }

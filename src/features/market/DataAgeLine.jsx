@@ -131,6 +131,28 @@ function toLocalIsoDay(parts) {
 }
 
 
+// "Last checked 4 Aug 2026, 12:06 PM" for a timestamp, or null when there is no
+// readable timestamp to state.
+//
+// Exported because the weather section needs this exact sentence and must not
+// own a second copy of it. That section is not a market row: it has no
+// source_date and no market_snapshots.source, so it cannot render the component
+// below. But "when did we last look" is the same question there as it is under
+// a price, and a reader moving down the page should meet one sentence rather
+// than two phrasings of it. One definition, two callers, for the same reason
+// canNameSource above is exported rather than copied.
+//
+// Null rather than a placeholder when the timestamp is unreadable. The caller
+// drops the line; nobody prints "Last checked unknown".
+export function lastCheckedText(fetchedAt, t) {
+  const parts = localDateParts(fetchedAt);
+  if (!parts) return null;
+  return t("market.lastChecked", {
+    date: formatLongDate(toLocalIsoDay(parts)),
+    time: formatClockTime(parts),
+  });
+}
+
 // CALLER CONTRACT. This returns null when it cannot state both the date and the
 // source, which means a caller must not render the price either. A number
 // without its date and its source is the one thing this feature does not ship,
@@ -170,13 +192,7 @@ export function DataAgeLine({ sourceDate, sourceKey, fetchedAt }) {
   // says the day the market published; this one says the moment we looked. Two
   // different facts, and merging them is the confusion this component exists to
   // prevent.
-  const fetched = localDateParts(fetchedAt);
-  const checkedLine = fetched
-    ? t("market.lastChecked", {
-        date: formatLongDate(toLocalIsoDay(fetched)),
-        time: formatClockTime(fetched),
-      })
-    : null;
+  const checkedLine = lastCheckedText(fetchedAt, t);
 
   return (
     <div className="mt-3 space-y-0.5">

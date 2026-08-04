@@ -670,7 +670,7 @@
       "thunderstormHailSlight": "ಆಲಿಕಲ್ಲು ಸಹಿತ ಗುಡುಗು ಮಳೆ",
       "thunderstormHailHeavy": "ಭಾರೀ ಆಲಿಕಲ್ಲು ಸಹಿತ ಗುಡುಗು ಮಳೆ"
     },
-    "intro": "ಈಗಿನ ಹವಾಮಾನ, ಮತ್ತು ಮೂರು ದಿನಗಳಲ್ಲಿ ಅಳೆದ ಮಳೆ.",
+    "intro": "ಹವಾಮಾನ ಸೇವೆಯಿಂದ ಬಂದ ಇತ್ತೀಚಿನ ಮಾಪನ, ಮತ್ತು ಮೂರು ದಿನಗಳಲ್ಲಿ ಅಳೆದ ಮಳೆ.",
     "empty": "ಇನ್ನೂ ಯಾವುದೇ ಹವಾಮಾನ ಮಾಹಿತಿ ಬಂದಿಲ್ಲ.",
     "source": "ಹವಾಮಾನ ಮಾಹಿತಿ ಓಪನ್-ಮೆಟಿಯೊದಿಂದ, CC BY 4.0 ಪರವಾನಗಿ ಅಡಿಯಲ್ಲಿ.",
     "degrees": "{{value}}°C",
@@ -689,7 +689,19 @@
       "Virajpet": "ವೀರಾಜಪೇಟೆ",
       "Kushalnagar": "ಕುಶಾಲನಗರ",
       "Somwarpet": "ಸೋಮವಾರಪೇಟೆ",
-      "Gonikoppal": "ಗೋಣಿಕೊಪ್ಪಲು"
+      "Gonikoppal": "ಗೋಣಿಕೊಪ್ಪಲು",
+      "Ponnampet": "ಪೊನ್ನಂಪೇಟೆ",
+      "Suntikoppa": "ಸುಂಟಿಕೊಪ್ಪ",
+      "Napoklu": "ನಾಪೋಕ್ಲು",
+      "Bhagamandala": "ಭಾಗಮಂಡಲ",
+      "Srimangala": "ಶ್ರೀಮಂಗಲ",
+      "Kutta": "ಕುಟ್ಟ",
+      "Kodlipet": "ಕೊಡ್ಲಿಪೇಟೆ",
+      "Titimati": "ತಿತಿಮತಿ",
+      "Kakkabe": "ಕಕ್ಕಬೆ",
+      "Hudikeri": "ಹುದಿಕೇರಿ",
+      "Siddapur": "ಸಿದ್ದಾಪುರ",
+      "Ammathi": "ಅಮ್ಮತ್ತಿ"
     },
     "eyebrow": "ನಿಮ್ಮ ಜಿಲ್ಲೆ",
     "sunToday": "ಇಂದಿನ ಬಿಸಿಲು",
@@ -697,7 +709,14 @@
     "hours": "{{value}} ಗಂಟೆ",
     "percent": "{{value}}%",
     "notReported": "ವರದಿಯಾಗಿಲ್ಲ",
-    "positionOf": "{{total}} ರಲ್ಲಿ {{current}}",
-    "showTown": "{{town}} ತೋರಿಸಿ"
+    "filterLabel": "ಊರು ಹುಡುಕಿ",
+    "filterPlaceholder": "ಊರಿನ ಹೆಸರು ಬರೆಯಿರಿ",
+    "filterClear": "ಅಳಿಸಿ",
+    "filterMatch": "{{total}} ಊರುಗಳಲ್ಲಿ {{shown}} ಹೊಂದಿಕೆಯಾಗಿವೆ.",
+    "filterNoMatch": "ಆ ಹೆಸರಿನ ಯಾವ ಊರೂ ಸಿಗಲಿಲ್ಲ.",
+    "swipeHint": "{{towns}} ಊರುಗಳು. ಇನ್ನಷ್ಟು ನೋಡಲು ಬದಿಗೆ ಸರಿಸಿ.",
+    "oneTown": "ಒಂದು ಊರು.",
+    "scrollLeft": "ಹಿಂದಿನ ಊರು ತೋರಿಸಿ",
+    "scrollRight": "ಮುಂದಿನ ಊರು ತೋರಿಸಿ"
   }
 }

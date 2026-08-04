@@ -142,7 +142,17 @@ export function FlaggedNote({ row }) {
 // agree on a date and each one has to carry its own. There is no third setting:
 // a price on this page always has its date and source somewhere above or below
 // it, and the board decides which.
-export function MarketPriceRow({ row, nameKey, showProvenance = false }) {
+//
+// className carries the board's stranding rule, which decides whether this card
+// widens to fill a last row that would otherwise leave it alone. It is passed
+// in rather than worked out here, because the answer depends on how many cards
+// the board is drawing and this component cannot see that.
+export function MarketPriceRow({
+  row,
+  nameKey,
+  showProvenance = false,
+  className = "",
+}) {
   const { t } = useTranslation();
   const m = useUriMotion();
 
@@ -161,7 +171,10 @@ export function MarketPriceRow({ row, nameKey, showProvenance = false }) {
       // own small shadow lifts the card off the paper, where the old flat
       // ink-200 box just drew a rectangle around it. shadow-uri-sm is the
       // landing's --shadow-sm, copied into the config rather than reinvented.
-      className="rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm"
+      // flex h-full flex-col is what lets the board stretch every card in a row
+      // to a common height without this one looking truncated. See the long
+      // note on BOARD_GRID in TodaysRatesBoard.jsx.
+      className={`flex h-full flex-col rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm ${className}`}
     >
       {/* THE HIERARCHY. The crop name is a quiet label and the price is the
           card. It was the other way round when both sat near the same weight
@@ -187,13 +200,21 @@ export function MarketPriceRow({ row, nameKey, showProvenance = false }) {
       <UnitLine unit={row.unit}/>
       <FlaggedNote row={row}/>
 
-      {showProvenance && (
-        <DataAgeLine
-          sourceDate={row.source_date}
-          sourceKey={row.source}
-          fetchedAt={row.fetched_at}
-        />
-      )}
+      {/* mt-auto pushes the date and source to the bottom edge, so the extra
+          height a stretched row hands this card lands between the price and its
+          provenance rather than piling up under everything as blank white. On
+          the ordinary board path this card carries no provenance at all and the
+          wrapper is empty, which is harmless: an empty flex item takes no
+          height and the card simply ends where its content does. */}
+      <div className="mt-auto">
+        {showProvenance && (
+          <DataAgeLine
+            sourceDate={row.source_date}
+            sourceKey={row.source}
+            fetchedAt={row.fetched_at}
+          />
+        )}
+      </div>
     </motion.article>
   );
 }
