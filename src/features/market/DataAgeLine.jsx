@@ -33,6 +33,7 @@ import { formatLongDate } from "../../lib/constants";
 const SOURCE_LABEL_KEYS = {
   cpa: "market.source.cpa",
   coffee_board: "market.source.coffeeBoard",
+  spices_board: "market.source.spicesBoard",
 };
 
 // The i18n key for a stored source value, or null when there is none.

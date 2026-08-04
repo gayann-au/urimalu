@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { useUriMotion } from "../../lib/uiMotion";
 import { formatMarketPrice, quantityUnitFor } from "../../lib/marketCrops";
+import { DataAgeLine } from "./DataAgeLine";
 
 // WHAT A QUANTITY IS WORTH AT THE BOARD RATE.
 //
@@ -67,7 +68,15 @@ export function QuantityCalculator({ entries }) {
 
   const low = hasQuantity ? Number(row.price_min) * n : null;
   const highRaw = row.price_max;
+  // hasPriceBand is what makes multiplying the far end legitimate. It is true
+  // for a row quoting a band, where both ends are prices the same lot could
+  // fetch. It is false for the cardamom auction row, where price_min is the
+  // day's average and price_max is the highest price one lot made: stretching
+  // that top figure across a whole holding would tell a farmer their crop is
+  // worth what the best lot in the district made. So on those rows only the
+  // average is multiplied and the total is a single number.
   const hasHigh =
+    selected.hasPriceBand &&
     highRaw != null && highRaw !== "" && !isNaN(Number(highRaw)) &&
     Number(highRaw) !== Number(row.price_min);
   const high = hasQuantity && hasHigh ? Number(highRaw) * n : null;
@@ -115,7 +124,10 @@ export function QuantityCalculator({ entries }) {
                   : "border-ink-200 bg-white text-ink-700 hover:bg-paper-2"
               }`}
             >
-              {t(`market.crop.${o.cropKey}`)}
+              {/* The board's own label for the crop, carried on the entry so a
+                  chip and the card above it can never name the same crop two
+                  different things. */}
+              {t(o.nameKey)}
             </button>
           );
         })}
@@ -162,6 +174,21 @@ export function QuantityCalculator({ entries }) {
           </p>
         ) : (
           <p className="mt-1 text-sm text-ink-500">{t("market.calc.awaiting")}</p>
+        )}
+
+        {/* The date and source of the rate this total was worked out from.
+            Normally the board prints one line below this whole section that
+            covers it, and then this is not rendered. It appears when that line
+            cannot speak for the selected crop, which is the case for the
+            cardamom auction rate and for every crop on the fallback path where
+            the board's rows no longer share a date. A multiplied total is still
+            a number, so it does not get to skip its date and its source. */}
+        {selected.ownProvenance && (
+          <DataAgeLine
+            sourceDate={row.source_date}
+            sourceKey={row.source}
+            fetchedAt={row.fetched_at}
+          />
         )}
       </div>
 

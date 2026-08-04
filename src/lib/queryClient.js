@@ -33,6 +33,7 @@ export const qk = {
   sellerLeadsActive: ["seller_leads", "active"],
   sellerLeadReads: (merchantId) => ["seller_lead_reads", "mine", merchantId],
   marketSnapshots: ["market_snapshots", "all"],
+  cardamomAuction: ["market_snapshots", "cardamom_auction"],
   weather: (lat, lon) => ["weather", lat, lon],
   // One key for the whole five town batch, because it is one request. Keying
   // per town would make React Query cache five slices of a payload that only

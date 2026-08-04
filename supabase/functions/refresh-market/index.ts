@@ -5,11 +5,12 @@
 // nothing to do with public.price_history, which is internal merchant listing
 // data and is never read or written here.
 //
-// Three sources, each isolated in its own try/catch so one bad source cannot
+// Four sources, each isolated in its own try/catch so one bad source cannot
 // stop the others:
 //   1. Coorg Planters' Association JSON API      source 'cpa'
 //   2. Coffee Board of India home page HTML      source 'coffee_board'
 //   3. data.gov.in mandi prices (optional)       source 'agmarknet'
+//   4. Spices Board daily auction HTML           source 'spices_board'
 //
 // Secrets required (set via the Supabase dashboard or CLI, never committed):
 //   MARKET_REFRESH_SECRET  caller must send it as the x-refresh-secret header.
@@ -145,6 +146,48 @@ function dmyToIsoDate(value: unknown): string | null {
   const day = match[1].padStart(2, "0");
   const month = match[2].padStart(2, "0");
   return `${match[3]}-${month}-${day}`;
+}
+
+// The Spices Board auction page uses DD-Mon-YYYY, for example 03-Aug-2026.
+//
+// Deliberately not folded into dmyToIsoDate above. That one reads DD/MM/YYYY,
+// where the middle field is a number, and the two formats agree on nothing but
+// the day coming first. Teaching one function both would mean a regex loose
+// enough to accept either, and a loose date regex on a page whose structure can
+// change is how a wrong date gets stored looking perfectly ordinary.
+//
+// Matching is on the first three letters of the month name, so Sep, Sept and
+// September all resolve alike rather than only the spelling in use today. An
+// unknown month name returns null and the caller skips the block; it never
+// falls back to a month index of 0, which would silently date the row January.
+const MONTH_NAME_INDEX: Record<string, number> = {
+  jan: 1,
+  feb: 2,
+  mar: 3,
+  apr: 4,
+  may: 5,
+  jun: 6,
+  jul: 7,
+  aug: 8,
+  sep: 9,
+  oct: 10,
+  nov: 11,
+  dec: 12,
+};
+
+function dMonYToIsoDate(value: unknown): string | null {
+  const text = toText(value);
+  if (text === null) return null;
+  const match = text.match(/^(\d{1,2})-([A-Za-z]+)-(\d{4})$/);
+  if (!match) return null;
+
+  const month = MONTH_NAME_INDEX[match[2].slice(0, 3).toLowerCase()];
+  if (month === undefined) return null;
+
+  const day = Number(match[1]);
+  if (day < 1 || day > 31) return null;
+
+  return `${match[3]}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function median(values: number[]): number | null {
@@ -774,6 +817,267 @@ async function runAgmarknet(
 }
 
 // ---------------------------------------------------------------------------
+// Source 4: Spices Board of India, daily cardamom auction
+// ---------------------------------------------------------------------------
+
+// Free, no API key, no registration, server-rendered HTML. No scraper service.
+const SPICES_BOARD_URL =
+  "https://www.indianspices.com/marketing/price/domestic/daily-price.html";
+
+const SPICES_BOARD_SOURCE = "spices_board";
+const CARDAMOM_AUCTION_CROP_KEY = "cardamom_auction";
+
+// The band the day's average price has to fall inside to be published, reused
+// from the CPA cardamom entry rather than written again here.
+//
+// Small Cardamom on this page and CPA's "Cardamom" are the same physical
+// commodity quoted in the same unit, so they get the same band by definition.
+// Two literals would be two things to keep in step by hand, which is the exact
+// drift the agmarknet source already avoids by looking its band up rather than
+// restating it.
+const CARDAMOM_BAND = CPA_CROPS.cardamom;
+
+// The page carries its prices as text inside a scrolling marquee, with tags in
+// the middle of the fields: "Spice: Small Cardamom" sits in a <b> while the
+// numbers after it do not. So the tags come out first and the whitespace is
+// collapsed, and the block is matched on the flattened text.
+function flattenHtml(html: string): string {
+  return decodeEntities(html.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ");
+}
+
+// One Small Cardamom auction block.
+//
+// Large Cardamom is excluded by construction, not by a filter that could be
+// removed later: it is a different crop from the Sikkim and West Bengal markets
+// and its blocks have a different shape, reading "Date:" with a Market and a
+// Type and carrying no auctioneer at all. A pattern that demands "Small
+// Cardamom" followed by "Date of Auction:" and "Auctioneer:" cannot match one.
+// Kodagu grows Small Cardamom.
+const SMALL_CARDAMOM_BLOCK =
+  /Spice:\s*Small Cardamom\s*,\s*Date of Auction:\s*([0-9]{1,2}-[A-Za-z]+-[0-9]{4})\s*,\s*Auctioneer:\s*(.*?)\s*,\s*No\.of lots:\s*([0-9.,]+)\s*,\s*Qty Arrived \(Kgs\):\s*([0-9.,]+)\s*,\s*Qty Sold \(Kgs\):\s*([0-9.,]+)\s*,\s*Max Price \(Rs\.\/Kg\):\s*([0-9.,]+)\s*,\s*Avg\. Price \(Rs\.\/Kg\):\s*([0-9.,]+)/gi;
+
+interface AuctionBlock {
+  auction_date: string | null;
+  auction_date_raw: string;
+  auctioneer: string;
+  lots: number | null;
+  qty_arrived_kg: number | null;
+  qty_sold_kg: number | null;
+  max_price_per_kg: number | null;
+  avg_price_per_kg: number | null;
+}
+
+function parseSmallCardamomBlocks(html: string): AuctionBlock[] {
+  const text = flattenHtml(html);
+  const blocks: AuctionBlock[] = [];
+
+  for (const match of text.matchAll(SMALL_CARDAMOM_BLOCK)) {
+    blocks.push({
+      auction_date: dMonYToIsoDate(match[1]),
+      auction_date_raw: match[1],
+      auctioneer: match[2],
+      lots: toNumber(match[3]),
+      qty_arrived_kg: toNumber(match[4]),
+      qty_sold_kg: toNumber(match[5]),
+      max_price_per_kg: toNumber(match[6]),
+      avg_price_per_kg: toNumber(match[7]),
+    });
+  }
+
+  return blocks;
+}
+
+// The day's average price per kg across every auctioneer, weighted by the
+// quantity each of them actually sold.
+//
+// Weighted, not a plain mean of the two published averages. Total value over
+// total quantity is what "the average price cardamom sold at today" means, and
+// the two auctions are not the same size: on the day this was written one moved
+// 53,589 kg and the other 17,969 kg, so a plain mean would let the smaller
+// auction pull the day's figure as hard as the one three times its size. That
+// is a difference of about 43 rupees a kilo on the number a farmer reads.
+//
+// Falls back to the plain mean only when no quantity is usable, since a
+// weighting by zero would be a divide by zero rather than an answer. Which of
+// the two was used is recorded on the row, so the stored number can always be
+// traced back to the arithmetic that produced it.
+interface DayAggregate {
+  average_price_per_kg: number | null;
+  highest_max_price_per_kg: number | null;
+  qty_sold_kg: number | null;
+  qty_arrived_kg: number | null;
+  lots: number | null;
+  auctioneer_count: number;
+  average_method: "weighted_by_qty_sold" | "unweighted_mean" | "none";
+}
+
+function sumOrNull(values: Array<number | null>): number | null {
+  const present = values.filter((value): value is number => value !== null);
+  return present.length === 0
+    ? null
+    : present.reduce((total, value) => total + value, 0);
+}
+
+function aggregateDay(blocks: AuctionBlock[]): DayAggregate {
+  const averages = blocks.filter(
+    (block): block is AuctionBlock & { avg_price_per_kg: number } =>
+      block.avg_price_per_kg !== null
+  );
+
+  const weighable = averages.filter(
+    (block) => block.qty_sold_kg !== null && block.qty_sold_kg > 0
+  );
+  const weighableQty = weighable.reduce(
+    (total, block) => total + (block.qty_sold_kg as number),
+    0
+  );
+
+  let average: number | null = null;
+  let method: DayAggregate["average_method"] = "none";
+
+  if (weighable.length > 0 && weighableQty > 0) {
+    const value = weighable.reduce(
+      (total, block) =>
+        total + block.avg_price_per_kg * (block.qty_sold_kg as number),
+      0
+    );
+    average = value / weighableQty;
+    method = "weighted_by_qty_sold";
+  } else if (averages.length > 0) {
+    average =
+      averages.reduce((total, block) => total + block.avg_price_per_kg, 0) /
+      averages.length;
+    method = "unweighted_mean";
+  }
+
+  const maxima = blocks
+    .map((block) => block.max_price_per_kg)
+    .filter((value): value is number => value !== null);
+
+  return {
+    average_price_per_kg: average === null ? null : round2Number(average),
+    highest_max_price_per_kg: maxima.length === 0 ? null : Math.max(...maxima),
+    qty_sold_kg: sumOrNull(blocks.map((block) => block.qty_sold_kg)),
+    qty_arrived_kg: sumOrNull(blocks.map((block) => block.qty_arrived_kg)),
+    lots: sumOrNull(blocks.map((block) => block.lots)),
+    auctioneer_count: blocks.length,
+    average_method: method,
+  };
+}
+
+function round2Number(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+interface SpicesBoardSummary {
+  rows_written: number;
+  rows_held: number;
+  rows_skipped: number;
+  auction_date: string | null;
+  error: string | null;
+}
+
+async function runSpicesBoard(
+  client: SupabaseClient,
+  summary: SpicesBoardSummary,
+  warnings: string[]
+): Promise<void> {
+  const response = await fetch(SPICES_BOARD_URL, {
+    headers: { "User-Agent": "Mozilla/5.0" },
+  });
+  if (!response.ok) {
+    throw new Error(
+      `spices board responded ${response.status} ${response.statusText}`
+    );
+  }
+
+  const html = await response.text();
+  const blocks = parseSmallCardamomBlocks(html);
+  if (blocks.length === 0) {
+    // Not treated as a quiet no-op. The page always carries the most recent
+    // session, so nothing matching means the block shape moved, and a run that
+    // returned ok with zero rows would read as a working day with no auction.
+    throw new Error(
+      "spices board: no Small Cardamom block matched, page structure may have changed"
+    );
+  }
+
+  // The page can carry more than one session. Only the newest auction date is
+  // written, so an older session still sitting in the marquee cannot overwrite
+  // a newer one or be published as today's rate.
+  const dated = blocks.filter(
+    (block): block is AuctionBlock & { auction_date: string } =>
+      block.auction_date !== null
+  );
+  for (const block of blocks) {
+    if (block.auction_date !== null) continue;
+    const message = `spices_board: skipped ${block.auctioneer}, unparsable auction date ${JSON.stringify(block.auction_date_raw)}`;
+    console.error(message);
+    warnings.push(message);
+    summary.rows_skipped += 1;
+  }
+  if (dated.length === 0) return;
+
+  const auctionDate = dated.reduce(
+    (latest, block) =>
+      block.auction_date > latest ? block.auction_date : latest,
+    dated[0].auction_date
+  );
+  const dayBlocks = dated.filter((block) => block.auction_date === auctionDate);
+  const day = aggregateDay(dayBlocks);
+  summary.auction_date = auctionDate;
+
+  // The sanity band, checked once for the day because the day's average is what
+  // every row carries and therefore what a reader would see.
+  let status: ValidationStatus = "ok";
+  let note: string | null = null;
+  if (day.average_price_per_kg === null) {
+    status = "held";
+    note =
+      `no usable average price in ${dayBlocks.length} Small Cardamom block(s) ` +
+      `for ${auctionDate}, page structure may have changed`;
+  } else if (
+    day.average_price_per_kg < CARDAMOM_BAND.bandMinPerKg ||
+    day.average_price_per_kg > CARDAMOM_BAND.bandMaxPerKg
+  ) {
+    status = "held";
+    note =
+      `average price ${round2(day.average_price_per_kg)} INR per kg, ` +
+      `outside the expected band ${CARDAMOM_BAND.bandMinPerKg} to ${CARDAMOM_BAND.bandMaxPerKg} INR per kg`;
+  }
+
+  // One row per auctioneer. The auctioneer is the contract_month, because the
+  // unique index is (source, crop_key, contract_month, source_date) and two
+  // auctioneers share a date, so without it the second would overwrite the
+  // first and the day would be reported as half of itself.
+  //
+  // price_min and price_max carry the day's figures rather than this
+  // auctioneer's, so a reader of any single row gets the day. This auctioneer's
+  // own published numbers are not lost: they are the block in raw, next to the
+  // aggregate they went into.
+  for (const block of dayBlocks) {
+    await writeSnapshot(client, {
+      source: SPICES_BOARD_SOURCE,
+      crop_key: CARDAMOM_AUCTION_CROP_KEY,
+      display_name: "Small Cardamom",
+      unit: "INR/kg",
+      contract_month: block.auctioneer,
+      source_date: auctionDate,
+      price_min: day.average_price_per_kg,
+      price_max: day.highest_max_price_per_kg,
+      change_amount: null,
+      change_direction: null,
+      validation_status: status,
+      validation_note: note,
+      raw: { block, day },
+    });
+
+    summary.rows_written += 1;
+    if (status === "held") summary.rows_held += 1;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
 
@@ -809,6 +1113,13 @@ Deno.serve(async (req) => {
     rows_written: 0,
     skipped: false,
     rows_skipped: 0,
+    error: null,
+  };
+  const spicesBoard: SpicesBoardSummary = {
+    rows_written: 0,
+    rows_held: 0,
+    rows_skipped: 0,
+    auction_date: null,
     error: null,
   };
 
@@ -847,6 +1158,13 @@ Deno.serve(async (req) => {
     console.error("coffee board source failed:", coffeeBoard.error);
   }
 
+  try {
+    await runSpicesBoard(admin, spicesBoard, warnings);
+  } catch (err) {
+    spicesBoard.error = errorMessage(err);
+    console.error("spices board source failed:", spicesBoard.error);
+  }
+
   // rows_written counts every row written, whatever its validation status.
   // rows_held and rows_flagged are subsets of it, not separate totals.
   // rows_skipped is disjoint from rows_written: those rows reached no table.
@@ -856,6 +1174,7 @@ Deno.serve(async (req) => {
       cpa,
       coffee_board: coffeeBoard,
       agmarknet,
+      spices_board: spicesBoard,
     },
     warnings,
   });
