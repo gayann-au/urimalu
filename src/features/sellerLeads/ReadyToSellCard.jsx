@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "../../components/ui/Button";
 import { Input, Textarea } from "../../components/ui/Input";
 import { toast } from "../../components/ui/Toast";
+import { InstallMoment } from "../../components/InstallMoment";
 import { useUriMotion } from "../../lib/uiMotion";
 import {
   MAX_ACTIVE_SELLER_LEADS,
@@ -56,6 +57,11 @@ export function ReadyToSellCard({ profile }) {
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [error, setError] = useState(null);
+  // True once a lead has actually been written in this visit. Drives the
+  // install ask in the inline section below, which is why it is not reset when
+  // the sheet closes: the ask belongs in the page flow, where the farmer can
+  // see it after the sheet is gone.
+  const [justPosted, setJustPosted] = useState(false);
 
   // Whether the inline card has scrolled off. Drives the floating trigger.
   const [pastInline, setPastInline] = useState(false);
@@ -114,6 +120,10 @@ export function ReadyToSellCard({ profile }) {
       await createLead.mutateAsync({ farmerId: profile.id, description: trimmed });
       toast({ tone: "ok", text: t("sellerLeads.posted") });
       setDescription("");
+      // Only after the write has actually resolved. The install ask below is
+      // about merchants replying to this lead, and there is no lead to reply to
+      // until this line is reached.
+      setJustPosted(true);
     } catch (err) {
       toast({ tone: "err", text: err?.message || t("sellerLeads.postError") });
     }
@@ -150,17 +160,33 @@ export function ReadyToSellCard({ profile }) {
             </div>
           </div>
         </motion.button>
+
+        {/* The lead moment. In the feed's own flow, under the inline card, and
+            never inside the sheet: the sheet is a full screen overlay and an
+            ask does not belong on top of the page. It shows only after a lead
+            has really been written, and stands down when the bottom strip is
+            already saying the same thing. */}
+        <InstallMoment moment="lead" active={justPosted} className="mt-3"/>
       </section>
 
       {/* THE FLOATING TRIGGER.
           Bottom of the viewport, lifted clear of the home indicator by the
-          safe area inset so it is not half under the bar on an iPhone.
+          safe area inset so it is not half under the bar on an iPhone, and
+          clear of the install strip by --uri-install-h, which InstallBanner
+          measures itself into and clears back to 0px whenever no strip is
+          showing. Both are pinned to the same edge, and this is the one that
+          moves: the trigger is how a farmer says they have something to sell,
+          and an install nudge must never be the thing sitting on top of it.
+          The 0px fallback is required, not decoration, because the property is
+          simply absent on every page without a strip, and a calc() reading a
+          missing var is thrown away whole.
           z-30 keeps it under the toast stack and the sheet, both at z-50, so a
-          confirmation message is never hidden behind it. */}
+          confirmation message is never hidden behind it, and above the install
+          strip at z-20. */}
       <AnimatePresence>
         {pastInline && !open && (
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pointer-events-none"
+            className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[calc(1rem+env(safe-area-inset-bottom)+var(--uri-install-h,0px))] pointer-events-none"
             initial={m.reduce ? { opacity: 0 } : { opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={m.reduce ? { opacity: 0 } : { opacity: 0, y: 24 }}

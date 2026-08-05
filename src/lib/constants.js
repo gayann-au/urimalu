@@ -120,6 +120,34 @@ export const AUTO_APPROVE_MS = AUTO_APPROVE_HOURS * 60 * 60 * 1000;
 // feed page to show a one-time welcome toast on the first login after signup.
 export const WELCOME_FLAG_KEY = "urimalu.welcomeFarmer";
 
+// sessionStorage key set the moment a session begins: a password login, a
+// Google login, either signup, or finishing onboarding. InstallBanner reads it
+// and drops its reveal delay to nothing, because someone who has just committed
+// to the app is the one person who will not resent being offered the home
+// screen straight away.
+//
+// sessionStorage, deliberately. This is "did this person just sign in on this
+// tab", which is a fact about the session and nothing else. It dies with the
+// tab, needs no column, and is never written to Supabase. Unlike
+// WELCOME_FLAG_KEY above, nothing consumes this one: it is read many times and
+// cleared only on logout, so every page of the session gets the same answer.
+export const FRESH_SESSION_KEY = "urimalu.freshSession";
+
+// All three swallow storage failures. A blocked or full store must never break
+// a login, and the worst case is a strip that waits its normal two or six
+// seconds instead of appearing at once.
+export function markFreshSession() {
+  try { sessionStorage.setItem(FRESH_SESSION_KEY, "1"); } catch {}
+}
+
+export function isFreshSession() {
+  try { return sessionStorage.getItem(FRESH_SESSION_KEY) === "1"; } catch { return false; }
+}
+
+export function clearFreshSession() {
+  try { sessionStorage.removeItem(FRESH_SESSION_KEY); } catch {}
+}
+
 // ---------- Helpers ----------
 
 export function pendingMsLeft(merchant) {

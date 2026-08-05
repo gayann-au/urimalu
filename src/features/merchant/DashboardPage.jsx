@@ -18,6 +18,7 @@ import {
 } from "./useMerchant";
 import { useSellerLeadsUnreadCount } from "../sellerLeads/useSellerLeads";
 import { usePushRegistration } from "../alerts/usePushRegistration";
+import { InstallMoment } from "../../components/InstallMoment";
 import { toast } from "../../components/ui/Toast";
 import { LoadError } from "../../components/ui/LoadError";
 import { useUriMotion } from "../../lib/uiMotion";
@@ -187,6 +188,19 @@ export default function DashboardPage() {
           </Button>
         </motion.section>
       )}
+
+      {/* The approval moment. Keyed off the same route state that brought the
+          merchant here, not off the push card above it, because that card also
+          requires an undecided notification permission and this ask should
+          still happen for a merchant who settled that question long ago.
+          Renders in the page flow and suppresses itself when the bottom strip
+          is already on screen, when this device has been asked before, and when
+          any of the three moments has already asked this session. */}
+      <InstallMoment
+        moment="merchant"
+        active={!!location.state?.welcome}
+        className="mt-4"
+      />
 
       {/* Dashboard tabs: My Crops (default) and Seller Leads, with an unread badge. */}
       <div className="flex border-b border-ink-100 mt-2">

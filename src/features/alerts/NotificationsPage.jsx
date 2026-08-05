@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Header } from "../../components/layout/Header";
 import { LoadError } from "../../components/ui/LoadError";
 import { useMyNotifications, useMarkAllNotificationsRead } from "./useNotifications";
+import { InstallCard } from "../../components/InstallCard";
 import { useUriMotion } from "../../lib/uiMotion";
 import { formatINR } from "../../lib/constants";
 
@@ -132,6 +133,11 @@ export default function NotificationsPage() {
           })}
         </motion.ul>
       )}
+
+      {/* This is the page about being reached later, which is exactly what the
+          home screen improves, so the offer belongs here. Below the list, in
+          the flow, so it never covers the last row. */}
+      <InstallCard className="mt-6"/>
     </div>
   );
 }
