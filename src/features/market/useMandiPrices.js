@@ -26,8 +26,9 @@ const ARECANUT_PREFIX = "arecanut_";
 
 const STATUS_HELD = "held";
 
-// Matches the other two market queries. The refresh job runs once each morning,
-// so a shorter window would be waste rather than freshness.
+// Matches the other two market queries. The refresh job runs hourly between
+// 06:00 and 20:00 IST, so a window shorter than this is waste rather than
+// freshness: it would refetch the same rows several times between two writes.
 const MANDI_STALE_TIME_MS = 15 * 60_000;
 
 // One pepper row plus one row per arecanut variety. Four varieties were seen

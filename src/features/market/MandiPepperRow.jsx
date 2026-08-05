@@ -10,6 +10,7 @@ import {
   priceTextFor,
 } from "./MarketPriceRow";
 import { mandiModalPerKg } from "./useMandiPrices";
+import { MandiAgeNote, isMandiPriceTooOld } from "./MandiFreshness";
 
 // One market yard's own pepper prices. One card per yard, never one for pepper.
 //
@@ -61,12 +62,19 @@ export function MandiPepperRow({ row, nameKey, className = "" }) {
   // rather than a copy of its rules. No price without a date and a source.
   if (!canRenderPrice(row)) return null;
 
+  // Past the seven day cutoff the yard's figures come off the card entirely.
+  // The card stays: a farmer who came for the pepper rate has to be told what
+  // happened to it, and an absent card says nothing at all.
+  const tooOld = isMandiPriceTooOld(row.source_date);
+
   return (
     <motion.article
       variants={m.fadeUp}
       whileTap={m.btnTap}
       // flex h-full flex-col so a stretched grid row can give this card height
-      // without it looking truncated. See BOARD_GRID in TodaysRatesBoard.jsx.
+      // without it looking truncated. The board now groups cards of like height
+      // into one grid each, so a row here only ever stretches to another card of
+      // this same kind. See runsByCardHeight in TodaysRatesBoard.jsx.
       className={`flex h-full flex-col rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm ${className}`}
     >
       <h3 className="text-[11px] font-bold uppercase leading-tight tracking-wide text-ink-500 break-words">
@@ -82,15 +90,28 @@ export function MandiPepperRow({ row, nameKey, className = "" }) {
         {row.display_name}
       </p>
 
-      {/* priceTextFor renders a single figure when the two ends are equal, so a
-          yard that published one price does not show "350 to 350" and invent a
-          spread the source never had. */}
-      <p className="mt-1.5 font-display text-[22px] font-extrabold leading-[1.15] tracking-tight text-ink-900 tabular-nums break-words">
-        {priceTextFor(row, t)}
-      </p>
+      {/* THE PRICE IS WITHDRAWN PAST THE CUTOFF, not greyed and not captioned.
+          A figure more than seven days old is one a farmer could act on, and a
+          caveat under a number is read after the number has already been
+          believed. MandiAgeNote takes its place and says what the last date was
+          and that we are still looking. */}
+      {!tooOld && (
+        <>
+          {/* priceTextFor renders a single figure when the two ends are equal,
+              so a yard that published one price does not show "350 to 350" and
+              invent a spread the source never had. */}
+          <p className="mt-1.5 font-display text-[22px] font-extrabold leading-[1.15] tracking-tight text-ink-900 tabular-nums break-words">
+            {priceTextFor(row, t)}
+          </p>
 
-      <UnitLine unit={row.unit}/>
-      <UsualPrice row={row}/>
+          <UnitLine unit={row.unit}/>
+          <UsualPrice row={row}/>
+        </>
+      )}
+
+      {/* Nothing at all when this yard published today. See MandiFreshness. */}
+      <MandiAgeNote sourceDate={row.source_date} fetchedAt={row.fetched_at}/>
+
       <FlaggedNote row={row}/>
 
       {/* Always on the card, never deferred to the board's shared line. That

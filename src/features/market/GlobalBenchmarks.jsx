@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { LoadError } from "../../components/ui/LoadError";
 import { formatLongDate } from "../../lib/constants";
+import { istIsoDay } from "../../lib/ist";
 import { useUriMotion } from "../../lib/uiMotion";
 import { useMarketSnapshots, curveRowsForCrop } from "./useMarketSnapshots";
 import {
@@ -223,13 +224,17 @@ function UsdInrCard({ className }) {
   }
 
   const { rate, updatedMs } = fxQ.data;
-  // The provider's instant, turned into the reader's local calendar day.
-  // time_last_update_unix is a real timestamp, so it is parsed as one, which is
+  // The provider's instant, turned into the IST calendar day it fell on.
+  // time_last_update_unix is a real timestamp, so it is read as one, which is
   // the opposite of how source_date on a market row must be handled.
-  const localDay = updatedMs != null ? new Date(updatedMs) : null;
-  const localIsoDay = localDay
-    ? `${localDay.getFullYear()}-${String(localDay.getMonth() + 1).padStart(2, "0")}-${String(localDay.getDate()).padStart(2, "0")}`
-    : null;
+  //
+  // IST, not the reader's own calendar, which is what this used to build out of
+  // getFullYear and getDate. A rate stamped late in the evening IST is already
+  // the next day to a device set east of here and still the previous one to a
+  // device set west, so one rate carried three different dates depending on the
+  // phone. Every other date on this board is stated on the Kodagu calendar and
+  // this one has no business being the exception. See src/lib/ist.js.
+  const istDay = updatedMs != null ? istIsoDay(updatedMs) : null;
 
   return (
     <BenchCard className={className}>
@@ -245,9 +250,9 @@ function UsdInrCard({ className }) {
       {/* Not from our database and not from a body DataAgeLine knows how to
           name, so it states its own date and its own source here. */}
       <div className="mt-auto space-y-0.5 pt-2">
-        {localIsoDay && (
+        {istDay && (
           <p className="text-xs text-ink-500">
-            {t("market.fx.updated", { date: formatLongDate(localIsoDay) })}
+            {t("market.fx.updated", { date: formatLongDate(istDay) })}
           </p>
         )}
         <p className="text-xs text-ink-500">{t("market.fx.source")}</p>

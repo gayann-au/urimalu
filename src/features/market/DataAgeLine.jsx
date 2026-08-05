@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { dataAge } from "../../lib/dataAge";
 import { formatLongDate } from "../../lib/constants";
+import { istParts, isoDayFromParts, formatIstTime } from "../../lib/ist";
 
 // The age and attribution block that sits under every market number.
 //
@@ -85,54 +86,28 @@ function ClockIcon() {
   );
 }
 
-// Local calendar parts for a timestamp, or null when it cannot be read.
+// THE CLOCK IS IST, NEVER THE DEVICE'S.
 //
-// fetched_at is a timestamptz, a real instant, so new Date() is correct for it.
-// That is the opposite of source_date, which is a date column and is handled by
+// fetched_at is a timestamptz, a real instant, so it is read as one. That is
+// the opposite of source_date, which is a date column and is handled by
 // dataAge.js and formatLongDate through their YYYY-MM-DD prefix. The two look
 // inconsistent side by side and are not: parsing a date column as an instant is
 // the bug dataAge.js exists to avoid, and formatting an instant by its stored
 // prefix is the same bug pointing the other way, because the prefix of
 // "2026-08-02T20:30:00Z" is 2 August while a reader in IST is already on the
 // third.
-function localDateParts(value) {
-  if (!value) return null;
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  return {
-    year: d.getFullYear(),
-    month: d.getMonth() + 1,
-    day: d.getDate(),
-    hour: d.getHours(),
-    minute: d.getMinutes(),
-  };
-}
-
-// "12:06 PM" for a set of local parts.
 //
-// Hand rolled rather than toLocaleTimeString, for the same reason
-// formatLongDate is hand rolled: the runtime's answer varies by locale and by
-// ICU version, giving "12:06 pm" on one browser and "12:06 PM" on another, and
-// a Kannada locale can render the digits in a numeral set the rest of this app
-// never uses. Every other number on the board is Latin digits in a fixed shape,
-// and the fetch time has no business being the exception.
-function formatClockTime(parts) {
-  const suffix = parts.hour < 12 ? "AM" : "PM";
-  const hour12 = parts.hour % 12 === 0 ? 12 : parts.hour % 12;
-  return `${hour12}:${String(parts.minute).padStart(2, "0")} ${suffix}`;
-}
+// The parts used to be the reader's own, from getHours and getDate. A phone set
+// to another timezone then showed an hour that was never the hour we looked at,
+// with nothing on screen saying so. istParts reads the same instant on the
+// Kodagu calendar on every device, and formatIstTime prints the zone with it.
+// Both are hand rolled in src/lib/ist.js for the reason formatLongDate is: a
+// runtime formatter's answer varies by locale and by ICU version, and a Kannada
+// locale can render the digits in a numeral set the rest of this board never
+// uses.
 
-// "YYYY-MM-DD" for the reader's local calendar day, so formatLongDate renders
-// the same day the isSameDay check below reasons about.
-function toLocalIsoDay(parts) {
-  const mm = String(parts.month).padStart(2, "0");
-  const dd = String(parts.day).padStart(2, "0");
-  return `${parts.year}-${mm}-${dd}`;
-}
-
-
-// "Last checked 4 Aug 2026, 12:06 PM" for a timestamp, or null when there is no
-// readable timestamp to state.
+// "Last checked 4 August 2026, 12:06 PM IST" for a timestamp, or null when
+// there is no readable timestamp to state.
 //
 // Exported because the weather section needs this exact sentence and must not
 // own a second copy of it. That section is not a market row: it has no
@@ -145,11 +120,11 @@ function toLocalIsoDay(parts) {
 // Null rather than a placeholder when the timestamp is unreadable. The caller
 // drops the line; nobody prints "Last checked unknown".
 export function lastCheckedText(fetchedAt, t) {
-  const parts = localDateParts(fetchedAt);
+  const parts = istParts(fetchedAt);
   if (!parts) return null;
   return t("market.lastChecked", {
-    date: formatLongDate(toLocalIsoDay(parts)),
-    time: formatClockTime(parts),
+    date: formatLongDate(isoDayFromParts(parts)),
+    time: formatIstTime(parts),
   });
 }
 

@@ -72,7 +72,9 @@ export function CardamomAuctionRow({ row, nameKey, className = "" }) {
       variants={m.fadeUp}
       whileTap={m.btnTap}
       // flex h-full flex-col so a stretched grid row can give this card height
-      // without it looking truncated. See BOARD_GRID in TodaysRatesBoard.jsx.
+      // without it looking truncated. The board now groups cards of like height
+      // into one grid each, so a row here only ever stretches to another card of
+      // this same kind. See runsByCardHeight in TodaysRatesBoard.jsx.
       className={`flex h-full flex-col rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm ${className}`}
     >
       <h3 className="text-[11px] font-bold uppercase leading-tight tracking-wide text-ink-500 break-words">

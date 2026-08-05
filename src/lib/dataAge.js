@@ -15,25 +15,44 @@
 // The day count is always rendered by the caller. The band only selects
 // wording and weight, it never replaces the number.
 //
-// Everything below works in whole local calendar days, never elapsed
-// milliseconds. source_date is a date column, so Date.parse("2026-06-16")
-// would give UTC midnight, and diffing that against a local now in IST lands
-// 47 on 46 or 48 depending on the hour of day. That silent one-off would make
-// a stale price look fresher than it is, which is the exact failure this
-// feature exists to prevent. So both sides are reduced to a local midnight
-// first, reusing the YYYY-MM-DD prefix the way formatValidTill already does.
+// Everything below works in whole IST calendar days, never elapsed
+// milliseconds and never the device's own calendar. source_date is a date
+// column, so Date.parse("2026-06-16") would give UTC midnight, and diffing that
+// against a clock reading lands 47 on 46 or 48 depending on the hour of day.
+// That silent one-off would make a stale price look fresher than it is, which
+// is the exact failure this feature exists to prevent. So both sides are
+// reduced to a calendar day first, reusing the YYYY-MM-DD prefix the way
+// formatValidTill already does.
+//
+// IST ON BOTH SIDES, WHICH REPLACES AN EARLIER DECISION HERE. Today used to be
+// the reader's own local calendar day. On a phone set to another timezone that
+// is a different day from the one Kodagu is on, so a price published this
+// morning could read as one day old, or a day old price as today. The sources
+// measured here are Indian and publish on the Indian calendar, and the board
+// now states every time in IST, so the age has to be counted on the same
+// calendar it is printed against. See src/lib/ist.js.
+
+import { istIsoDay } from "./ist";
 
 const MS_PER_DAY = 86400000;
 
 const FRESH_MAX_DAYS = 2;
 const AGEING_MAX_DAYS = 14;
 
-// Local midnight for a "YYYY-MM-DD" date or an ISO timestamp sharing that
-// prefix. Returns null for anything missing, malformed, or impossible.
+// A day number for a "YYYY-MM-DD" date or an ISO timestamp sharing that prefix.
+// Returns null for anything missing, malformed, or impossible.
+//
+// Date.UTC is used purely as fixed day arithmetic, not as a claim that the date
+// is in UTC. Both sides of the subtraction below are built this way, so their
+// difference is a whole number of days with no zone and no daylight saving
+// anywhere in it. That is why there is no rounding here any more: the old
+// version subtracted two local midnights, which can be 23 or 25 hours apart
+// across a daylight saving boundary, and had to round to survive it.
+//
 // The round trip through the constructor is the impossibility check:
-// new Date(2026, 1, 30) rolls silently into 2 March, so "2026-02-30" comes
-// back with a different date than it went in with and is rejected.
-function localMidnightFromSourceDate(value) {
+// Date.UTC(2026, 1, 30) rolls silently into 2 March, so "2026-02-30" comes back
+// with a different date than it went in with and is rejected.
+function dayNumberFromIsoDay(value) {
   if (!value) return null;
   const parts = String(value).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!parts) return null;
@@ -42,42 +61,29 @@ function localMidnightFromSourceDate(value) {
   const month = Number(parts[2]);
   const day = Number(parts[3]);
 
-  const midnight = new Date(year, month - 1, day);
+  const ms = Date.UTC(year, month - 1, day);
+  const check = new Date(ms);
   if (
-    midnight.getFullYear() !== year ||
-    midnight.getMonth() !== month - 1 ||
-    midnight.getDate() !== day
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== day
   ) {
     return null;
   }
-  return midnight;
+  return ms / MS_PER_DAY;
 }
 
-// Local midnight of the reader's today. Accepts a Date or a timestamp.
-function localMidnightFromNow(now) {
-  const d = now instanceof Date ? now : new Date(now);
-  if (Number.isNaN(d.getTime())) return null;
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-// Whole calendar days between the source date and today, never negative.
+// Whole IST calendar days between the source date and today, never negative.
 // Returns null when the date is missing or unparseable, so the caller can
 // omit the line rather than render an age it cannot stand behind.
-//
-// Math.round, not floor. Both operands are local midnights, so the gap is a
-// whole number of days except across a daylight saving boundary where it is
-// 23 or 25 hours, and floor would report the 23 hour case a day short. India
-// has no DST so this only reaches a reader who is travelling, but rounding
-// costs nothing and removes the case entirely.
 export function ageInDays(sourceDate, now = Date.now()) {
-  const from = localMidnightFromSourceDate(sourceDate);
-  const to = localMidnightFromNow(now);
-  if (!from || !to) return null;
+  const from = dayNumberFromIsoDay(sourceDate);
+  const to = dayNumberFromIsoDay(istIsoDay(now));
+  if (from === null || to === null) return null;
 
-  const days = Math.round((to.getTime() - from.getTime()) / MS_PER_DAY);
   // A source date in the future is a bad feed, not a negative age. Clamp to
   // zero so it reads as today rather than as a countdown.
-  return Math.max(0, days);
+  return Math.max(0, to - from);
 }
 
 // { days, band, key, params } for a source date, or null when there is no

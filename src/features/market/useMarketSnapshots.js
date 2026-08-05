@@ -21,8 +21,8 @@ const SOURCE_COFFEE_BOARD = "coffee_board";
 const STATUS_HELD = "held";
 const STATUS_FLAGGED = "flagged";
 
-// The source refreshes once a day at 06:00 IST, so the 30 second global default
-// would be pure waste on a weak hill connection.
+// The refresh job runs hourly between 06:00 and 20:00 IST, so the 30 second
+// global default would be pure waste on a weak hill connection.
 const MARKET_STALE_TIME_MS = 15 * 60_000;
 
 // Separator for the grouping key below. A NUL byte cannot appear in any of the
@@ -61,8 +61,14 @@ export function useMarketSnapshots() {
 // ---------------------------------------------------------------------------
 
 // A flagged row is a fact with a caveat, not a failure. It is returned like any
-// other row and carries its validation_note for the caller to render verbatim.
-// It is never dropped, never hidden, and must not be styled as an error.
+// other row. It is never dropped, never hidden, and must not be styled as an
+// error.
+//
+// This answers only whether the caveat is due. It does not hand the caller a
+// note to print: validation_note is written in our own vocabulary, naming our
+// sources and our ratio, and it must never reach a screen. FlaggedNote in
+// MarketPriceRow.jsx carries the fixed, translated sentence a reader gets
+// instead, and the long comment there is the record of why.
 //
 // Zero flagged rows exist today, so this path has never been rendered and is
 // unproven against live data.
