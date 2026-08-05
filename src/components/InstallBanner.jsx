@@ -2,13 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  isStandalone,
-  isInAppBrowser,
-  getPlatform,
-  getBrowserFamily,
-} from "../lib/installEnvironment";
-import { useInstallPrompt } from "../hooks/useInstallPrompt";
+import { useInstallPrompt } from "./InstallPromptProvider";
+import { resolveInstallMessage } from "../lib/installMessage";
 import { useAuth } from "../features/auth/useAuth";
 import { useUriMotion } from "../lib/uiMotion";
 
@@ -23,12 +18,10 @@ import { useUriMotion } from "../lib/uiMotion";
 // much room at the bottom, which is what keeps it off the end of a list and off
 // the buttons that live down there.
 //
-// It reads only environment detection, the install hook, the current path, and
-// localStorage. It never touches Supabase or any API.
-
-// Set once we have confirmed a real install on this browser, so the strip never
-// returns after the app has genuinely been installed here.
-const INSTALLED_KEY = "urimalu_pwa_installed_confirmed";
+// It no longer listens for beforeinstallprompt itself. That event fires once
+// per page load and can be spent once, and three components now need it, so it
+// is captured in InstallPromptProvider and shared. This file reads that shared
+// state and owns only its own dismissal, its reveal delay, and its height.
 
 // When the strip was last dismissed, as epoch milliseconds. A device
 // preference, not user data, so it lives here and never in the database: the
@@ -68,10 +61,6 @@ const TASK_PATH_PREFIXES = [
   "/reset-password",
 ];
 
-// The in-app browsers we can name in the message. Anything else falls back to
-// the generic wording, which says the same thing without naming an app.
-const NAMED_IN_APP = new Set(["whatsapp", "instagram", "facebook", "line"]);
-
 // True on the paths listed above. The trailing slash is trimmed so "/login/"
 // and "/login" are the same page, and the prefix test requires a segment break
 // so a future "/loginhelp" would not be swallowed by "/login".
@@ -94,28 +83,6 @@ function isOnOnboardingGate(profile) {
   return (
     !profile.full_name?.trim() || !profile.phone?.trim() || !profile.district
   );
-}
-
-// True when a real install has been confirmed on this browser before. Any
-// storage failure (private mode, blocked storage) is swallowed and treated as
-// "not installed", so a storage error can never suppress a genuine prompt.
-function isPermanentlyInstalled() {
-  try {
-    return window.localStorage.getItem(INSTALLED_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
-
-// Records that the app has been installed on this browser, so the strip stays
-// hidden permanently from now on.
-function recordPermanentInstall() {
-  try {
-    window.localStorage.setItem(INSTALLED_KEY, "true");
-  } catch {
-    // Ignore: the flag simply will not persist when storage is unavailable,
-    // meaning the strip may show again on this browser despite a real install.
-  }
 }
 
 // True while a dismissal is still inside its seven days.
@@ -148,57 +115,6 @@ function recordDismissal() {
   }
 }
 
-// Works out what this browser should be told, or null when there is nothing
-// useful to say. Returns the message plus whether a real install button can be
-// offered, so the renderer never has to guess which case it is in.
-//
-// Every branch returns a key that exists in both en.json and kn.json. There are
-// deliberately no inline English fallbacks: a fallback would let a missing
-// Kannada string ship silently as English, which is the exact bug this file
-// used to have.
-function resolveVariant(t, canInstall) {
-  // 1. Inside a social or messaging in-app browser: no install of any kind can
-  // work here, so steer the user to their real browser and name the app when
-  // we know it.
-  const inApp = isInAppBrowser();
-  if (inApp.isInApp) {
-    const key = NAMED_IN_APP.has(inApp.appName)
-      ? `install.inApp.${inApp.appName}`
-      : "install.inApp.generic";
-    return { message: t(key), canPrompt: false };
-  }
-
-  const platform = getPlatform();
-
-  // 2. iOS: Safari has no install prompt and never fires beforeinstallprompt,
-  // so this is instructions only. Offering a button here would be offering a
-  // button that cannot do anything.
-  if (platform === "ios") {
-    return { message: t("install.ios"), canPrompt: false };
-  }
-
-  // 3. Android.
-  if (platform === "android") {
-    // 3a. Eligible Chromium sent a beforeinstallprompt: offer the one-tap
-    // native install.
-    if (canInstall) {
-      return { message: t("install.android.prompt"), canPrompt: true };
-    }
-    // 3b. No native prompt available: manual steps matched to the browser.
-    const family = getBrowserFamily();
-    if (family === "samsung-internet") {
-      return { message: t("install.android.samsung"), canPrompt: false };
-    }
-    if (family === "firefox") {
-      return { message: t("install.android.firefox"), canPrompt: false };
-    }
-    return { message: t("install.android.generic"), canPrompt: false };
-  }
-
-  // 4. Desktop and anything else: out of scope for now.
-  return null;
-}
-
 function CloseIcon() {
   return (
     <svg
@@ -223,10 +139,10 @@ export default function InstallBanner() {
   const m = useUriMotion();
   const location = useLocation();
   const { profile } = useAuth();
-  // Hooks run unconditionally and before every decision below, so the set of
-  // hooks never changes between renders. The install hook stays inert on
-  // browsers that never fire beforeinstallprompt, so it costs nothing there.
-  const { canInstall, isInstalled, promptInstall } = useInstallPrompt();
+  // Shared install state. One listener for the whole app lives in the provider,
+  // so nothing here competes for the deferred prompt.
+  const install = useInstallPrompt();
+  const { reportStripVisible } = install;
   // Seeded from storage so a dismissal made on an earlier visit is honoured on
   // the very first render, with no flash of a strip the reader already closed.
   const [dismissed, setDismissed] = useState(isDismissalCurrent);
@@ -260,12 +176,6 @@ export default function InstallBanner() {
     };
   }, []);
 
-  // Once a real install is confirmed for this session, remember it permanently
-  // so the strip never returns on this browser.
-  useEffect(() => {
-    if (isInstalled) recordPermanentInstall();
-  }, [isInstalled]);
-
   const handleClose = useCallback(() => {
     recordDismissal();
     setDismissed(true);
@@ -277,15 +187,10 @@ export default function InstallBanner() {
   const hidden =
     // Before the delay or first interaction, nothing at all.
     !ready ||
-    // Already running installed. Both signals are checked inside isStandalone:
-    // the standalone display-mode media query, and navigator.standalone for
-    // iOS Safari, which does not report the media query.
-    isStandalone() ||
-    // Confirmed installed on this browser in the past.
-    isPermanentlyInstalled() ||
-    // Installed during this visit (appinstalled fired): hide immediately rather
-    // than falling through to a manual-instructions branch.
-    isInstalled ||
+    // Already installed. The provider resolves all three signals behind this
+    // one flag: the standalone display-mode media query, iOS
+    // navigator.standalone, and a remembered appinstalled event.
+    install.isInstalled ||
     // Dismissed within the last seven days.
     dismissed ||
     // Sign in, registration, password recovery, role choice.
@@ -293,7 +198,16 @@ export default function InstallBanner() {
     // A farmer part way through the name, phone or district gates.
     isOnOnboardingGate(profile);
 
-  const variant = hidden ? null : resolveVariant(t, canInstall);
+  const variant = hidden ? null : resolveInstallMessage(t, install);
+  const visible = !!variant;
+
+  // Tell the rest of the app whether the strip is on screen, so the moment
+  // based asks can stand down while it is showing rather than each keeping its
+  // own copy of these rules. Reported from an effect, never during render.
+  useEffect(() => {
+    reportStripVisible(visible);
+    return () => reportStripVisible(false);
+  }, [visible, reportStripVisible]);
 
   // Publish the strip's real measured height so the app shell can reserve that
   // much room at the bottom of every page, and clear it back to zero the moment
@@ -365,7 +279,7 @@ export default function InstallBanner() {
           <div className="mt-2 flex justify-end">
             <motion.button
               type="button"
-              onClick={promptInstall}
+              onClick={install.promptInstall}
               whileTap={m.btnTap}
               className="inline-flex min-h-[44px] items-center justify-center rounded-[14px] bg-chilli-600 px-5 text-sm font-bold text-white transition-colors hover:bg-chilli-700"
             >

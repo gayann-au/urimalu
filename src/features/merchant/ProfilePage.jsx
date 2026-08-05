@@ -18,6 +18,7 @@ import { ReviewForm } from "../reviews/ReviewForm";
 import { supabase } from "../../lib/supabase";
 import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
 import { FollowCropButton } from "../alerts/FollowCropButton";
+import { InstallMoment } from "../../components/InstallMoment";
 import { formatINR, dayKey, lastNDays, listingPriceView, BAG_WEIGHTS, formatValidTill } from "../../lib/constants";
 
 // Shared easing, matches the landing page --ease-out token.
@@ -530,6 +531,9 @@ export default function ProfilePage() {
 }
 
 function ListingRow({ listing, t, fadeUp, cardHover }) {
+  // Set only by this row's own Price Watch save, so a merchant listing several
+  // crops offers the home screen on the one that was actually followed.
+  const [justFollowed, setJustFollowed] = useState(false);
   const active = !!listing.is_active;
   const dim = active ? "" : "opacity-60";
   const price = listingPriceView(listing);
@@ -553,11 +557,15 @@ function ListingRow({ listing, t, fadeUp, cardHover }) {
             <div className="text-xs text-ink-500 mt-0.5 truncate">{listing.variety_notes}</div>
           )}
         </div>
-        <FollowCropButton cropName={listing.crop_name}/>
+        <FollowCropButton cropName={listing.crop_name} onFollowed={() => setJustFollowed(true)}/>
       </div>
       <div className="mt-2.5">
         <FreshnessBadge confirmedAt={listing.confirmed_at} className="bg-paper-2 rounded-full px-2.5 py-1" />
       </div>
+
+      {/* The follow moment, in this row's own flow. Same reasoning as the feed
+          card: the line above is a flex row and an ask does not belong in it. */}
+      <InstallMoment moment="follow" active={justFollowed} className="mt-3"/>
       <ListingPrice price={price} t={t} />
       {price.mode === "perkg" && price.perKg != null && (
         <BagTotals perKg={price.perKg} t={t} />

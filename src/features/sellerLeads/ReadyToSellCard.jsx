@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "../../components/ui/Button";
 import { Input, Textarea } from "../../components/ui/Input";
 import { toast } from "../../components/ui/Toast";
+import { InstallMoment } from "../../components/InstallMoment";
 import { useUriMotion } from "../../lib/uiMotion";
 import {
   MAX_ACTIVE_SELLER_LEADS,
@@ -56,6 +57,11 @@ export function ReadyToSellCard({ profile }) {
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [error, setError] = useState(null);
+  // True once a lead has actually been written in this visit. Drives the
+  // install ask in the inline section below, which is why it is not reset when
+  // the sheet closes: the ask belongs in the page flow, where the farmer can
+  // see it after the sheet is gone.
+  const [justPosted, setJustPosted] = useState(false);
 
   // Whether the inline card has scrolled off. Drives the floating trigger.
   const [pastInline, setPastInline] = useState(false);
@@ -114,6 +120,10 @@ export function ReadyToSellCard({ profile }) {
       await createLead.mutateAsync({ farmerId: profile.id, description: trimmed });
       toast({ tone: "ok", text: t("sellerLeads.posted") });
       setDescription("");
+      // Only after the write has actually resolved. The install ask below is
+      // about merchants replying to this lead, and there is no lead to reply to
+      // until this line is reached.
+      setJustPosted(true);
     } catch (err) {
       toast({ tone: "err", text: err?.message || t("sellerLeads.postError") });
     }
@@ -150,6 +160,13 @@ export function ReadyToSellCard({ profile }) {
             </div>
           </div>
         </motion.button>
+
+        {/* The lead moment. In the feed's own flow, under the inline card, and
+            never inside the sheet: the sheet is a full screen overlay and an
+            ask does not belong on top of the page. It shows only after a lead
+            has really been written, and stands down when the bottom strip is
+            already saying the same thing. */}
+        <InstallMoment moment="lead" active={justPosted} className="mt-3"/>
       </section>
 
       {/* THE FLOATING TRIGGER.

@@ -3,10 +3,18 @@ import { Providers } from "./providers";
 import { AppRoutes } from "./routes";
 import { ErrorBoundary } from "./ErrorBoundary";
 import InstallBanner from "../components/InstallBanner";
+import { InstallPromptProvider } from "../components/InstallPromptProvider";
 
 export default function App() {
   return (
     <Providers>
+      {/* Above the router on purpose. beforeinstallprompt fires once per page
+          load, early, and often before the first route has settled. Mounted
+          inside the router this would miss it on any navigation that remounts,
+          and the strip, the inline card and the moment asks would all be left
+          with a button that does nothing. Up here it is mounted once for the
+          life of the page and every consumer reads the same captured event. */}
+      <InstallPromptProvider>
       <BrowserRouter>
         {/* The bottom padding is the room the install strip needs. InstallBanner
             is fixed to the bottom edge, so it takes up no space in the flow and
@@ -25,6 +33,7 @@ export default function App() {
           <InstallBanner/>
         </div>
       </BrowserRouter>
+      </InstallPromptProvider>
     </Providers>
   );
 }

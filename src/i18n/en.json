@@ -730,6 +730,7 @@
   },
   "install": {
     "close": "Not now",
+    "cardTitle": "Keep Urimalu on your phone",
     "ios": "Keep Urimalu on your phone screen. It opens faster, and price alerts reach your phone. Tap the share button, then tap Add to Home Screen.",
     "android": {
       "prompt": "Keep Urimalu on your phone screen. It opens faster, and price alerts reach your phone.",
@@ -744,6 +745,16 @@
       "instagram": "You are inside Instagram. Open this page in your browser. Then you can keep Urimalu on your phone screen, where it opens faster and price alerts reach your phone.",
       "facebook": "You are inside Facebook. Open this page in your browser. Then you can keep Urimalu on your phone screen, where it opens faster and price alerts reach your phone.",
       "line": "You are inside Line. Open this page in your browser. Then you can keep Urimalu on your phone screen, where it opens faster and price alerts reach your phone."
+    },
+    "how": {
+      "ios": "Tap the share button, then tap Add to Home Screen.",
+      "android": "Open your browser menu, then tap Install or Add to Home screen.",
+      "inApp": "Open this page in your browser first."
+    },
+    "moment": {
+      "follow": "Price alerts reach your phone properly once Urimalu is on your home screen.",
+      "lead": "Merchants may reply while you are away. Keep Urimalu on your home screen so their reply reaches your phone.",
+      "merchant": "Keep Urimalu on your home screen. It opens faster each morning, so posting your price takes a moment."
     }
   }
 }

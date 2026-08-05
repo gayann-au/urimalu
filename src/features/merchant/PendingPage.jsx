@@ -7,6 +7,7 @@ import { Header } from "../../components/layout/Header";
 import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { Button } from "../../components/ui/Button";
 import { CheckIcon } from "../../components/icons/Sprite";
+import { InstallCard } from "../../components/InstallCard";
 import { useAuth, useLogout } from "../auth/useAuth";
 import SignupMerchant from "../auth/SignupMerchant";
 import { pendingMsLeft, formatDuration } from "../../lib/constants";
@@ -151,6 +152,11 @@ export default function PendingPage() {
             </ul>
           </motion.div>
         )}
+
+        {/* Waiting on approval is exactly when a merchant will close the tab
+            and come back later, and the home screen is what makes coming back
+            one tap. In the flow, above the logout link, so it covers nothing. */}
+        <InstallCard className="mt-4 w-full max-w-sm"/>
 
         <motion.button
           variants={m.fadeUp}

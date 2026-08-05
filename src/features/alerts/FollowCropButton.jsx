@@ -14,7 +14,12 @@ import { usePushRegistration } from "./usePushRegistration";
 // "Watching" label means the crop is followed; tapping again reopens the sheet
 // to change settings or stop alerts. Hidden entirely for logged-out visitors:
 // following requires an account for the alerts to belong to.
-export function FollowCropButton({ cropName }) {
+// onFollowed is called once a follow has actually been written, never on an
+// unfollow and never on a failure. The card that owns this button uses it to
+// offer the home screen at that moment, because a farmer who has just asked for
+// price alerts is about to find out how well they arrive. It is optional: a
+// call site that does not pass it behaves exactly as before.
+export function FollowCropButton({ cropName, onFollowed }) {
   const { t, i18n } = useTranslation();
   const knCls = i18n.language === "kn" ? "kn" : "";
   const { profile } = useAuth();
@@ -57,6 +62,10 @@ export function FollowCropButton({ cropName }) {
       // Right after a follow saves, offer push (asks the browser once, ever).
       // Fire and forget: it never throws, and a denial leaves in-app alerts on.
       promptAfterFollow();
+      // Then tell the owning card the follow is real, so it can offer the home
+      // screen in its own flow. Only on this path: an unfollow or a failed save
+      // never reaches here.
+      onFollowed?.();
     } catch {
       setError("alerts.saveError");
     }

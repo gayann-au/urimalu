@@ -6,6 +6,7 @@ import { GlowBackdrop } from "../../components/ui/GlowBackdrop";
 import { useAuth } from "../auth/useAuth";
 import AccountFarmerForm from "./AccountFarmerForm";
 import AccountMerchantForm from "./AccountMerchantForm";
+import { InstallCard } from "../../components/InstallCard";
 import { useUriMotion } from "../../lib/uiMotion";
 
 const ROLE_LABEL_KEY = {
@@ -72,6 +73,12 @@ export default function AccountPage() {
             </Link>
           </motion.div>
         )}
+
+        {/* The standing way to put Urimalu on the home screen. This page is
+            where someone looks at their own setup rather than doing a job, so
+            an offer here interrupts nothing. It renders nothing at all once
+            the app is installed, and nothing on desktop. */}
+        <InstallCard className="mt-6"/>
       </main>
     </div>
   );

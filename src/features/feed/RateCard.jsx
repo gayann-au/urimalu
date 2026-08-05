@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useLeadTracking } from "../../hooks/useLeadTracking";
 import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
 import { FollowCropButton } from "../alerts/FollowCropButton";
+import { InstallMoment } from "../../components/InstallMoment";
 import { useUriMotion } from "../../lib/uiMotion";
 import { BAG_WEIGHTS, formatINR, listingPriceView, formatValidTill } from "../../lib/constants";
 import { waNumber } from "../../lib/phone";
@@ -22,6 +23,10 @@ export function RateCard({ item }) {
   const { t } = useTranslation();
   const m = useUriMotion();
   const { trackLead } = useLeadTracking();
+  // Set only by this card's own Price Watch save. Kept local so a feed showing
+  // the same crop from five merchants offers the home screen once, on the card
+  // that was actually tapped.
+  const [justFollowed, setJustFollowed] = useState(false);
   const merchant = item.merchant || {};
 
   const callPhone = merchant.phone;
@@ -68,11 +73,19 @@ export function RateCard({ item }) {
             {merchant.town}
           </p>
         </div>
-        <FollowCropButton cropName={item.crop_name}/>
+        <FollowCropButton cropName={item.crop_name} onFollowed={() => setJustFollowed(true)}/>
       </div>
       <div className="mt-2.5">
         <FreshnessBadge confirmedAt={item.confirmed_at} className="bg-paper-2 rounded-full px-2.5 py-1" />
       </div>
+
+      {/* The follow moment, in this card's own flow rather than beside the
+          button. The row above is a flex line holding the crop name and the
+          Price Watch button, and an ask dropped into it would fight that
+          layout; here it is a block of its own and pushes nothing sideways.
+          Local state, so only the card whose crop was just followed offers it,
+          never every card showing the same crop. */}
+      <InstallMoment moment="follow" active={justFollowed} className="mt-3"/>
 
       {/* Price */}
       <PriceBlock price={price} t={t} />
