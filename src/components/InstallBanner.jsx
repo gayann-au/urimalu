@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useInstallPrompt } from "./InstallPromptProvider";
 import { resolveInstallMessage } from "../lib/installMessage";
 import { useAuth } from "../features/auth/useAuth";
+import { isFreshSession } from "../lib/constants";
 import { useUriMotion } from "../lib/uiMotion";
 
 // The install nudge. One strip, pinned to the bottom edge, on every page of the
@@ -32,10 +33,33 @@ const DISMISSED_AT_KEY = "urimalu_pwa_dismissed_at";
 // How long a dismissal lasts before the nudge may come back.
 const DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
 
-// Hold the strip back on first paint. It may appear only after the user has had
-// a moment with the page: either six seconds pass, or they scroll or tap once,
-// whichever comes first. This keeps the install nudge from ambushing arrival.
+// How long the strip waits before it may appear, and what else it waits for.
+//
+// The original rule, still the default everywhere: six seconds, or the first
+// scroll or tap, whichever comes first. That is right for a page someone opened
+// to do a job, where an unasked-for offer on arrival is an interruption.
+//
+// It was wrong for the two pages people actually arrive on. A farmer who lands
+// on the feed, reads the morning's prices and leaves may never scroll and may
+// never be there six seconds, so the strip that was meant to reach new users
+// was the one thing they never saw. On those two pages it now shows after two
+// seconds on its own, with nothing to trigger it.
+//
+// And someone who has just signed up or just signed in has this second chosen
+// the app. Waiting to ask them is pointless caution, so that case waits for
+// nothing at all.
 const REVEAL_DELAY_MS = 6 * 1000;
+const FAST_REVEAL_MS = 2 * 1000;
+
+// The two pages a visitor arrives on rather than navigates to. Exact matches,
+// not prefixes: "/feed" is the feed itself, and a future "/feed/something"
+// would be a different, deeper page that has not earned the shorter wait.
+const FAST_REVEAL_PATHS = new Set(["/", "/feed"]);
+
+function isFastRevealPath(pathname) {
+  const path = (pathname || "/").toLowerCase().replace(/\/+$/, "") || "/";
+  return FAST_REVEAL_PATHS.has(path);
+}
 
 // The strip's own height, published to the document root so the app shell can
 // reserve the same amount of room at the bottom of every page.
@@ -151,11 +175,36 @@ export default function InstallBanner() {
   const [ready, setReady] = useState(false);
   const cardRef = useRef(null);
 
-  // Reveal the strip once the user has settled in: after REVEAL_DELAY_MS, or on
-  // the first scroll or first tap/click anywhere, whichever happens first. All
-  // triggers funnel through a single one-shot reveal so it can only fire once,
-  // and everything is torn down on unmount.
+  // Which of the three waits applies right now. Recomputed on navigation, so
+  // walking from a deep page onto the feed switches to the shorter wait rather
+  // than being stuck with the one that applied on arrival.
+  const revealMode = isFreshSession()
+    ? "immediate"
+    : isFastRevealPath(location.pathname)
+      ? "fast"
+      : "settled";
+
+  // Reveal the strip once its wait is over. Three modes:
+  //
+  //   immediate  they just signed up or signed in: no wait, no listeners
+  //   fast       landing or feed: two seconds, and nothing else to trigger it
+  //   settled    everywhere else: six seconds, or the first scroll or tap,
+  //              whichever comes first. Unchanged from before.
+  //
+  // The scroll and pointer listeners are attached in settled mode ONLY. In fast
+  // mode they would be pointless (the timer is shorter than any realistic first
+  // interaction) and in immediate mode there is nothing to wait for.
+  //
+  // Guarded on ready so this can never un-reveal: once the strip has earned its
+  // place, navigating to a slower page must not take it away again.
   useEffect(() => {
+    if (ready) return undefined;
+
+    if (revealMode === "immediate") {
+      setReady(true);
+      return undefined;
+    }
+
     let revealed = false;
     let timerId = 0;
     const reveal = () => {
@@ -166,15 +215,19 @@ export default function InstallBanner() {
       window.removeEventListener("pointerdown", reveal);
       setReady(true);
     };
-    timerId = window.setTimeout(reveal, REVEAL_DELAY_MS);
-    window.addEventListener("scroll", reveal, { passive: true });
-    window.addEventListener("pointerdown", reveal);
+
+    const settled = revealMode === "settled";
+    timerId = window.setTimeout(reveal, settled ? REVEAL_DELAY_MS : FAST_REVEAL_MS);
+    if (settled) {
+      window.addEventListener("scroll", reveal, { passive: true });
+      window.addEventListener("pointerdown", reveal);
+    }
     return () => {
       window.clearTimeout(timerId);
       window.removeEventListener("scroll", reveal);
       window.removeEventListener("pointerdown", reveal);
     };
-  }, []);
+  }, [ready, revealMode]);
 
   const handleClose = useCallback(() => {
     recordDismissal();

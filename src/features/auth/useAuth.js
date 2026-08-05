@@ -3,7 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
-import { USER_COLUMNS_AUTHED, WELCOME_FLAG_KEY } from "../../lib/constants";
+import {
+  USER_COLUMNS_AUTHED,
+  WELCOME_FLAG_KEY,
+  markFreshSession,
+  clearFreshSession,
+} from "../../lib/constants";
 import { normalizePhone } from "../../lib/phone";
 import { toast } from "../../components/ui/Toast";
 import i18n from "../../i18n";
@@ -164,7 +169,13 @@ export function useLogin() {
       qc.setQueryData(qk.profile(data.user.id), profile);
       return profile;
     },
-    onSuccess: (profile) => navigateByProfile(nav, profile),
+    // A session has just begun on this tab. The flag is set before navigating
+    // so it is already readable by the time the destination page renders and
+    // InstallBanner decides how long to wait.
+    onSuccess: (profile) => {
+      markFreshSession();
+      navigateByProfile(nav, profile);
+    },
   });
 }
 
@@ -201,6 +212,7 @@ export function useGoogleLogin() {
       return { profile };
     },
     onSuccess: ({ profile }) => {
+      markFreshSession();
       if (profile) navigateByProfile(nav, profile);
       else nav("/onboarding", { replace: true });
     },
@@ -248,6 +260,7 @@ export function useSignupFarmer() {
       // One-time flag: the feed shows a single welcome toast on the first
       // login after signup, then clears it.
       try { sessionStorage.setItem(WELCOME_FLAG_KEY, "1"); } catch {}
+      markFreshSession();
       nav("/", { replace: true });
     },
   });
@@ -297,7 +310,10 @@ export function useSignupMerchant() {
       qc.setQueryData(qk.profile(userId), profile);
       return profile;
     },
-    onSuccess: () => nav("/merchant/pending", { replace: true }),
+    onSuccess: () => {
+      markFreshSession();
+      nav("/merchant/pending", { replace: true });
+    },
   });
 }
 
@@ -312,6 +328,9 @@ export function useLogout() {
     },
     onSuccess: () => {
       qc.clear();
+      // The session is over, so it is no longer a fresh one. Without this the
+      // next visitor on this tab would be treated as having just signed in.
+      clearFreshSession();
       nav("/", { replace: true });
     },
   });

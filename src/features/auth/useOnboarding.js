@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { qk } from "../../lib/queryClient";
-import { USER_COLUMNS_AUTHED, WELCOME_FLAG_KEY } from "../../lib/constants";
+import { USER_COLUMNS_AUTHED, WELCOME_FLAG_KEY, markFreshSession } from "../../lib/constants";
 import { normalizePhone } from "../../lib/phone";
 
 // Onboarding for brand new Google accounts. The Google session already exists
@@ -67,6 +67,9 @@ export function useFarmerOnboarding() {
       // One-time flag: the feed shows a single welcome toast on the first
       // login after signup, then clears it.
       try { sessionStorage.setItem(WELCOME_FLAG_KEY, "1"); } catch {}
+      // Finishing onboarding is the point this account becomes real, so it
+      // counts as the start of the session for the install strip's timing.
+      markFreshSession();
       // Farmers land on the feed, same as the password farmer sign-up.
       nav("/", { replace: true });
     },
