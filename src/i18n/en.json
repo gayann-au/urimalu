@@ -168,6 +168,8 @@
     "sub": "Your account is under review",
     "timeline": "If an admin has not reviewed your account within 24 hours, it is approved automatically. You will be able to access your dashboard once approved.",
     "autoApprove": "Auto-approved in",
+    "autoApproveError": "We could not approve your account just now. Please try again.",
+    "autoApproveRetry": "Try again",
     "prepareTitle": "While waiting, prepare:",
     "prepare1": "Today's EP rate for Robusta Cherry",
     "prepare2": "Arabica Cherry bag price",
@@ -725,5 +727,23 @@
     "oneTown": "One town.",
     "scrollLeft": "Show the previous town",
     "scrollRight": "Show the next town"
+  },
+  "install": {
+    "close": "Not now",
+    "ios": "Keep Urimalu on your phone screen. It opens faster, and price alerts reach your phone. Tap the share button, then tap Add to Home Screen.",
+    "android": {
+      "prompt": "Keep Urimalu on your phone screen. It opens faster, and price alerts reach your phone.",
+      "button": "Add",
+      "samsung": "Keep Urimalu on your phone screen. It opens faster, and price alerts reach your phone. Open the browser menu, tap Add page to, then tap Home screen.",
+      "firefox": "Keep Urimalu on your phone screen. It opens faster, and price alerts reach your phone. Open the browser menu, then tap Install.",
+      "generic": "Keep Urimalu on your phone screen. It opens faster, and price alerts reach your phone. Open your browser menu and look for Install or Add to Home screen."
+    },
+    "inApp": {
+      "generic": "Open this page in your browser. Then you can keep Urimalu on your phone screen, where it opens faster and price alerts reach your phone.",
+      "whatsapp": "You are inside WhatsApp. Open this page in your browser. Then you can keep Urimalu on your phone screen, where it opens faster and price alerts reach your phone.",
+      "instagram": "You are inside Instagram. Open this page in your browser. Then you can keep Urimalu on your phone screen, where it opens faster and price alerts reach your phone.",
+      "facebook": "You are inside Facebook. Open this page in your browser. Then you can keep Urimalu on your phone screen, where it opens faster and price alerts reach your phone.",
+      "line": "You are inside Line. Open this page in your browser. Then you can keep Urimalu on your phone screen, where it opens faster and price alerts reach your phone."
+    }
   }
 }

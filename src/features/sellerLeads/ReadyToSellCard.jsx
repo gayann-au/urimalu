@@ -154,13 +154,22 @@ export function ReadyToSellCard({ profile }) {
 
       {/* THE FLOATING TRIGGER.
           Bottom of the viewport, lifted clear of the home indicator by the
-          safe area inset so it is not half under the bar on an iPhone.
+          safe area inset so it is not half under the bar on an iPhone, and
+          clear of the install strip by --uri-install-h, which InstallBanner
+          measures itself into and clears back to 0px whenever no strip is
+          showing. Both are pinned to the same edge, and this is the one that
+          moves: the trigger is how a farmer says they have something to sell,
+          and an install nudge must never be the thing sitting on top of it.
+          The 0px fallback is required, not decoration, because the property is
+          simply absent on every page without a strip, and a calc() reading a
+          missing var is thrown away whole.
           z-30 keeps it under the toast stack and the sheet, both at z-50, so a
-          confirmation message is never hidden behind it. */}
+          confirmation message is never hidden behind it, and above the install
+          strip at z-20. */}
       <AnimatePresence>
         {pastInline && !open && (
           <motion.div
-            className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pointer-events-none"
+            className="fixed inset-x-0 bottom-0 z-30 flex justify-center px-4 pb-[calc(1rem+env(safe-area-inset-bottom)+var(--uri-install-h,0px))] pointer-events-none"
             initial={m.reduce ? { opacity: 0 } : { opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             exit={m.reduce ? { opacity: 0 } : { opacity: 0, y: 24 }}
