@@ -41,16 +41,42 @@ import { SectionEyebrow } from "./SectionEyebrow";
 const CROP_LIFFE_ROBUSTA = "liffe_robusta";
 const CROP_ICE_ARABICA = "ice_arabica";
 
-// Two across on a phone, matching TodaysRatesBoard, and three across from sm
-// so all three benchmarks sit on one row on a tablet or a desktop.
-const BENCH_GRID = "grid grid-cols-2 gap-2.5 sm:grid-cols-3";
+// STACKED ON A PHONE, three across from sm.
+//
+// This was two across at phone width, matching TodaysRatesBoard. It should not
+// have been. A board card carries a crop name and one number and reads fine in
+// half of 360px. These cards carry an exchange's name, a delivery month, a
+// price in US cents, a unit line and a full date and source block, and at the
+// 165px that leaves, every one of those wraps to two or three lines. The card
+// stopped being a card and became a column of fragments.
+//
+// So they stack. One per row below sm, full width, nothing wrapping that does
+// not have to. The scroll-snap strip the weather section uses was the other
+// option offered and was not taken: there are three cards here, a reader meets
+// all three by scrolling the page they are already scrolling, and a second
+// sideways scroller on the same screen is a gesture to learn for no gain.
+//
+// No horizontal page overflow at any width follows from this. At one column a
+// card is the width of its column and cannot exceed it, and the long figures
+// inside already carry break-words.
+const BENCH_GRID = "grid grid-cols-1 gap-2.5 sm:grid-cols-3";
 
-// The last card fills the row when there is an odd number of them, so a lone
-// trailing card is never stranded beside dead space at phone width. From sm
-// the grid is three wide and the natural placement is already right.
+// The last card widens to fill its row rather than sitting beside dead space.
+//
+// Only asked from sm. Below that the grid is a single column where every card
+// already fills its row, and a span class there would be worse than useless:
+// spanning two columns in a one column grid makes the browser add a second,
+// implicit column and the row overflows the page.
+//
+// Three cards is the ordinary case and divides evenly, so this usually returns
+// nothing. It earns its keep when a benchmark is missing: at two cards the
+// second goes double width, at one it fills the row.
 function spanClassFor(index, total) {
-  const isLastAndOdd = index === total - 1 && total % 2 === 1;
-  return isLastAndOdd ? "col-span-2 sm:col-span-1" : "";
+  if (index !== total - 1) return "";
+  const remainder = total % 3;
+  if (remainder === 1) return "sm:col-span-3";
+  if (remainder === 2) return "sm:col-span-2";
+  return "";
 }
 
 // The nearest contract month for a futures crop, or null.
@@ -73,7 +99,11 @@ function BenchCard({ className = "", children }) {
     <motion.article
       variants={m.fadeUp}
       whileTap={m.btnTap}
-      className={`rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm ${className}`}
+      // flex h-full flex-col so the three cards on a tablet or desktop row end
+      // on a common line, with each card's date and source held at its bottom
+      // edge by mt-auto rather than floating under a short one. Same treatment
+      // as the board, for the same reason.
+      className={`flex h-full flex-col rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm ${className}`}
     >
       {children}
     </motion.article>
@@ -130,12 +160,15 @@ function BenchmarkCard({ row, titleKey, explainKey, className }) {
         extra={storedUnitNote(row.unit, t)}
       />
 
-      {/* This card's own date and source, inside this card. */}
-      <DataAgeLine
-        sourceDate={row.source_date}
-        sourceKey={row.source}
-        fetchedAt={row.fetched_at}
-      />
+      {/* This card's own date and source, inside this card and held to its
+          bottom edge so a stretched row opens space above it, not below. */}
+      <div className="mt-auto">
+        <DataAgeLine
+          sourceDate={row.source_date}
+          sourceKey={row.source}
+          fetchedAt={row.fetched_at}
+        />
+      </div>
     </BenchCard>
   );
 }
@@ -211,7 +244,7 @@ function UsdInrCard({ className }) {
 
       {/* Not from our database and not from a body DataAgeLine knows how to
           name, so it states its own date and its own source here. */}
-      <div className="mt-2 space-y-0.5">
+      <div className="mt-auto space-y-0.5 pt-2">
         {localIsoDay && (
           <p className="text-xs text-ink-500">
             {t("market.fx.updated", { date: formatLongDate(localIsoDay) })}

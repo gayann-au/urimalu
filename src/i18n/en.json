@@ -517,7 +517,8 @@
       "robusta_parchment": "Robusta Parchment",
       "robusta_cherry": "Robusta Cherry",
       "pepper": "Pepper",
-      "cardamom": "Cardamom"
+      "cardamom": "Cardamom",
+      "cardamom_auction": "Small Cardamom"
     },
     "priceRange": "{{min}} to {{max}}",
     "unitGloss": {
@@ -530,11 +531,22 @@
     "ageDays": "{{count}} days ago",
     "ageDay": "{{count}} day ago",
     "ageToday": "today",
-    "checkedToday": "We checked this morning, {{date}}",
-    "checkedOn": "We last checked {{date}}",
+    "lastChecked": "Last checked {{date}}, {{time}}",
     "source": {
       "cpa": "Coorg Planters' Association",
-      "coffeeBoard": "Coffee Board of India"
+      "coffeeBoard": "Coffee Board of India",
+      "spicesBoard": "Spices Board of India",
+      "agmarknet": "Agricultural Marketing Directorate, Government of India"
+    },
+    "mandi": {
+      "pepper": {
+        "usual": "Usual price {{price}}"
+      },
+      "arecanut": {
+        "heading": "Arecanut",
+        "where": "Sulya market, Dakshina Kannada district. This is not a Kodagu price.",
+        "note": "No market in Kodagu gives a price for arecanut. Sulya is the closest market that does. It is just over the district line. The two names below are different kinds of arecanut, and they sell at different prices."
+      }
     },
     "flaggedLabel": "Note from our check:",
     "calc": {
@@ -605,7 +617,14 @@
       "usdInr": "Coffee is bought and sold between countries in US dollars, not rupees. This line says how many rupees one dollar is worth. When this number moves, the world coffee price comes to a different number of rupees, even if the coffee price itself has not changed.",
       "weather": "Sun today is how many hours the sun was out. Chance of rain is how likely the weather service thinks rain is today, counted out of a hundred. The two rain figures are how many millimetres fell in the last three days and how much is expected in the next three. Coffee and pepper are dried in the open air, so sun and rain both affect that work.",
       "storedUnit": "The exact unit recorded from the source is {{unit}}.",
-      "storedUnits": "The exact units recorded from the source are {{units}}."
+      "storedUnits": "The exact units recorded from the source are {{units}}.",
+      "cardamomAuction": "Cardamom comes from the Spices Board of India auction, which is held and published every day. The average is worked out across that day's auctions, counting each one by how much it sold. The highest is the most a single lot fetched, not a rate offered to everyone."
+    },
+    "auction": {
+      "averageLabel": "Average price",
+      "highestLabel": "Highest price",
+      "soldLabel": "Quantity sold",
+      "soldValue": "{{qty}} kg"
     }
   },
   "weather": {
@@ -651,7 +670,7 @@
       "thunderstormHailSlight": "Thunderstorm with hail",
       "thunderstormHailHeavy": "Thunderstorm with heavy hail"
     },
-    "intro": "Conditions right now, and rain measured over three days.",
+    "intro": "The latest reading from the weather service, and rain measured over three days.",
     "empty": "No weather readings have arrived yet.",
     "source": "Weather readings from Open-Meteo, licensed CC BY 4.0.",
     "degrees": "{{value}}°C",
@@ -670,7 +689,19 @@
       "Virajpet": "Virajpet",
       "Kushalnagar": "Kushalnagar",
       "Somwarpet": "Somwarpet",
-      "Gonikoppal": "Gonikoppal"
+      "Gonikoppal": "Gonikoppal",
+      "Ponnampet": "Ponnampet",
+      "Suntikoppa": "Suntikoppa",
+      "Napoklu": "Napoklu",
+      "Bhagamandala": "Bhagamandala",
+      "Srimangala": "Srimangala",
+      "Kutta": "Kutta",
+      "Kodlipet": "Kodlipet",
+      "Titimati": "Titimati",
+      "Kakkabe": "Kakkabe",
+      "Hudikeri": "Hudikeri",
+      "Siddapur": "Siddapur",
+      "Ammathi": "Ammathi"
     },
     "eyebrow": "Your district",
     "sunToday": "Sun today",
@@ -678,7 +709,14 @@
     "hours": "{{value}} hours",
     "percent": "{{value}}%",
     "notReported": "Not reported",
-    "positionOf": "{{current}} of {{total}}",
-    "showTown": "Show {{town}}"
+    "filterLabel": "Find a town",
+    "filterPlaceholder": "Type a town name",
+    "filterClear": "Clear",
+    "filterMatch": "{{shown}} of {{total}} towns match.",
+    "filterNoMatch": "No town matches that name.",
+    "swipeHint": "{{towns}} towns. Swipe to see more.",
+    "oneTown": "One town.",
+    "scrollLeft": "Show the previous town",
+    "scrollRight": "Show the next town"
   }
 }
