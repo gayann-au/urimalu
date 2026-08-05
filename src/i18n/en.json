@@ -611,7 +611,7 @@
       "title": "US dollar to rupee",
       "unit": "rupees for one US dollar",
       "updated": "Rate as on {{date}}",
-      "source": "ExchangeRate-API",
+      "source": "World currency market",
       "unavailable": "The dollar rate could not be loaded.",
       "loading": "Loading the dollar rate"
     },
