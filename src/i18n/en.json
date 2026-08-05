@@ -555,6 +555,7 @@
       }
     },
     "flaggedLabel": "Note from our check:",
+    "flaggedNote": "This price is not the same as another price given for this crop, so it is worth checking before you use it.",
     "calc": {
       "heading": "What is your quantity worth?",
       "bagsLabel": "Number of 50 kg bags",

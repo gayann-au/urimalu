@@ -110,25 +110,37 @@ export function storedUnitNote(unit, t) {
 // A flagged row is a fact with a caveat, not a failure. The number renders
 // normally and is not suppressed, and this note is not styled as an error:
 // paper-2 and ink-700 are the same neutrals the rest of the feature uses, with
-// no warning colour.
+// no warning colour. There is no line clamp, no truncation and no title
+// attribute: a caveat behind a tooltip is a caveat nobody reads.
 //
-// whitespace-pre-wrap keeps the newlines the edge function wrote, and
-// break-words stops a long unbroken token overflowing. There is no line clamp,
-// no truncation and no title attribute: a caveat behind a tooltip is a caveat
-// nobody reads.
+// validation_note IS NOT RENDERED, AND MUST NEVER BE. It is written by our own
+// edge function for our own reading, in our own vocabulary: the only check that
+// can flag a row is the mandi cross-check, and it records the two source names,
+// both per-kg figures and the ratio between them. Every one of those is an
+// internal key or an internal number. Putting them on a farmer's screen would
+// ask a reader to interpret our plumbing, in English, to find out whether a
+// price they are about to act on is sound. The note stays in the database,
+// where it is useful. This component states the one thing a reader needs from
+// it, and reads no field to do so.
 //
-// validation_note is written by our own edge function, so it is trusted text,
-// but it is English only. The Kannada UI shows the translated prefix above the
-// English note.
+// So the text below is fixed and translated, not derived. It carries no source
+// name, no figure and no ratio, and it does not say anyone is wrong: two
+// published prices disagreeing is not a mistake by either publisher.
+//
+// The gate is isFlagged alone. The old gate also required a note to be present,
+// which let an internal field decide whether a reader saw a caveat at all.
+// Today the edge function always writes status and note together, so this
+// changes nothing now; if that ever stops being true, showing the caveat is the
+// side to fail towards.
 export function FlaggedNote({ row }) {
   const { t } = useTranslation();
-  if (!isFlagged(row) || !row.validation_note) return null;
+  if (!isFlagged(row)) return null;
   return (
     <div className="mt-2 rounded-xl bg-paper-2 p-2.5 text-xs text-ink-700">
       <p className="font-medium">{t("market.flaggedLabel")}</p>
-      <p className="mt-1 whitespace-pre-wrap break-words">
-        {row.validation_note}
-      </p>
+      {/* break-words for the same reason the crop name below has it: Kannada
+          gives a narrow phone column very few break opportunities. */}
+      <p className="mt-1 break-words">{t("market.flaggedNote")}</p>
     </div>
   );
 }
