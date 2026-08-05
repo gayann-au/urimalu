@@ -545,7 +545,13 @@
       "arecanut": {
         "heading": "Arecanut",
         "where": "Sulya market, Dakshina Kannada district. This is not a Kodagu price.",
-        "note": "No market in Kodagu gives a price for arecanut. Sulya is the closest market that does. It is just over the district line. The two names below are different kinds of arecanut, and they sell at different prices."
+        "note": "No market in Kodagu gives a price for arecanut. Sulya is the closest market that does. It is just over the district line.",
+        "grades": "The names in the list are what the market calls the different kinds of arecanut. Each kind gets its own price."
+      },
+      "age": {
+        "notYet": "We checked at {{time}}. Today's price is not out yet. This is the last price, from {{date}}.",
+        "notYetNoTime": "Today's price is not out yet. This is the last price, from {{date}}.",
+        "noNewPrice": "No new price has come since {{date}}. We are still checking every day."
       }
     },
     "flaggedLabel": "Note from our check:",
@@ -585,7 +591,7 @@
       "robustas": "ICO Robustas"
     },
     "loading": "Loading market prices",
-    "emptyAll": "No market prices have arrived yet. They are collected once each morning.",
+    "emptyAll": "No market prices have arrived yet. We keep checking through the day.",
     "emptyCrop": "No price has arrived for {{crop}} yet.",
     "emptyCurve": "No future month prices have arrived yet.",
     "today": {

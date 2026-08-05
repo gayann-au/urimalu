@@ -5,6 +5,17 @@
 // nothing to do with public.price_history, which is internal merchant listing
 // data and is never read or written here.
 //
+// The cron runs hourly from 06:00 to 20:00 IST, because the government's
+// publishing hour moves from day to day: on 4 August 2026 the Kodagu mandi rows
+// were there by 03:32 and on 5 August there were none at 10:45. A single daily
+// run misses whichever hour it is not standing in.
+//
+// Hourly means two of the four sources have to stop asking once the day's
+// answer is in. agmarknet is an undocumented API with an unknown rate limit and
+// the Spices Board is an HTML page, so each is checked against the table first
+// and skipped when today is already stored. CPA and the Coffee Board are
+// fetched every run: they are cheap and their data changes rarely.
+//
 // Four sources, each isolated in its own try/catch so one bad source cannot
 // stop the others:
 //   1. Coorg Planters' Association JSON API      source 'cpa'
@@ -205,6 +216,27 @@ function round2(value: number): string {
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+// ---------------------------------------------------------------------------
+// The clock this function reasons about
+// ---------------------------------------------------------------------------
+
+// Today's calendar day in IST, as "YYYY-MM-DD".
+//
+// Every source here is Indian and publishes on the Indian calendar, and the
+// board that reads these rows states every date and time in IST. So "do we
+// already have today" has to be asked on that same calendar. A UTC day would
+// roll over at 5:30 AM IST and call the small hours of the morning yesterday,
+// which is exactly when this cron starts running.
+//
+// IST is UTC+05:30 and India has never observed daylight saving, so the shift
+// is a constant rather than a call into Intl: exact, no locale data, and it
+// cannot vary between one deployment and the next.
+const IST_OFFSET_MS = 330 * 60 * 1000;
+
+function istToday(now = Date.now()): string {
+  return new Date(now + IST_OFFSET_MS).toISOString().slice(0, 10);
 }
 
 // ---------------------------------------------------------------------------
@@ -678,6 +710,10 @@ async function runCoffeeBoard(
 const AGMARKNET_RESOURCE =
   "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070";
 
+// The stored source value for every row this section writes. Named once so the
+// freshness check reads the table on the same string the writer put there.
+const AGMARKNET_SOURCE = "agmarknet";
+
 // Prices in this dataset are quoted per quintal.
 const KG_PER_QUINTAL = 100;
 
@@ -697,17 +733,49 @@ const KG_PER_QUINTAL = 100;
 const AGMARKNET_COMMODITIES: Array<{
   commodity: string;
   cropKey: string;
+  cropKeyPrefix: string;
   displayName: string;
 }> = [
-  { commodity: "Black pepper", cropKey: "pepper", displayName: "Pepper" },
+  {
+    commodity: "Black pepper",
+    cropKey: "pepper",
+    // One row per market yard, so a written crop_key is this prefix plus the
+    // yard's slug. hasMandiPepperFor below asks the table for a row carrying
+    // this exact prefix, so it has to be the string the writer actually uses
+    // and not a second copy of it that could drift.
+    cropKeyPrefix: "pepper_",
+    displayName: "Pepper",
+  },
 ];
 
+// The one state this function may ever touch. Named once so the two pepper
+// rungs, the arecanut query and the guard that discards anything else all read
+// the same spelling.
+const KARNATAKA = "Karnataka";
+
 // How wide a net the pepper query cast to find a price. Recorded on the row and
-// returned in the HTTP summary, because level 1 and the two below it are
-// different claims: one is a Kodagu price and the others explicitly are not.
-type GeographyLevel = "kodagu" | "karnataka" | "india";
+// returned in the HTTP summary, because the two levels are different claims:
+// one is a Kodagu price and the other explicitly is not.
+type GeographyLevel = "kodagu" | "karnataka";
+
+// What the summary reports when neither rung returned anything.
+const GEOGRAPHY_NONE = "none";
 
 // The ladder, tried in order, stopping at the first level that returns records.
+//
+// TWO RUNGS, AND THERE USED TO BE THREE. The third was an unfiltered national
+// query. On 5 August 2026 at 10:45 IST it is what the run resolved to, and it
+// returned Perumbavoor, Payyannur and Munnar: three Kerala markets. Zero rows
+// were written, which was correct, but the request had already gone out, and a
+// national result is one this board can never legally take a figure from. It is
+// deleted rather than guarded downstream. A request whose answer must never be
+// acted on must never be sent.
+//
+// BOTH RUNGS ARE INSIDE KARNATAKA BY CONSTRUCTION. The state filter sits on the
+// Kodagu rung as well as the district name, so neither request can reach a row
+// outside the state even if another state ever publishes a district spelled the
+// same way. keepKarnatakaOnly below then discards anything that arrives anyway,
+// because a filter on an undocumented API is a request, not a guarantee.
 //
 // "Kodagu" is the only district spelling this dataset answers to. Coorg,
 // Madikeri and Kodagu(Coorg) were all checked against the live resource on
@@ -717,17 +785,22 @@ const PEPPER_GEOGRAPHY_LADDER: Array<{
   level: GeographyLevel;
   filters: Record<string, string>;
 }> = [
-  { level: "kodagu", filters: { "filters[district.keyword]": "Kodagu" } },
-  { level: "karnataka", filters: { "filters[state.keyword]": "Karnataka" } },
-  { level: "india", filters: {} },
+  {
+    level: "kodagu",
+    filters: {
+      "filters[state.keyword]": KARNATAKA,
+      "filters[district.keyword]": "Kodagu",
+    },
+  },
+  { level: "karnataka", filters: { "filters[state.keyword]": KARNATAKA } },
 ];
 
 // The exact commodity string the dataset publishes. The parentheses are part of
 // the value: a plain "Arecanut" returns zero records.
 const ARECANUT_COMMODITY = "Arecanut(Betelnut/Supari)";
 
-// Arecanut is pulled state-wide and then narrowed to this one district in code,
-// because the dataset has no filter for a taluk.
+// Arecanut is pulled from Karnataka and then narrowed to this one district in
+// code, because the dataset has no filter for a taluk.
 //
 // Sulya taluk in Dakshina Kannada shares a border with Kodagu. The only other
 // Karnataka district publishing arecanut is Shivamogga, whose market is
@@ -765,13 +838,19 @@ const AGMARKNET_RAW_SAMPLE = 20;
 
 interface AgmarknetSummary {
   rows_written: number;
-  // skipped means the whole source was skipped because no API key is set.
-  // rows_skipped counts individual rows that could not be written.
+  // skipped means the whole source was skipped without a single request being
+  // made. skipped_reason says which of the two reasons it was:
+  //   "no_api_key"          DATA_GOV_IN_API_KEY is not set
+  //   "already_have_today"  the table already holds today's mandi pepper rows
+  // rows_skipped is a different count entirely: individual rows that were
+  // fetched and could not be written.
   skipped: boolean;
+  skipped_reason: "no_api_key" | "already_have_today" | null;
   rows_skipped: number;
   // Which rung of the ladder pepper resolved to, and the markets behind it.
-  // Null when pepper produced no row at all.
-  pepper_geography_level: GeographyLevel | null;
+  // "none" when neither rung returned anything, which is an answer rather than
+  // an absence: it means both requests were made and both came back empty.
+  pepper_geography_level: GeographyLevel | typeof GEOGRAPHY_NONE;
   pepper_markets: string[];
   // One row is written per market, so this is the market count that actually
   // reached the table rather than the number of markets the response named.
@@ -834,7 +913,97 @@ async function fetchAgmarknet(
     warnings.push(message);
   }
 
-  return { records, total };
+  return { records: keepKarnatakaOnly(records, label, warnings), total };
+}
+
+// THE LAST LINE OF DEFENCE ON GEOGRAPHY. Nothing outside Karnataka may be
+// fetched, stored or shown, and this is where the third of those is made
+// unconditional.
+//
+// Every request this file sends already carries a state filter, so on a correct
+// day this drops nothing. It exists because a filter on an undocumented API is
+// a request and not a guarantee: a parameter silently ignored after a change at
+// the far end would put another state's markets straight into a median, a band
+// check and a row, and nothing on the board would look wrong. A record from
+// anywhere else is discarded here and never reaches any of them.
+//
+// Reported once with the states named, not once per record. A rung that came
+// back entirely from elsewhere would otherwise write a thousand warnings and
+// bury everything else in the summary.
+function keepKarnatakaOnly(
+  records: unknown[],
+  label: string,
+  warnings: string[]
+): unknown[] {
+  const kept: unknown[] = [];
+  const outside: string[] = [];
+
+  for (const entry of records) {
+    const state = toText(asRecord(entry)?.state);
+    if (state === KARNATAKA) {
+      kept.push(entry);
+      continue;
+    }
+    const named = state ?? "no state";
+    if (!outside.includes(named)) outside.push(named);
+  }
+
+  if (outside.length > 0) {
+    const message =
+      `agmarknet: discarded ${records.length - kept.length} ${label} record(s) ` +
+      `from outside ${KARNATAKA}: ${outside.join(", ")}`;
+    console.error(message);
+    warnings.push(message);
+  }
+
+  return kept;
+}
+
+// Whether the table already holds a mandi pepper row dated today in IST.
+//
+// WHY THE WHOLE SOURCE IS SKIPPED ON A HIT. The cron runs hourly from 06:00 to
+// 20:00 IST, because the publishing hour moves: on 4 August 2026 the Kodagu rows
+// were there by 03:32 and on 5 August there were none at 10:45. Fifteen runs a
+// day against an undocumented API with an unknown rate limit is not something to
+// spend once the day's rows are in.
+//
+// THE ONE RULE THIS MUST NEVER BREAK is skipping on a day whose row does not
+// exist, because then the board never updates. So it skips only on a positive
+// answer. A query error, an empty result, or rows from any other date all fall
+// through to the fetch. There is no path here that turns "I could not tell" into
+// "we already have it".
+//
+// The prefix is tested in TypeScript against the same constant the writer uses,
+// rather than as a LIKE pattern with an escaped underscore. The check and the
+// write then cannot drift, and there is no escaping to get wrong. This source
+// writes a handful of rows a day, so it reads a handful of crop_key strings.
+async function hasMandiPepperFor(
+  client: SupabaseClient,
+  isoDay: string,
+  warnings: string[]
+): Promise<boolean> {
+  try {
+    const { data, error } = await client
+      .from("market_snapshots")
+      .select("crop_key")
+      .eq("source", AGMARKNET_SOURCE)
+      .eq("source_date", isoDay);
+
+    if (error) throw new Error(error.message);
+
+    const prefixes = AGMARKNET_COMMODITIES.map((crop) => crop.cropKeyPrefix);
+    return (data ?? []).some((row) => {
+      const key = toText((row as Record<string, unknown>).crop_key);
+      return key !== null && prefixes.some((prefix) => key.startsWith(prefix));
+    });
+  } catch (err) {
+    const message =
+      `agmarknet: could not check for rows dated ${isoDay}, fetching anyway: ` +
+      errorMessage(err);
+    console.warn(message);
+    warnings.push(message);
+    return false;
+  }
 }
 
 // The distinct non-empty values of one field, in first-seen order.
@@ -904,13 +1073,14 @@ async function runAgmarknet(
   warnings: string[]
 ): Promise<void> {
   for (const target of AGMARKNET_COMMODITIES) {
-    // THE FALLBACK LADDER. Kodagu first, then Karnataka, then no geography
-    // filter at all, stopping at the first level that returns anything.
+    // THE FALLBACK LADDER. Kodagu first, then Karnataka, stopping at the first
+    // level that returns anything. There is no rung past Karnataka: see the
+    // note on PEPPER_GEOGRAPHY_LADDER.
     //
-    // The level travels with the row because the three are not interchangeable.
-    // A Kodagu price is the price at the reader's own two markets. A Karnataka
-    // or all-India median is a different fact wearing the same clothes, and the
-    // card has to be able to say which one it is holding.
+    // The level travels with the row because the two are not interchangeable.
+    // A Kodagu price is the price at the reader's own market yards. A Karnataka
+    // median is a different fact wearing the same clothes, and the card has to
+    // be able to say which one it is holding.
     let level: GeographyLevel | null = null;
     let records: unknown[] = [];
     let total: number | null = null;
@@ -935,10 +1105,13 @@ async function runAgmarknet(
     }
 
     if (level === null) {
-      // Normal on Sundays and public holidays, and now only reached when even
-      // the unfiltered query is empty.
+      // Normal on Sundays and public holidays, and normal at any hour before
+      // the day's rows are published. Nothing is written and the summary keeps
+      // its "none", which is a statement that both Karnataka requests were made
+      // and both came back empty. It is not an invitation to look further out:
+      // there is nowhere further out this board may look.
       console.log(
-        `agmarknet returned no records for ${target.commodity} at any geography level`
+        `agmarknet returned no records for ${target.commodity} in ${KARNATAKA}`
       );
       continue;
     }
@@ -1011,7 +1184,7 @@ async function runAgmarknet(
     }
 
     for (const [market, group] of byMarket) {
-      const cropKey = slugCropKey(`${target.cropKey}_`, market);
+      const cropKey = slugCropKey(target.cropKeyPrefix, market);
       if (cropKey === null) {
         const message = `agmarknet: skipped pepper market ${JSON.stringify(market)}, no usable crop_key`;
         console.error(message);
@@ -1080,7 +1253,7 @@ async function runAgmarknet(
       }
 
       await writeSnapshot(client, {
-        source: "agmarknet",
+        source: AGMARKNET_SOURCE,
         crop_key: cropKey,
         // The market's own name, as returned. This is the card's heading, so it
         // is the publisher's spelling and not a tidied version of it.
@@ -1160,10 +1333,10 @@ async function runArecanut(
   warnings: string[]
 ): Promise<void> {
   const { records, total } = await fetchAgmarknet(
-    `${ARECANUT_COMMODITY} in Karnataka`,
+    `${ARECANUT_COMMODITY} in ${KARNATAKA}`,
     {
       "filters[commodity.keyword]": ARECANUT_COMMODITY,
-      "filters[state.keyword]": "Karnataka",
+      "filters[state.keyword]": KARNATAKA,
     },
     warnings
   );
@@ -1181,7 +1354,7 @@ async function runArecanut(
     // question the reader did not ask.
     console.log(
       `agmarknet: no arecanut rows for ${ARECANUT_DISTRICT}, ` +
-        `${records.length} Karnataka records seen, writing nothing`
+        `${records.length} ${KARNATAKA} records seen, writing nothing`
     );
     return;
   }
@@ -1250,7 +1423,7 @@ async function runArecanut(
     }
 
     await writeSnapshot(client, {
-      source: "agmarknet",
+      source: AGMARKNET_SOURCE,
       crop_key: cropKey,
       display_name: variety,
       unit: "INR/kg",
@@ -1444,8 +1617,54 @@ interface SpicesBoardSummary {
   rows_written: number;
   rows_held: number;
   rows_skipped: number;
+  // skipped means the page was never requested because the table already holds
+  // today's auction. rows_skipped is the unrelated count of blocks that were
+  // parsed and could not be written.
+  skipped: boolean;
+  skipped_reason: "already_have_today" | null;
   auction_date: string | null;
   error: string | null;
+}
+
+// Whether the table already holds a cardamom auction row dated today in IST.
+//
+// THE LATEST AVAILABLE AUCTION DATE IS AT MOST TODAY. An auction cannot be
+// published for a day that has not happened, so a row dated today is the newest
+// row this page could possibly yield and asking again can only return the same
+// thing. That is the whole of the reasoning, and it is why this does not try to
+// work out which day the page is carrying: finding that out means fetching the
+// page, which is the request being saved.
+//
+// A quiet day, a Sunday or a holiday, has no row dated today and is therefore
+// never skipped. That costs one page request an hour on a day with no auction,
+// which is the right way round: a wrong skip would freeze the card.
+//
+// Same rule as the mandi check above. It skips only on a positive answer, and
+// an error or an empty result falls through to the fetch.
+async function hasCardamomAuctionFor(
+  client: SupabaseClient,
+  isoDay: string,
+  warnings: string[]
+): Promise<boolean> {
+  try {
+    const { data, error } = await client
+      .from("market_snapshots")
+      .select("id")
+      .eq("source", SPICES_BOARD_SOURCE)
+      .eq("crop_key", CARDAMOM_AUCTION_CROP_KEY)
+      .eq("source_date", isoDay)
+      .limit(1);
+
+    if (error) throw new Error(error.message);
+    return (data ?? []).length > 0;
+  } catch (err) {
+    const message =
+      `spices_board: could not check for an auction dated ${isoDay}, ` +
+      `fetching anyway: ${errorMessage(err)}`;
+    console.warn(message);
+    warnings.push(message);
+    return false;
+  }
 }
 
 async function runSpicesBoard(
@@ -1583,8 +1802,9 @@ Deno.serve(async (req) => {
   const agmarknet: AgmarknetSummary = {
     rows_written: 0,
     skipped: false,
+    skipped_reason: null,
     rows_skipped: 0,
-    pepper_geography_level: null,
+    pepper_geography_level: GEOGRAPHY_NONE,
     pepper_markets: [],
     pepper_rows_written: 0,
     arecanut_rows_written: 0,
@@ -1596,6 +1816,8 @@ Deno.serve(async (req) => {
     rows_written: 0,
     rows_held: 0,
     rows_skipped: 0,
+    skipped: false,
+    skipped_reason: null,
     auction_date: null,
     error: null,
   };
@@ -1605,13 +1827,28 @@ Deno.serve(async (req) => {
   // as a success.
   const warnings: string[] = [];
 
+  // The day every freshness question below is asked against, taken once so two
+  // checks a few hundred milliseconds apart cannot land on different sides of
+  // midnight.
+  const today = istToday();
+
   // Source 3 runs first because the CPA cross-check reads its per-kg values.
   // A failure here leaves the map empty, which only means the CPA cross-check
-  // is skipped, so the other two sources are unaffected.
+  // is skipped, so the other two sources are unaffected. A skip does the same,
+  // and for the same reason it is harmless: the cross-check is a second opinion
+  // on a CPA row, not a condition of writing one.
   const agmarknetPerKg = new Map<string, number>();
   if (DATA_GOV_IN_API_KEY === "") {
     agmarknet.skipped = true;
+    agmarknet.skipped_reason = "no_api_key";
     console.log("DATA_GOV_IN_API_KEY not set, skipping agmarknet");
+  } else if (await hasMandiPepperFor(admin, today, warnings)) {
+    // Today's mandi pepper rows are already in the table, so there is nothing
+    // this source could add and no request is made. See hasMandiPepperFor for
+    // why this can only ever fire on a positive answer.
+    agmarknet.skipped = true;
+    agmarknet.skipped_reason = "already_have_today";
+    console.log(`agmarknet already holds pepper rows for ${today}, skipping`);
   } else {
     try {
       await runAgmarknet(admin, agmarknetPerKg, agmarknet, warnings);
@@ -1635,11 +1872,20 @@ Deno.serve(async (req) => {
     console.error("coffee board source failed:", coffeeBoard.error);
   }
 
-  try {
-    await runSpicesBoard(admin, spicesBoard, warnings);
-  } catch (err) {
-    spicesBoard.error = errorMessage(err);
-    console.error("spices board source failed:", spicesBoard.error);
+  if (await hasCardamomAuctionFor(admin, today, warnings)) {
+    // Today's auction is already stored, and no auction can be published for a
+    // later day than today, so the page has nothing newer to give.
+    spicesBoard.skipped = true;
+    spicesBoard.skipped_reason = "already_have_today";
+    spicesBoard.auction_date = today;
+    console.log(`spices board already holds the auction for ${today}, skipping`);
+  } else {
+    try {
+      await runSpicesBoard(admin, spicesBoard, warnings);
+    } catch (err) {
+      spicesBoard.error = errorMessage(err);
+      console.error("spices board source failed:", spicesBoard.error);
+    }
   }
 
   // rows_written counts every row written, whatever its validation status.
@@ -1647,6 +1893,10 @@ Deno.serve(async (req) => {
   // rows_skipped is disjoint from rows_written: those rows reached no table.
   return json(200, {
     ok: true,
+    // The IST calendar day this run reasoned about, so a reader of the summary
+    // can tell which day the two freshness checks were asking about without
+    // having to convert the log's own timestamp.
+    ist_date: today,
     sources: {
       cpa,
       coffee_board: coffeeBoard,

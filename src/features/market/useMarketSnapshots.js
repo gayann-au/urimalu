@@ -21,8 +21,8 @@ const SOURCE_COFFEE_BOARD = "coffee_board";
 const STATUS_HELD = "held";
 const STATUS_FLAGGED = "flagged";
 
-// The source refreshes once a day at 06:00 IST, so the 30 second global default
-// would be pure waste on a weak hill connection.
+// The refresh job runs hourly between 06:00 and 20:00 IST, so the 30 second
+// global default would be pure waste on a weak hill connection.
 const MARKET_STALE_TIME_MS = 15 * 60_000;
 
 // Separator for the grouping key below. A NUL byte cannot appear in any of the

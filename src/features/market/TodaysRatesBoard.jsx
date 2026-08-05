@@ -16,6 +16,7 @@ import { CardamomAuctionRow } from "./CardamomAuctionRow";
 import { MandiPepperRow } from "./MandiPepperRow";
 import { ArecanutMandiCard } from "./ArecanutMandiCard";
 import { DataAgeLine } from "./DataAgeLine";
+import { isMandiPriceTooOld } from "./MandiFreshness";
 import { Explainer } from "./Explainer";
 import { SectionEyebrow } from "./SectionEyebrow";
 import { QuantityCalculator } from "./QuantityCalculator";
@@ -126,6 +127,13 @@ function boardEntriesInOrder(rows, auctionRow, pepperRows, t) {
         // "Gonikappal APMC" would not say what is being priced.
         label: `${t(`market.crop.${cropKey}`)}, ${row.display_name}`,
         hasPriceBand: hasRealRange(row),
+        // Past the seven day cutoff the card withdraws its figure, so the
+        // quantity calculator must not be able to multiply it either. The flag
+        // travels with the entry rather than being re-derived downstream, which
+        // is the same reasoning as hasPriceBand above: one answer, computed
+        // once, so the card and the calculator cannot disagree about whether a
+        // price may be shown.
+        priceHidden: isMandiPriceTooOld(row.source_date),
       }));
     }
 
@@ -214,57 +222,115 @@ function explainerNotes(entries, hasAuction, t) {
   return notes.length === 0 ? null : notes.join(" ");
 }
 
-// Two columns on a phone. These are short numbers and six of them fit in a
-// glance at this width, which is the entire point of the section. It stays two
-// wide up to sm and goes three wide on a tablet, so a desktop reader does not
-// get six columns of mostly whitespace.
+// ONE GRID PER RUN OF CARDS THAT SHARE A HEIGHT. This is the fix for the blank
+// areas, and it replaces a single grid holding every card at once.
 //
-// items-stretch, WHICH REVERSES AN EARLIER DECISION IN THIS FILE, so the old
-// reasoning is kept rather than deleted.
+// WHY THE OLD ONE COULD NOT WORK. A CSS grid row is as tall as its tallest
+// item, so mixing card kinds in one grid forces the short ones to match the
+// tall ones. The cards on this board are not the same size and cannot be made
+// so: a CPA coffee card carries a name, a price and a unit, while a mandi
+// pepper card also carries a yard name, a usual price and its own date and
+// source block, which is three lines more. At three columns and seven cards
+// that put Robusta Cherry in the same row as two pepper cards, and it grew a
+// large blank area under its number to match them. That is the exact fault this
+// board was reported for.
 //
-// This was items-start, added when the cardamom auction card arrived carrying
-// three numbers and its own date and source. Letting a row stretch to its
-// tallest card meant a Pepper card holding one price grew a couple of hundred
-// pixels of blank white below its number and read as a card that had failed to
-// load. items-start fixed that card and created a worse problem one level up:
-// cards stopped ending on a common line, so a short card left dead space under
-// it inside its own row. Once pepper became one card per market yard, each
-// carrying its own date and source and standing far taller than a coffee card,
-// that dead space became the large empty areas this board was reported for.
+// The previous attempts are recorded because both were tried and both failed.
+// items-start let each card keep its own height and stopped the cards ending on
+// a common line, so a short card left dead space under it inside its own row.
+// items-stretch plus mt-auto pushed each card's date block to its bottom edge,
+// which moved the blank area from under the block to above it and improved the
+// look without removing it. Neither addressed the cause, which is that unlike
+// cards were sharing a row at all.
 //
-// The answer is not to pick one of the two. It is to stretch the cards AND give
-// them somewhere to put the height: every card in this grid is a flex column
-// now and its date and source block is pushed to the bottom edge with mt-auto,
-// so a short card reads as spaced rather than truncated, ends on the same line
-// as its neighbours, and leaves no hole in its row.
+// So they no longer do. The board splits its cards into runs of neighbours that
+// use the same component, and gives each run its own grid. Every row inside a
+// grid then holds one kind of card, stretching costs nothing, and there is no
+// blank area to push anywhere.
+//
+// ORDER IS UNTOUCHED BY THIS. The runs are contiguous slices of the same
+// ordered list in the same order, so the cards appear in exactly the catalogue
+// sequence they did before: the four coffee crops, then pepper, then cardamom.
+// Coffee keeps its order because nothing reorders anything.
 //
 // A masonry column flow was the other option offered and was rejected. CSS
 // multi-column fills top to bottom and then across, so at three columns the
 // first line of the screen would read Arabica Parchment, Robusta Cherry,
 // Pepper. The crops would be in order down each column and in the wrong order
 // across the screen, which is a reordering by any reading a farmer would give
-// it, and the coffee crops have to keep their order.
+// it.
+
+// The one gap value on this board, used both inside each grid and between the
+// grids, so the cards stay evenly spaced across the seam where a run ends.
+const BOARD_GAP = "gap-2.5";
+
+const GRID_BASE = `grid items-stretch ${BOARD_GAP}`;
+
+// The skeleton's shape while the queries are in flight. It stands for the six
+// catalogue crops, which is what the board shows on an ordinary day before
+// pepper expands, so the layout does not lurch when the data lands.
+const LOADING_GRID = `${GRID_BASE} grid-cols-2 sm:grid-cols-3`;
+
+// The card kinds that carry their own date and source block and therefore stand
+// far taller than a CPA card. Written as the set of tall kinds rather than a
+// height in pixels: the height is a consequence of what the card has to say,
+// and a measured number would go stale the first time a card gained a line.
+const TALL_KINDS = new Set([KIND_MANDI, KIND_AUCTION]);
+
+// The entries split into contiguous runs of the same height class.
 //
-// Holds at 360, 768 and 1280: two columns below sm, three from sm, with the
-// span rule below handling the one card that would otherwise sit alone on the
-// last row.
-const BOARD_GRID = "grid grid-cols-2 items-stretch gap-2.5 sm:grid-cols-3";
+// Contiguous, never gathered: two runs of CPA cards separated by a mandi card
+// stay two runs. Gathering them would move a card past another card, and the
+// order on this board is the catalogue's, not ours to rearrange.
+function runsByCardHeight(entries) {
+  const runs = [];
+  for (const entry of entries) {
+    const tall = TALL_KINDS.has(entry.kind);
+    const current = runs[runs.length - 1];
+    if (current && current.tall === tall) current.entries.push(entry);
+    else runs.push({ tall, entries: [entry] });
+  }
+  return runs;
+}
+
+// The column shape for a run, chosen from how many cards it holds so the rows
+// come out full at 360, 768 and 1280 rather than leaving a card alone with
+// empty cells beside it.
+//
+//   1  one column, so the single card fills its row instead of sitting in half
+//      of one with nothing beside it
+//   2  two columns at every width, which divides exactly
+//   4  two columns on a phone and four from sm, both of which divide exactly.
+//      This is the ordinary coffee run, and it is why Robusta Cherry no longer
+//      has anything tall beside it
+//   otherwise  two columns then three, the board's old shape, with the span
+//      rule below widening a last card that would otherwise be stranded
+//
+// spanAware says whether that span rule may be applied. It must not be applied
+// to the four card shape: four leaves a remainder of one against three columns,
+// so the rule would emit sm:col-span-3 into a four column grid and make the
+// last card three quarters of a row wide for no reason.
+function gridShapeFor(count) {
+  if (count <= 1) return { cols: "grid-cols-1", spanAware: false };
+  if (count === 2) return { cols: "grid-cols-2", spanAware: false };
+  if (count === 4) return { cols: "grid-cols-2 sm:grid-cols-4", spanAware: false };
+  return { cols: "grid-cols-2 sm:grid-cols-3", spanAware: true };
+}
 
 // The last card widens to fill its row when it would otherwise sit alone.
 //
-// Without this a total of seven leaves one card at three columns with two empty
-// cells beside it, which is the stranding this section was reported for. Asked
-// per breakpoint because the column count changes: alone at two columns means
-// an odd total, alone at three means a total leaving a remainder of one. A
-// remainder of two at three columns puts two cards on the last row, which is a
-// pair rather than a stranded card, so it is left as it is.
+// Only reached on the two-then-three shape. Asked per breakpoint because the
+// column count changes: alone at two columns means an odd total, alone at three
+// means a total leaving a remainder of one. A remainder of two at three columns
+// puts two cards on the last row, which is a pair rather than a stranded card,
+// so it is left as it is.
 //
 // sm:col-span-1 is stated on the other branch rather than left off, because
 // col-span-2 would otherwise carry into the three column layout and make the
 // last card double width for no reason.
 //
-// The arecanut card is not counted here. It spans every column at both widths
-// and always starts its own row, so it neither strands nor is stranded.
+// The arecanut card is not counted here. It is not in any grid: it is a full
+// width block between the runs, so it neither strands nor is stranded.
 function spanClassFor(index, total) {
   if (index !== total - 1) return "";
   const aloneAtTwo = total % 2 === 1;
@@ -307,14 +373,21 @@ export function TodaysRatesBoard() {
   // date and source next to the total instead. Two cases: the auction card,
   // which never joins the shared line, and every card when the CPA rows have
   // fallen out of step and there is no shared line at all.
-  const calcEntries = entries.map((entry) => ({
-    ...entry,
-    // Any card that is not a CPA card is outside what the shared line speaks
-    // for, so it carries its own. Written as "not CPA" rather than a list of
-    // the other kinds, so a fourth source added later cannot quietly inherit a
-    // caption that was never true of it.
-    ownProvenance: entry.kind !== KIND_CPA || !shared,
-  }));
+  //
+  // An entry whose card has withdrawn its price is left out entirely. The
+  // calculator multiplies a rate by a quantity, so offering a crop whose rate
+  // is no longer on screen would put the withdrawn figure back in front of the
+  // reader as a total, which is the one thing the cutoff exists to stop.
+  const calcEntries = entries
+    .filter((entry) => !entry.priceHidden)
+    .map((entry) => ({
+      ...entry,
+      // Any card that is not a CPA card is outside what the shared line speaks
+      // for, so it carries its own. Written as "not CPA" rather than a list of
+      // the other kinds, so a fourth source added later cannot quietly inherit
+      // a caption that was never true of it.
+      ownProvenance: entry.kind !== KIND_CPA || !shared,
+    }));
 
   return (
     <motion.section
@@ -346,7 +419,7 @@ export function TodaysRatesBoard() {
 
       <div className="mt-3">
         {isLoading ? (
-          <div className={BOARD_GRID} aria-label={t("market.loading")} data-state="loading">
+          <div className={LOADING_GRID} aria-label={t("market.loading")} data-state="loading">
             {CROP_KEYS.map((cropKey) => (
               <div
                 key={cropKey}
@@ -370,52 +443,73 @@ export function TodaysRatesBoard() {
           </div>
         ) : (
           <div data-state="populated">
-            {/* The grid is the stagger parent for the six cards, so they
-                arrive one after another rather than all at once. */}
-            <motion.div className={BOARD_GRID} variants={m.stagger}>
-              {entries.map(({ cropKey, row, kind, nameKey }, i) => {
-                // Computed once per card and handed to whichever component
-                // renders it, so the stranding rule lives in one place rather
-                // than in three card files that would have to agree.
-                const span = spanClassFor(i, entries.length);
-                if (kind === KIND_AUCTION) {
-                  return (
-                    <CardamomAuctionRow
-                      key={cropKey}
-                      row={row}
-                      nameKey={nameKey}
-                      className={span}
-                    />
-                  );
-                }
-                if (kind === KIND_MANDI) {
-                  return (
-                    <MandiPepperRow
-                      key={cropKey}
-                      row={row}
-                      nameKey={nameKey}
-                      className={span}
-                    />
-                  );
-                }
+            {/* The outer block is the stagger parent, so the cards still arrive
+                one after another across the several grids rather than each grid
+                starting its own sequence. Its own gap matches the gap inside
+                the grids, so the seam between two runs is invisible. */}
+            <motion.div className={`flex flex-col ${BOARD_GAP}`} variants={m.stagger}>
+              {runsByCardHeight(entries).map((run) => {
+                const shape = gridShapeFor(run.entries.length);
                 return (
-                  <MarketPriceRow
-                    key={cropKey}
-                    row={row}
-                    nameKey={nameKey}
-                    className={span}
-                    // Only when the CPA rows disagree about their date. See
-                    // sharedProvenance above.
-                    showProvenance={!shared}
-                  />
+                  <motion.div
+                    // The first card's key names the run. Every crop_key on the
+                    // board is unique, so no two runs can collide, and the key
+                    // moves with the card rather than being a bare index that
+                    // would re-use a slot when a run appears or vanishes.
+                    key={run.entries[0].cropKey}
+                    className={`${GRID_BASE} ${shape.cols}`}
+                    variants={m.stagger}
+                  >
+                    {run.entries.map(({ cropKey, row, kind, nameKey }, i) => {
+                      // Computed once per card and handed to whichever
+                      // component renders it, so the stranding rule lives in
+                      // one place rather than in three card files that would
+                      // have to agree. Counted within the run, because the run
+                      // is the grid.
+                      const span = shape.spanAware
+                        ? spanClassFor(i, run.entries.length)
+                        : "";
+                      if (kind === KIND_AUCTION) {
+                        return (
+                          <CardamomAuctionRow
+                            key={cropKey}
+                            row={row}
+                            nameKey={nameKey}
+                            className={span}
+                          />
+                        );
+                      }
+                      if (kind === KIND_MANDI) {
+                        return (
+                          <MandiPepperRow
+                            key={cropKey}
+                            row={row}
+                            nameKey={nameKey}
+                            className={span}
+                          />
+                        );
+                      }
+                      return (
+                        <MarketPriceRow
+                          key={cropKey}
+                          row={row}
+                          nameKey={nameKey}
+                          className={span}
+                          // Only when the CPA rows disagree about their date.
+                          // See sharedProvenance above.
+                          showProvenance={!shared}
+                        />
+                      );
+                    })}
+                  </motion.div>
                 );
               })}
 
-              {/* In the grid with the crops, spanning every column. It sat
-                  below the calculator and the board's date line until it was
-                  found that nobody scrolled that far, which on a phone is most
-                  of a screen past the rates. A crop from the next district
-                  still has to be met while a farmer is reading today's
+              {/* With the crops, full width, in its own block rather than in a
+                  grid. It sat below the calculator and the board's date line
+                  until it was found that nobody scrolled that far, which on a
+                  phone is most of a screen past the rates. A crop from the next
+                  district still has to be met while a farmer is reading today's
                   prices. It renders nothing on a day the bordering district
                   published no arecanut. */}
               <ArecanutMandiCard rows={arecanut}/>

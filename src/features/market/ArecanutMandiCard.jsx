@@ -4,6 +4,7 @@ import { useUriMotion } from "../../lib/uiMotion";
 import { formatMarketPrice } from "../../lib/marketCrops";
 import { DataAgeLine } from "./DataAgeLine";
 import { canRenderPrice } from "./MarketPriceRow";
+import { MandiAgeNote, isMandiPriceTooOld } from "./MandiFreshness";
 
 // Arecanut from the market yard next door, every variety on one card.
 //
@@ -24,20 +25,26 @@ import { canRenderPrice } from "./MarketPriceRow";
 // covering every number on the card, which is honest only because the selector
 // that builds these rows takes a single day and only that day.
 
-// Inside the board grid, spanning every column.
+// Full width, in the run of blocks that make up the board.
 //
-// It used to sit below the grid, after the quantity calculator and the board's
+// It used to sit below the whole board, after the quantity calculator and the
 // shared date line. It rendered correctly there and nobody ever saw it: on a
 // 360px phone that is a full calculator's height below the rates. A farmer
-// scanning today's prices has to meet arecanut with everything else, so it is
-// in the grid now.
+// scanning today's prices has to meet arecanut with everything else, so it sits
+// with them.
 //
-// Full width rather than a single cell, because a card carrying a heading, two
-// sentences and a variable length list does not fit a slot sized for one
+// Full width rather than a single cell, because a card carrying a heading,
+// three sentences and a variable length list does not fit a slot sized for one
 // number, and putting it in one would stretch whatever sat beside it to match.
-// No top margin: the grid's own gap spaces it.
+//
+// w-full, WHICH REPLACES col-span-2 sm:col-span-3. It was a grid child when the
+// board was one grid. The board is now several grids, one per group of cards
+// that share a height, and this card sits between them rather than inside any
+// of them. A col-span class outside a grid does nothing, so it would have been
+// a silent claim to a width it no longer had. No top margin: the surrounding
+// space-y does the spacing.
 const CARD =
-  "col-span-2 sm:col-span-3 rounded-[18px] border border-ink-100 bg-white p-4 shadow-uri-sm";
+  "w-full rounded-[18px] border border-ink-100 bg-white p-4 shadow-uri-sm";
 
 // One variety and its rate. Name on the left, price on the right, which is the
 // one place in this feature a label and a number share a line: this card is full
@@ -71,8 +78,14 @@ export function ArecanutMandiCard({ rows }) {
 
   // Every row on this card shares one day by construction: arecanutRows takes
   // the newest source_date and only that date. So one line can speak for all of
-  // them, and the first row is as good as any to read it from.
+  // them, and the first row is as good as any to read it from. That is also why
+  // one cutoff test covers the whole list rather than one per variety.
   const first = shown[0];
+
+  // Past the seven day cutoff every rate comes off the card and the note below
+  // stands in their place. The card itself stays, because a farmer who came for
+  // the arecanut rate has to be told what happened to it.
+  const tooOld = isMandiPriceTooOld(first.source_date);
 
   return (
     <motion.section
@@ -95,11 +108,31 @@ export function ArecanutMandiCard({ rows }) {
         {t("market.mandi.arecanut.note")}
       </p>
 
-      <ul className="mt-3 space-y-2">
-        {shown.map((row) => (
-          <VarietyRow key={row.crop_key} row={row}/>
-        ))}
-      </ul>
+      {/* WHAT "Cqca" AND "New Variety" ARE.
+          Those strings are the government's own, printed exactly as returned
+          and never translated, so a farmer can match them against the official
+          page. Unexplained they read as codes. This one line says what kind of
+          word they are and that each kind fetches its own price, which is the
+          whole of what a reader needs before the list means anything.
+          Only rendered beside the list. Past the cutoff there are no grade
+          names on screen for it to be about. */}
+      {!tooOld && (
+        <p className="mt-1 text-xs leading-relaxed text-ink-500">
+          {t("market.mandi.arecanut.grades")}
+        </p>
+      )}
+
+      {!tooOld && (
+        <ul className="mt-3 space-y-2">
+          {shown.map((row) => (
+            <VarietyRow key={row.crop_key} row={row}/>
+          ))}
+        </ul>
+      )}
+
+      {/* Nothing at all when the yard published today. Past the cutoff this is
+          what stands where the list was. See MandiFreshness. */}
+      <MandiAgeNote sourceDate={first.source_date} fetchedAt={first.fetched_at}/>
 
       {/* One block for the whole card. Legitimate only because every row above
           carries the same date and the same source, which is what the selector

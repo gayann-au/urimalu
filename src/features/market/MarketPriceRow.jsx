@@ -172,8 +172,10 @@ export function MarketPriceRow({
       // ink-200 box just drew a rectangle around it. shadow-uri-sm is the
       // landing's --shadow-sm, copied into the config rather than reinvented.
       // flex h-full flex-col is what lets the board stretch every card in a row
-      // to a common height without this one looking truncated. See the long
-      // note on BOARD_GRID in TodaysRatesBoard.jsx.
+      // to a common height without this one looking truncated. The board now
+      // groups cards of like height into one grid each, so a row here only ever
+      // stretches to another card of this same kind, and the stretch costs
+      // nothing. See the long note on runsByCardHeight in TodaysRatesBoard.jsx.
       className={`flex h-full flex-col rounded-[14px] border border-ink-100 bg-white p-3.5 shadow-uri-sm ${className}`}
     >
       {/* THE HIERARCHY. The crop name is a quiet label and the price is the
