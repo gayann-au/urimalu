@@ -64,15 +64,6 @@ export function canNameSource(source) {
   return labelKeyFor(source) !== null;
 }
 
-// Below this the day count is suppressed and the date stands alone.
-//
-// "Priced 2 Aug 2026, today" is not a sentence anyone writes, and "Priced 1 Aug
-// 2026, 1 day ago" only restates the date sitting next to it. From two days up
-// the count carries information the date does not, because it saves the reader
-// doing the subtraction. market.ageToday and market.ageDay stay in the language
-// files unused; they cost nothing and a later caller may want them.
-const MIN_DAYS_TO_SHOW_COUNT = 2;
-
 // Shown only on the stale band, and it is the only mark that changes between
 // bands besides the weight. No colour anywhere in this component means good or
 // bad about a price: stale is ink-700, everything else is ink-500, and neither
@@ -139,14 +130,16 @@ export function DataAgeLine({ sourceDate, sourceKey, fetchedAt }) {
   const sourceLabelKey = labelKeyFor(sourceKey);
   if (!age || !sourceLabelKey) return null;
 
-  const pricedOn = t("market.pricedOn", { date: formatLongDate(sourceDate) });
-  // The comma is untranslated punctuation joining two translated fragments.
-  // Kannada takes the same comma, so this holds for both languages today. A
-  // language that does not would need a joining key rather than this literal.
-  const pricedLine =
-    age.days >= MIN_DAYS_TO_SHOW_COUNT
-      ? `${pricedOn}, ${t(age.key, age.params)}`
-      : pricedOn;
+  // The date alone, with no days-ago count appended.
+  //
+  // The count was removed because two dates are already on screen: this line
+  // says the day the source published, and the checked line below says the day
+  // we looked. A reader can judge the gap between them without being told it,
+  // and stating it as "9 days ago" reads as a complaint about the source rather
+  // than a fact about the price. market.ageDays, market.ageDay and
+  // market.ageToday stay in the language files unused; they cost nothing and a
+  // later caller may want them.
+  const pricedLine = t("market.pricedOn", { date: formatLongDate(sourceDate) });
 
   const isStale = age.band === "stale";
 

@@ -529,11 +529,11 @@
       "uscLb": "US cents for every pound",
       "usdTon": "US dollars for every tonne"
     },
-    "pricedOn": "Rate as on {{date}}",
+    "pricedOn": "Last updated on {{date}}",
     "ageDays": "{{count}} days ago",
     "ageDay": "{{count}} day ago",
     "ageToday": "today",
-    "lastChecked": "Last checked {{date}}, {{time}}",
+    "lastChecked": "We checked on {{date}} at {{time}}",
     "source": {
       "cpa": "Coorg Planters' Association",
       "coffeeBoard": "Coffee Board of India",
@@ -553,7 +553,7 @@
       "age": {
         "notYet": "We checked at {{time}}. Today's price is not out yet. This is the last price, from {{date}}.",
         "notYetNoTime": "Today's price is not out yet. This is the last price, from {{date}}.",
-        "noNewPrice": "No new price has come since {{date}}. We are still checking every day."
+        "noNewPrice": "The price is not shown because it is more than a week old."
       }
     },
     "flaggedLabel": "Note from our check:",

@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { ageInDays } from "../../lib/dataAge";
 import { formatLongDate } from "../../lib/constants";
-import { istTimeText } from "../../lib/ist";
 
 // WHY A PRICE FROM YESTERDAY NEEDS A SENTENCE.
 //
@@ -54,46 +53,32 @@ export function isMandiPriceFromToday(sourceDate, now = Date.now()) {
   return ageInDays(sourceDate, now) === 0;
 }
 
-// The freshness line for a mandi card, or nothing when the row is from today.
+// The freshness line for a mandi card, or nothing at all.
 //
-// Three outcomes, and this component picks between them rather than the cards,
-// so a pepper card and the arecanut card cannot end up saying it differently:
+// Two outcomes, and this component picks between them rather than the cards, so
+// a pepper card and the arecanut card cannot end up saying it differently:
 //
-//   published today        no line at all, the date under the price is enough
-//   not published yet      when we looked, that today is not out, and the date
-//                          of the price actually on screen
+//   within the cutoff      no line at all, the lines above the price are enough
 //   past the cutoff        no figure is on screen, so this says what the last
 //                          date was and that we are still looking
 //
-// fetchedAt is the moment our job pulled from the source, not the moment this
-// rendered. That is the honest reading of "we checked": a card held in the
-// query cache for twenty minutes still names the time the data arrived.
-//
-// The time is dropped, and only the time, when fetched_at is unreadable. The
-// rest of the sentence is still true and still worth saying, so it goes out
-// without that clause rather than the whole line being lost.
-export function MandiAgeNote({ sourceDate, fetchedAt }) {
+// It used to be three, the missing one being a "not published yet" sentence on
+// any row that was not from today. That sentence has gone because the two lines
+// above it already state both of its facts, and state them with dates: the
+// priced line gives the day the source published, and the checked line gives
+// the day and the minute we looked. The extra sentence repeated that pair
+// without a date of its own, which made it the vaguest line in the block.
+export function MandiAgeNote({ sourceDate }) {
   const { t } = useTranslation();
 
-  if (isMandiPriceFromToday(sourceDate)) return null;
+  if (!isMandiPriceTooOld(sourceDate)) return null;
 
   const date = formatLongDate(sourceDate);
   if (!date) return null;
 
-  if (isMandiPriceTooOld(sourceDate)) {
-    return (
-      <p className="mt-1.5 text-sm leading-relaxed text-ink-700">
-        {t("market.mandi.age.noNewPrice", { date })}
-      </p>
-    );
-  }
-
-  const time = istTimeText(fetchedAt);
   return (
-    <p className="mt-2 text-xs leading-relaxed text-ink-600">
-      {time
-        ? t("market.mandi.age.notYet", { time, date })
-        : t("market.mandi.age.notYetNoTime", { date })}
+    <p className="mt-1.5 text-sm leading-relaxed text-ink-700">
+      {t("market.mandi.age.noNewPrice", { date })}
     </p>
   );
 }
