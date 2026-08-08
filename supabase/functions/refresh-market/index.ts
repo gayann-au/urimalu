@@ -111,6 +111,104 @@ async function writeSnapshot(
   if (error) throw new Error(`insert failed: ${error.message}`);
 }
 
+// The heartbeat. Moves fetched_at forward on the newest stored rows of each crop
+// for one source, so that column answers "when did we last actually contact this
+// source" rather than "when did this source last change its mind".
+//
+// WHY IT EXISTS. writeSnapshot stamps fetched_at only on a row it is writing,
+// and a source that publishes once a day gives the fourteen later runs of the
+// hourly cron nothing to write. Without a heartbeat the stored fetched_at would
+// sit at the hour the day's figures first landed and drift further from the
+// present every hour after that. A stale timestamp would then mean either "we
+// stopped asking" or "they stopped changing", and those are opposite problems
+// wearing the same face.
+//
+// THE NEWEST SOURCE_DATE PER CROP, THEN EVERY ROW ON IT. For each crop_key the
+// greatest source_date is found first, and then every row carrying that
+// source_date for that crop is stamped, whatever its contract_month. One crop
+// can hold several rows on one date that differ only by contract_month:
+// coffee_board liffe_robusta carries three futures months on 2026-08-05, and
+// spices_board carries one row per auctioneer. Those rows all came out of the
+// same fetch, so they are all confirmed together and must show one check time.
+//
+// Yesterday's row and every older one keep the fetched_at they were written
+// with, because each of those numbers was last confirmed on the day it was
+// fetched and restamping it now would claim otherwise.
+//
+// WHY NOT GROUP ON CROP AND CONTRACT MONTH. That was the earlier rule, and it
+// held only while contract_month repeated across dates, as futures months do.
+// It fails wherever contract_month is unique per row. spices_board puts the
+// auctioneer name in contract_month and each auctioneer appears on one date
+// only, so every historical row was the sole member of its own group and
+// therefore the newest in it. Every run restamped the whole table: a finished
+// auction from 3 August came back reading as checked today, and the work grew
+// with the table instead of staying with the day.
+//
+// It writes no rows, deletes none, and changes no column but fetched_at.
+//
+// NEVER THROWS. The point of this is a timestamp. A run that fetched prices
+// successfully must not be reported as failed because the stamp did not land, so
+// any error is named in the warnings and 0 comes back.
+async function touchFetchedAt(
+  client: SupabaseClient,
+  source: string,
+  warnings: string[]
+): Promise<number> {
+  try {
+    const { data, error } = await client
+      .from("market_snapshots")
+      .select("id, crop_key, source_date")
+      .eq("source", source);
+    if (error) throw new Error(error.message);
+
+    const rows = (data ?? []) as Array<{
+      id: string;
+      crop_key: string;
+      source_date: string;
+    }>;
+
+    // Grouped here rather than asked of the database. source_date is a date and
+    // arrives as YYYY-MM-DD, where string order is date order, so the newest is
+    // found by comparing the values as they came.
+    //
+    // Two passes, because a row cannot be judged until the greatest date for its
+    // crop is known, and that may sit anywhere in the list. The first pass
+    // settles the date per crop, the second collects every row that matches it.
+    const newestDate = new Map<string, string>();
+    for (const row of rows) {
+      const held = newestDate.get(row.crop_key);
+      if (held === undefined || row.source_date > held) {
+        newestDate.set(row.crop_key, row.source_date);
+      }
+    }
+
+    const ids: string[] = [];
+    for (const row of rows) {
+      if (row.source_date === newestDate.get(row.crop_key)) ids.push(row.id);
+    }
+    if (ids.length === 0) return 0;
+
+    const touched = await client
+      .from("market_snapshots")
+      .update({ fetched_at: new Date().toISOString() })
+      .in("id", ids)
+      .select("id");
+    if (touched.error) throw new Error(touched.error.message);
+
+    // What the update reported back, not the number of ids it was handed. The
+    // two agree on a normal run, and when they do not it is the smaller, true
+    // figure that belongs in the summary.
+    return (touched.data ?? []).length;
+  } catch (err) {
+    const message =
+      `${source}: heartbeat failed, fetched_at not moved forward: ` +
+      errorMessage(err);
+    console.warn(message);
+    warnings.push(message);
+    return 0;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Small parsing helpers
 // ---------------------------------------------------------------------------
@@ -313,6 +411,12 @@ interface CpaSummary {
   rows_held: number;
   rows_flagged: number;
   rows_skipped: number;
+  // How many stored rows had their fetched_at moved forward by the heartbeat.
+  // Disjoint from rows_written in meaning: those rows carry new figures, these
+  // carry the same figures with a fresher timestamp. Zero is the normal value
+  // when the source was skipped or failed, and also when the heartbeat itself
+  // failed, which the warnings name.
+  rows_touched: number;
   error: string | null;
 }
 
@@ -523,6 +627,7 @@ interface CoffeeBoardSummary {
   rows_written: number;
   rows_held: number;
   rows_skipped: number;
+  rows_touched: number;
   error: string | null;
 }
 
@@ -847,6 +952,9 @@ interface AgmarknetSummary {
   skipped: boolean;
   skipped_reason: "no_api_key" | "already_have_today" | null;
   rows_skipped: number;
+  // Stays 0 on either skip. A skipped source was never contacted, and the
+  // heartbeat's whole claim is that contact happened.
+  rows_touched: number;
   // Which rung of the ladder pepper resolved to, and the markets behind it.
   // "none" when neither rung returned anything, which is an answer rather than
   // an absence: it means both requests were made and both came back empty.
@@ -1622,6 +1730,7 @@ interface SpicesBoardSummary {
   // parsed and could not be written.
   skipped: boolean;
   skipped_reason: "already_have_today" | null;
+  rows_touched: number;
   auction_date: string | null;
   error: string | null;
 }
@@ -1791,12 +1900,14 @@ Deno.serve(async (req) => {
     rows_held: 0,
     rows_flagged: 0,
     rows_skipped: 0,
+    rows_touched: 0,
     error: null,
   };
   const coffeeBoard: CoffeeBoardSummary = {
     rows_written: 0,
     rows_held: 0,
     rows_skipped: 0,
+    rows_touched: 0,
     error: null,
   };
   const agmarknet: AgmarknetSummary = {
@@ -1804,6 +1915,7 @@ Deno.serve(async (req) => {
     skipped: false,
     skipped_reason: null,
     rows_skipped: 0,
+    rows_touched: 0,
     pepper_geography_level: GEOGRAPHY_NONE,
     pepper_markets: [],
     pepper_rows_written: 0,
@@ -1818,6 +1930,7 @@ Deno.serve(async (req) => {
     rows_skipped: 0,
     skipped: false,
     skipped_reason: null,
+    rows_touched: 0,
     auction_date: null,
     error: null,
   };
@@ -1856,6 +1969,15 @@ Deno.serve(async (req) => {
       agmarknet.error = errorMessage(err);
       console.error("agmarknet source failed:", agmarknet.error);
     }
+    // Inside the else, so both skips are already excluded: neither of them sent
+    // a request, and this stamp is a claim that one was sent and answered.
+    if (agmarknet.error === null) {
+      agmarknet.rows_touched = await touchFetchedAt(
+        admin,
+        AGMARKNET_SOURCE,
+        warnings
+      );
+    }
   }
 
   try {
@@ -1864,12 +1986,26 @@ Deno.serve(async (req) => {
     cpa.error = errorMessage(err);
     console.error("cpa source failed:", cpa.error);
   }
+  // CPA is fetched every run and has no skip path, so reaching here with no
+  // error is the same thing as having been contacted. A failed source is not
+  // stamped: the last real contact is then the one before this run, and saying
+  // otherwise would hide an outage behind a fresh timestamp.
+  if (cpa.error === null) {
+    cpa.rows_touched = await touchFetchedAt(admin, "cpa", warnings);
+  }
 
   try {
     await runCoffeeBoard(admin, coffeeBoard, warnings);
   } catch (err) {
     coffeeBoard.error = errorMessage(err);
     console.error("coffee board source failed:", coffeeBoard.error);
+  }
+  if (coffeeBoard.error === null) {
+    coffeeBoard.rows_touched = await touchFetchedAt(
+      admin,
+      "coffee_board",
+      warnings
+    );
   }
 
   if (await hasCardamomAuctionFor(admin, today, warnings)) {
@@ -1886,11 +2022,21 @@ Deno.serve(async (req) => {
       spicesBoard.error = errorMessage(err);
       console.error("spices board source failed:", spicesBoard.error);
     }
+    if (spicesBoard.error === null) {
+      spicesBoard.rows_touched = await touchFetchedAt(
+        admin,
+        SPICES_BOARD_SOURCE,
+        warnings
+      );
+    }
   }
 
   // rows_written counts every row written, whatever its validation status.
   // rows_held and rows_flagged are subsets of it, not separate totals.
   // rows_skipped is disjoint from rows_written: those rows reached no table.
+  // rows_touched counts neither. It is the heartbeat: rows already in the table
+  // whose fetched_at was moved forward because the source answered, and whose
+  // prices were not changed by this run.
   return json(200, {
     ok: true,
     // The IST calendar day this run reasoned about, so a reader of the summary
