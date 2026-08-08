@@ -17,16 +17,17 @@
 // a user's town over coordinates that are not that town's, and never imply the
 // reading is local to them when isFallback is true.
 
-// Approximate town centres. Every pair below was taken from the Open-Meteo
-// geocoding API, the same vendor as the forecast endpoint the weather card
-// calls, so the coordinates and the forecast come from one source:
+// Approximate town centres. The first seventeen pairs below, Virajpet down to
+// Ammathi, were taken from the Open-Meteo geocoding API, the same vendor as the
+// forecast endpoint the weather card calls, so those coordinates and the
+// forecast come from one source:
 //
 //   https://geocoding-api.open-meteo.com/v1/search?name=Madikeri&count=10&country=IN
 //
 // NOT ONE OF THESE NUMBERS WAS TYPED FROM MEMORY. Each name was queried on its
 // own and the results kept only when admin2 was the district, spelled "Coorg"
 // in that dataset, or when the point fell inside the Kodagu bounding box of
-// 11.9 to 12.9 north and 75.4 to 76.3 east. Every pair below cleared the admin2
+// 11.9 to 12.9 north and 75.4 to 76.3 east. All seventeen cleared the admin2
 // test, so the bounding box never had to stand alone for any of them.
 //
 // That filter is load bearing. Kushalnagar also matches a town in Bangladesh,
@@ -37,9 +38,14 @@
 // Values are recorded to the digit as returned, not rounded, because rounding a
 // sourced number turns it back into an approximation.
 //
-// The first seven were resolved on 2 August 2026 and the rest on 4 August 2026.
-// The seven were re-queried on the second date and came back identical, so the
-// table below is one consistent read of the vendor rather than two.
+// The first seven were resolved on 2 August 2026 and the next ten on 4 August
+// 2026. The seven were re-queried on the second date and came back identical,
+// so those seventeen are one consistent read of the vendor rather than two.
+//
+// The four added on 8 August 2026 are a different case. Three of them are not
+// in the vendor's dataset at all and came from elsewhere, so everything above
+// this line describes the first seventeen only. Their sources are recorded in
+// the block directly above them in the table.
 //
 // SPELLING. The keys are the app's spellings, because users.town is matched
 // against them, and the vendor's transliteration is often not ours: it returns
@@ -81,6 +87,39 @@ export const KODAGU_PLACES = {
   Siddapur: { lat: 12.29547, lon: 75.87485 },
   // Queried as "Ammatti". "Ammathi" returns nothing at all from this vendor.
   Ammathi: { lat: 12.23896, lon: 75.85806 },
+  // Added 8 August 2026, and NOT ALL FROM ONE VENDOR, unlike the seventeen
+  // above. Open-Meteo has a pair for Birunani and has nothing for the other
+  // three, so those three were sourced elsewhere and each one says where.
+  //
+  //   Birunani       Open-Meteo, admin2 returned as Coorg. Same source and the
+  //                  same admin2 test as every entry above it.
+  //   T. Shettigeri  Open-Meteo returned nothing under that name or under
+  //                  "Shettigeri". Taken instead from a Central Ground Water
+  //                  Board record for T.Shettigeri, Virajpet, which publishes
+  //                  full decimal precision.
+  //   Murnad         Open-Meteo returned nothing under Murnad, Murnadu or
+  //                  Moornad. Taken from OpenStreetMap, and THE PIN IS A
+  //                  LANDMARK RATHER THAN THE VILLAGE CENTRE: it is MURNAD JUMA
+  //                  MASJID on Mangaluru Road in Murnadu, Madikeri taluk. Kept
+  //                  because rain and temperature do not vary over a few
+  //                  hundred metres, but a later reader should know the point
+  //                  is a landmark and not mistake it for a centre.
+  //   Badagarakeri   Open-Meteo returned nothing. Taken from OpenStreetMap,
+  //                  which names it Badagarakeri, Ponnampete taluk, Kodagu.
+  //
+  // All four were checked against the Kodagu bounding box of 11.9 to 12.9 north
+  // and 75.4 to 76.3 east and all four fall inside it. Each also names a Kodagu
+  // taluk in the record it came from: Virajpet for T. Shettigeri, Madikeri for
+  // Murnad, Ponnampete for Badagarakeri. Birunani names the district rather
+  // than a taluk, being the vendor's own admin2 of Coorg, which is the same
+  // test the seventeen above cleared.
+  Birunani: { lat: 12.02849, lon: 75.86455 },
+  // Quoted because of the dot and the space. Lookup is unaffected: the key is
+  // lowercased into PLACES_BY_LOWER_NAME like every other, and users.town is
+  // trimmed and lowercased before it is matched.
+  "T. Shettigeri": { lat: 12.025709, lon: 75.995725 },
+  Murnad: { lat: 12.3162044, lon: 75.7528859 },
+  Badagarakeri: { lat: 12.0426655, lon: 75.9036642 },
 };
 
 // The place used whenever the reader's town is unknown or unrecognised.

@@ -35,18 +35,30 @@ import { KODAGU_PLACES } from "../../lib/kodaguPlaces";
 // committed KODAGU_PLACES table so there is one set of numbers in the client,
 // not a second copy drifting from the first.
 //
-// The first five are the ones this section shipped with, kept first and in
-// their original order so a reader who already knew where their town sat still
-// finds it there. The rest follow in the order they resolved.
+// The five this section shipped with keep their order relative to each other,
+// and everything resolved after them still follows in the order it resolved.
+// They are no longer the first five on screen: the four added on 8 August 2026
+// sit directly after Madikeri, which puts Virajpet sixth.
 //
-// SEVENTEEN, NOT TWENTY. Twenty-two names were put to the geocoding API and
-// five could not be resolved to a point inside Kodagu: Talacauvery, Murnad,
-// Shanivarsanthe, Chettalli and Balele return nothing from that vendor under
-// any spelling tried. They are absent rather than approximated. A coordinate
-// typed from memory to round this list up to twenty would put one valley's
-// rainfall under another valley's name, and nothing on screen would look wrong.
+// TWENTY-ONE, AND NOT HELD TO A NUMBER. The towns still missing are missing
+// because no source was found for them, not because the list was capped.
+// Talacauvery, Shanivarsanthe, Chettalli and Balele return nothing from the
+// geocoding API under any spelling tried and nothing has been found for them
+// elsewhere either, so they stay absent rather than approximated. Murnad was in
+// that group until 8 August 2026, when OpenStreetMap supplied a point for it.
+//
+// Three of the four added that day are not in Open-Meteo's dataset at all, so
+// this list no longer rests on one vendor. Each of the four records its own
+// source in KODAGU_PLACES in src/lib/kodaguPlaces.js, including the one whose
+// pin is a landmark rather than a village centre. Read that block before adding
+// a name here: a coordinate typed from memory would put one valley's rainfall
+// under another valley's name, and nothing on screen would look wrong.
 export const WEATHER_TOWNS = [
   "Madikeri",
+  "Birunani",
+  "T. Shettigeri",
+  "Murnad",
+  "Badagarakeri",
   "Virajpet",
   "Kushalnagar",
   "Somwarpet",
