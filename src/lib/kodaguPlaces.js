@@ -114,10 +114,18 @@ export const KODAGU_PLACES = {
   // than a taluk, being the vendor's own admin2 of Coorg, which is the same
   // test the seventeen above cleared.
   Birunani: { lat: 12.02849, lon: 75.86455 },
-  // Quoted because of the dot and the space. Lookup is unaffected: the key is
-  // lowercased into PLACES_BY_LOWER_NAME like every other, and users.town is
-  // trimmed and lowercased before it is matched.
-  "T. Shettigeri": { lat: 12.025709, lon: 75.995725 },
+  // THE DOT IS GONE FROM THE KEY ON PURPOSE, and only from the key. This name
+  // is also the suffix of an i18next lookup, weather.town.<key>, and i18next
+  // reads a dot as a key separator by default, so "T. Shettigeri" would be
+  // parsed as a path through nested objects and would never resolve however the
+  // language files were written. The dot survives where it belongs, in the
+  // displayed name, which lives in the weather.town value in en.json and
+  // kn.json and reads "T. Shettigeri" on screen.
+  //
+  // Still quoted, for the space rather than the dot. Lookup is otherwise
+  // unaffected: the key is lowercased into PLACES_BY_LOWER_NAME like every
+  // other, and users.town is trimmed and lowercased before it is matched.
+  "T Shettigeri": { lat: 12.025709, lon: 75.995725 },
   Murnad: { lat: 12.3162044, lon: 75.7528859 },
   Badagarakeri: { lat: 12.0426655, lon: 75.9036642 },
 };

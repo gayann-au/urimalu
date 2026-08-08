@@ -56,7 +56,7 @@ import { KODAGU_PLACES } from "../../lib/kodaguPlaces";
 export const WEATHER_TOWNS = [
   "Madikeri",
   "Birunani",
-  "T. Shettigeri",
+  "T Shettigeri",
   "Murnad",
   "Badagarakeri",
   "Virajpet",
