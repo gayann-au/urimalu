@@ -25,6 +25,9 @@ const LandingPage     = lazy(() => import("../features/landing/LandingPage"));
 const AccountPage     = lazy(() => import("../features/account/AccountPage"));
 const FeatureRequestPage = lazy(() => import("../features/feedback/FeatureRequestPage"));
 const NotificationsPage  = lazy(() => import("../features/alerts/NotificationsPage"));
+// Engineering readout at /debug/push. Deliberately not linked from any menu,
+// header or page: it is reached by typing the URL on the device being tested.
+const PushDiagnosticsPage = lazy(() => import("../features/alerts/PushDiagnosticsPage"));
 const PrivacyPage     = lazy(() => import("../features/legal/PrivacyPage"));
 const TermsPage       = lazy(() => import("../features/legal/TermsPage"));
 const ForgotPasswordPage = lazy(() => import("../features/auth/ForgotPasswordPage"));
@@ -285,6 +288,7 @@ export function AppRoutes() {
         <Route path="/merchant/history"   element={<MerchantHistoryGuard/>}/>
         <Route path="/merchant/:id"       element={<ProfileGuard/>}/>
         <Route path="/admin"              element={<AdminOnly><AdminPage/></AdminOnly>}/>
+        <Route path="/debug/push"         element={<PushDiagnosticsPage/>}/>
         <Route path="/privacy"            element={<PrivacyPage/>}/>
         <Route path="/terms"              element={<TermsPage/>}/>
         <Route path="/forgot-password"    element={<GuestOnly><ForgotPasswordPage/></GuestOnly>}/>

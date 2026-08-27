@@ -12,44 +12,86 @@ import { useAuth } from "../auth/useAuth";
 // local flag stops us re-prompting a user who dismissed the prompt without
 // choosing (which the browser keeps as "default").
 //
-// EVERY EXIT SAYS WHY, OUT LOUD. This file used to end each failure at a bare
+// EVERY EXIT SAYS WHY, TWICE. This file used to end each failure at a bare
 // `catch {}` with no logging, and the result was that push registration failed
-// for every device for weeks with nothing anywhere to show it. Silence is
-// still the right behaviour for the user, who must never see an error from
-// here, but it is the wrong behaviour for the console: a warning naming the
-// exact reason is the only way anyone finds out this stopped working. Warn,
-// never throw.
+// for every device for weeks with nothing anywhere to show it. Console warnings
+// fixed that for a developer at a desk and fixed nothing at all for a farmer on
+// a phone, whose console nobody can read. So every exit now does two things: it
+// warns, and it RETURNS A RESULT STRING naming the same reason. The result is
+// what the diagnostics screen puts on the phone's own display.
+//
+// THE SPLIT, AND WHY IT MATTERS MORE THAN IT LOOKS.
+// requestPushPermission and savePushSubscription are separate on purpose.
+// Asking for notification permission needs a live user gesture, and a gesture
+// expires: on a slow connection the network round trip of a listing write can
+// outlast it, at which point the browser refuses the request and nothing is
+// ever asked. So the ask has to ride the tap itself, while the parts that need
+// the network (subscribing, and storing the subscription) run afterwards.
+// promptForPush still does both in order, for callers already inside a gesture
+// that have no reason to hold the two halves apart.
 
 const PROMPTED_FLAG = "urimalu.pushPrompted";
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 const LOG = "[push]";
 
-// True only when this browser can actually do web push and we have a key.
-// Logs which of the four requirements is missing, because "push not supported"
-// on its own does not tell you whether the browser is old or the deploy is
-// missing its VAPID key.
-function pushSupported() {
-  if (typeof window === "undefined") {
-    console.warn(`${LOG} not registering: no window (server-side render).`);
-    return false;
-  }
-  if (!("Notification" in window)) {
-    console.warn(`${LOG} not registering: push not supported, this browser has no Notification API.`);
-    return false;
-  }
-  if (!("serviceWorker" in navigator)) {
-    console.warn(`${LOG} not registering: push not supported, this browser has no service worker support.`);
-    return false;
-  }
-  if (!("PushManager" in window)) {
-    console.warn(`${LOG} not registering: push not supported, this browser has no PushManager.`);
-    return false;
-  }
-  if (!VAPID_PUBLIC_KEY) {
-    console.warn(`${LOG} not registering: VITE_VAPID_PUBLIC_KEY is not set in this build.`);
-    return false;
-  }
-  return true;
+// Every reason this code can stop, as a string a screen can show. Kept as one
+// frozen map so the hook, the console warnings and the diagnostics panel cannot
+// drift into three different vocabularies for the same event. No product or
+// company names anywhere in here: these strings reach a user's screen.
+export const PUSH_RESULT = Object.freeze({
+  NO_PROFILE: "no-profile",
+  NO_WINDOW: "no-window",
+  NO_NOTIFICATION_API: "no-notification-api",
+  NO_SERVICE_WORKER_SUPPORT: "no-service-worker-support",
+  NO_PUSH_MANAGER: "no-push-manager",
+  NO_VAPID_KEY: "no-vapid-key",
+  PERMISSION_ALREADY_DENIED: "permission-already-denied",
+  ALREADY_PROMPTED: "already-prompted",
+  PERMISSION_REQUEST_BLOCKED: "permission-request-blocked",
+  PERMISSION_DENIED: "permission-denied",
+  PERMISSION_DISMISSED: "permission-dismissed",
+  PERMISSION_GRANTED: "permission-granted",
+  PERMISSION_NOT_GRANTED: "permission-not-granted",
+  NO_SERVICE_WORKER_REGISTRATION: "no-service-worker-registration",
+  DATABASE_SAVE_FAILED: "database-save-failed",
+  SUBSCRIPTION_SAVED: "subscription-saved",
+  UNEXPECTED_ERROR: "unexpected-error",
+});
+
+// Which requirement for web push this browser is missing, or null when it has
+// all of them. Silent by design: the diagnostics reader calls this and must not
+// spray the console every time the panel refreshes. pushSupported below is the
+// noisy wrapper the registration paths use.
+function supportFailure() {
+  if (typeof window === "undefined") return PUSH_RESULT.NO_WINDOW;
+  if (!("Notification" in window)) return PUSH_RESULT.NO_NOTIFICATION_API;
+  if (!("serviceWorker" in navigator)) return PUSH_RESULT.NO_SERVICE_WORKER_SUPPORT;
+  if (!("PushManager" in window)) return PUSH_RESULT.NO_PUSH_MANAGER;
+  if (!VAPID_PUBLIC_KEY) return PUSH_RESULT.NO_VAPID_KEY;
+  return null;
+}
+
+// Human sentence for each stopping reason, for the console only.
+const REASON_TEXT = {
+  [PUSH_RESULT.NO_PROFILE]: "no profile, nobody to attach the subscription to.",
+  [PUSH_RESULT.NO_WINDOW]: "no window (server-side render).",
+  [PUSH_RESULT.NO_NOTIFICATION_API]: "this browser has no Notification API.",
+  [PUSH_RESULT.NO_SERVICE_WORKER_SUPPORT]: "this browser has no service worker support.",
+  [PUSH_RESULT.NO_PUSH_MANAGER]: "this browser has no PushManager. On an iPhone this is what a page open in a browser tab looks like: push is only available once the app has been added to the Home Screen and opened from there.",
+  [PUSH_RESULT.NO_VAPID_KEY]: "VITE_VAPID_PUBLIC_KEY is not set in this build.",
+  [PUSH_RESULT.PERMISSION_ALREADY_DENIED]: "notification permission was already denied on this browser.",
+  [PUSH_RESULT.ALREADY_PROMPTED]: "already prompted flag is set, this browser was asked once before.",
+  [PUSH_RESULT.PERMISSION_DENIED]: "the user denied the permission prompt.",
+  [PUSH_RESULT.PERMISSION_DISMISSED]: "the user dismissed the permission prompt without choosing.",
+  [PUSH_RESULT.PERMISSION_NOT_GRANTED]: "permission is not granted, so there is nothing to subscribe.",
+  [PUSH_RESULT.NO_SERVICE_WORKER_REGISTRATION]: "no service worker registration on this page.",
+};
+
+// Warn and hand the same reason back to the caller, so the console line and the
+// on-screen line can never disagree about what happened.
+function stop(result) {
+  console.warn(`${LOG} not registering: ${REASON_TEXT[result] || result}`);
+  return result;
 }
 
 // VAPID public key (base64url) to the Uint8Array applicationServerKey wants.
@@ -62,6 +104,100 @@ function urlBase64ToUint8Array(base64) {
   return out;
 }
 
+// The host a push endpoint points at, and nothing else from it.
+//
+// The endpoint itself is a capability: anyone holding it can push to this
+// device. It is never returned from this module and never rendered. The
+// hostname alone is what a diagnosis needs, because it says which delivery
+// service the browser signed up with, and it carries no secret.
+function endpointHost(endpoint) {
+  try {
+    return new URL(endpoint).hostname;
+  } catch {
+    return null;
+  }
+}
+
+// localStorage throws outright in some privacy modes, so both the read and the
+// write of the one-shot flag are guarded. A flag we cannot read is treated as
+// unset: asking a user twice is a far smaller harm than never asking at all.
+function promptedFlagSet() {
+  try {
+    return !!localStorage.getItem(PROMPTED_FLAG);
+  } catch (err) {
+    console.warn(`${LOG} could not read the prompted flag, treating it as unset:`, err);
+    return false;
+  }
+}
+
+function setPromptedFlag() {
+  try {
+    localStorage.setItem(PROMPTED_FLAG, "1");
+  } catch (err) {
+    console.warn(`${LOG} could not write the prompted flag, this browser may be asked again:`, err);
+  }
+}
+
+// Clear the one-shot flag. Exists for the diagnostics screen, so one phone can
+// be tested over and over instead of being spent on the first attempt. Nothing
+// in the normal app calls this.
+export function clearPromptedFlag() {
+  try {
+    localStorage.removeItem(PROMPTED_FLAG);
+    return true;
+  } catch (err) {
+    console.warn(`${LOG} could not clear the prompted flag:`, err);
+    return false;
+  }
+}
+
+// A plain snapshot of everything that decides whether push can work here.
+//
+// READ ONLY. It never prompts, never subscribes and never writes, so it is safe
+// to call on page load from a diagnostics screen. It also never returns a
+// secret: the VAPID key is reported as a yes or no and never as its value, the
+// endpoint is reduced to its hostname, and the subscription keys are not read
+// at all.
+export async function readPushDiagnostics() {
+  const hasWindow = typeof window !== "undefined";
+  const hasNotification = hasWindow && "Notification" in window;
+  const hasServiceWorker = hasWindow && "serviceWorker" in navigator;
+  const hasPushManager = hasWindow && "PushManager" in window;
+
+  const diagnostics = {
+    hasWindow,
+    hasNotification,
+    hasServiceWorker,
+    hasPushManager,
+    hasVapidKey: !!VAPID_PUBLIC_KEY,
+    permission: hasNotification ? Notification.permission : "unavailable",
+    hasServiceWorkerRegistration: false,
+    hasPushSubscription: false,
+    pushEndpointHost: null,
+    promptedFlagSet: promptedFlagSet(),
+    readError: null,
+  };
+
+  if (!hasServiceWorker) return diagnostics;
+
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) return diagnostics;
+    diagnostics.hasServiceWorkerRegistration = true;
+
+    if (!hasPushManager || !reg.pushManager) return diagnostics;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return diagnostics;
+
+    diagnostics.hasPushSubscription = true;
+    diagnostics.pushEndpointHost = endpointHost(sub.endpoint);
+  } catch (err) {
+    diagnostics.readError = err?.message || String(err);
+  }
+
+  return diagnostics;
+}
+
 // Subscribe this browser and store the subscription for the given user. Safe to
 // call repeatedly: pushManager reuses an existing subscription, and the DB
 // upsert is keyed on the endpoint so duplicates never accumulate.
@@ -69,8 +205,7 @@ async function subscribeAndSave(userId) {
   const reg = await navigator.serviceWorker.getRegistration();
   if (!reg) {
     // No service worker (for example the dev server): nothing to subscribe to.
-    console.warn(`${LOG} not registering: no service worker registration on this page.`);
-    return;
+    return stop(PUSH_RESULT.NO_SERVICE_WORKER_REGISTRATION);
   }
 
   const existing = await reg.pushManager.getSubscription();
@@ -91,56 +226,50 @@ async function subscribeAndSave(userId) {
   );
   if (error) {
     console.warn(
-      `${LOG} supabase upsert into push_subscriptions failed, this device will not receive push:`,
+      `${LOG} storing the subscription failed, this device will not receive push:`,
       error.message || error
     );
+    return PUSH_RESULT.DATABASE_SAVE_FAILED;
   }
+  return PUSH_RESULT.SUBSCRIPTION_SAVED;
 }
 
 export function usePushRegistration() {
   const { profile } = useAuth();
 
-  // Called right after a user action that has just been saved: a crop follow,
-  // or a merchant listing write. Resolves quietly no matter what; callers do
-  // not await a result and never see an error from here.
-  const promptForPush = useCallback(async () => {
+  // THE GESTURE HALF. Ask the browser for notification permission.
+  //
+  // MUST be called from inside a live user gesture, and MUST NOT have anything
+  // awaited in front of it in the calling handler. Everything above the
+  // requestPermission call below runs synchronously in the caller's own task,
+  // which is exactly what keeps the gesture alive; a single awaited network
+  // call in front of this is enough to lose it on a phone.
+  //
+  // Returns one of PUSH_RESULT. Never throws.
+  const requestPushPermission = useCallback(async () => {
     try {
-      if (!profile) {
-        console.warn(`${LOG} not registering: no profile, nobody to attach the subscription to.`);
-        return;
-      }
-      if (!pushSupported()) return; // pushSupported already named the reason.
+      if (!profile) return stop(PUSH_RESULT.NO_PROFILE);
+      const failure = supportFailure();
+      if (failure) return stop(failure);
 
       const permission = Notification.permission;
 
       // Already decided against it: respect that, never nag again.
-      if (permission === "denied") {
-        console.warn(`${LOG} not registering: notification permission was already denied on this browser.`);
-        return;
-      }
+      if (permission === "denied") return stop(PUSH_RESULT.PERMISSION_ALREADY_DENIED);
 
-      // Already granted: make sure this browser is subscribed (for example a
-      // returning user on a new device) and stop.
-      if (permission === "granted") {
-        await subscribeAndSave(profile.id);
-        return;
-      }
+      // Already granted: nothing to ask. The caller moves on to the save half.
+      if (permission === "granted") return PUSH_RESULT.PERMISSION_GRANTED;
 
       // permission === "default": ask exactly once, ever, on this browser.
-      if (localStorage.getItem(PROMPTED_FLAG)) {
-        console.warn(`${LOG} not registering: already prompted flag is set, this browser was asked once before.`);
-        return;
-      }
+      if (promptedFlagSet()) return stop(PUSH_RESULT.ALREADY_PROMPTED);
 
       // THE FLAG IS WRITTEN AFTER THE ANSWER, NEVER BEFORE IT.
       //
-      // requestPermission needs a live user gesture, and the merchant path
-      // calls this after awaiting a listing write, so the gesture can have
-      // expired by the time we get here and the browser rejects the call
-      // outright. Setting the flag first meant that rejection burned the one
-      // shot: the merchant was marked as asked, no prompt had appeared, and
-      // nothing would ever ask again on that device. A throw now leaves the
-      // flag unset so the next saved listing can try again.
+      // If the gesture has expired the browser rejects this call outright.
+      // Setting the flag first meant that rejection burned the one shot: the
+      // user was marked as asked, no prompt had appeared, and nothing would
+      // ever ask again on that device. A throw now leaves the flag unset so a
+      // later attempt can still ask.
       let result;
       try {
         result = await Notification.requestPermission();
@@ -149,27 +278,50 @@ export function usePushRegistration() {
           `${LOG} not registering: the browser refused the permission request, most likely because the user gesture had already expired. Leaving the prompted flag unset so a later attempt can still ask:`,
           err
         );
-        return;
+        return PUSH_RESULT.PERMISSION_REQUEST_BLOCKED;
       }
-      localStorage.setItem(PROMPTED_FLAG, "1");
+      setPromptedFlag();
 
-      if (result === "granted") {
-        await subscribeAndSave(profile.id);
-        return;
-      }
+      if (result === "granted") return PUSH_RESULT.PERMISSION_GRANTED;
       // Denied or dismissed: do nothing. In-app notifications keep working.
-      if (result === "denied") {
-        console.warn(`${LOG} not registering: the user denied the permission prompt.`);
-      } else {
-        console.warn(`${LOG} not registering: the user dismissed the permission prompt without choosing.`);
-      }
+      if (result === "denied") return stop(PUSH_RESULT.PERMISSION_DENIED);
+      return stop(PUSH_RESULT.PERMISSION_DISMISSED);
     } catch (err) {
-      // Any failure (unsupported API, blocked SW, network) leaves the user on
-      // in-app notifications only, with no visible error. It does not leave the
-      // console empty any more.
-      console.warn(`${LOG} registration failed and this device will not receive push:`, err);
+      console.warn(`${LOG} the permission request failed unexpectedly:`, err);
+      return PUSH_RESULT.UNEXPECTED_ERROR;
     }
   }, [profile]);
 
-  return { promptForPush };
+  // THE NETWORK HALF. Subscribe this browser and store the subscription.
+  //
+  // Needs no gesture, so it is safe to run after an awaited write. It requires
+  // permission to be granted already and never prompts.
+  //
+  // Returns one of PUSH_RESULT. Never throws.
+  const savePushSubscription = useCallback(async () => {
+    try {
+      if (!profile) return stop(PUSH_RESULT.NO_PROFILE);
+      const failure = supportFailure();
+      if (failure) return stop(failure);
+      if (Notification.permission !== "granted") {
+        return stop(PUSH_RESULT.PERMISSION_NOT_GRANTED);
+      }
+      return await subscribeAndSave(profile.id);
+    } catch (err) {
+      console.warn(`${LOG} registration failed and this device will not receive push:`, err);
+      return PUSH_RESULT.UNEXPECTED_ERROR;
+    }
+  }, [profile]);
+
+  // Both halves in order, for a caller already inside a gesture that has no
+  // reason to hold them apart: the crop follow, the merchant welcome card, and
+  // the diagnostics button. Resolves to one of PUSH_RESULT and never throws.
+  // Existing callers ignore the return value and are unaffected by it.
+  const promptForPush = useCallback(async () => {
+    const outcome = await requestPushPermission();
+    if (outcome !== PUSH_RESULT.PERMISSION_GRANTED) return outcome;
+    return savePushSubscription();
+  }, [requestPushPermission, savePushSubscription]);
+
+  return { promptForPush, requestPushPermission, savePushSubscription };
 }

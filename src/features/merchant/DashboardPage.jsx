@@ -17,7 +17,7 @@ import {
   useConfirmTodaysPrices,
 } from "./useMerchant";
 import { useSellerLeadsUnreadCount } from "../sellerLeads/useSellerLeads";
-import { usePushRegistration } from "../alerts/usePushRegistration";
+import { usePushRegistration, PUSH_RESULT } from "../alerts/usePushRegistration";
 import { InstallMoment } from "../../components/InstallMoment";
 import { toast } from "../../components/ui/Toast";
 import { LoadError } from "../../components/ui/LoadError";
@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const deleteOne     = useDeleteListing();
   const confirmPrices = useConfirmTodaysPrices();
   const leadsUnread   = useSellerLeadsUnreadCount(profile?.id);
-  const { promptForPush } = usePushRegistration();
+  const { promptForPush, requestPushPermission, savePushSubscription } = usePushRegistration();
 
   // formMode: null when closed, "new" when adding, the listing object when editing.
   // Single state guarantees only one form open at a time, and closing fully unmounts
@@ -117,6 +117,24 @@ export default function DashboardPage() {
       }
     }
 
+    // THE PERMISSION REQUEST RIDES THIS TAP, NOT THE SAVE THAT FOLLOWS IT.
+    //
+    // A browser only shows the notification prompt while a user gesture is
+    // still live, and a gesture expires. The await below is a network round
+    // trip, and on a phone on a slow connection it routinely outlasts the
+    // gesture, at which point the request is refused and no prompt is ever
+    // seen. That is the likeliest reason no phone has registered. So the ask
+    // goes out here, synchronously, before anything is awaited; the half that
+    // needs the network (subscribing and storing the subscription) waits for
+    // the write to land, further down.
+    //
+    // This sits AFTER the duplicate-crop guard above on purpose, so a merchant
+    // re-adding a crop they already list is never prompted for a save that is
+    // about to be rejected. It cannot wait for the write to succeed, though:
+    // the gesture is gone by then. That is the one part of "only on success"
+    // this cannot honour, and it is the cost of the prompt working at all.
+    const permission = requestPushPermission();
+
     try {
       // merchant_id is only needed on insert. On update, payload.id is present
       // and RLS prevents touching another merchant's row anyway.
@@ -126,13 +144,13 @@ export default function DashboardPage() {
       await saveListing.mutateAsync(body);
       toast({ tone: "ok", text: t("dashboard.savedToast") });
       closeForm();
-      // The listing is written, so this is the moment to offer push. It is the
-      // only merchant path that recurs: the welcome card above fires once, on
-      // approval, and a merchant who dismissed it then had no second chance,
-      // which is why no merchant device was ever registered. Fire and forget
-      // on the success path only, never after a failed save. It never throws,
-      // asks the browser once ever, and a denial leaves in-app alerts on.
-      promptForPush();
+      // The listing is written, so now the subscription is worth storing. Fire
+      // and forget on the success path only: a failed save stores nothing, and
+      // the next successful one picks this up again because permission is
+      // granted by then. Neither half throws.
+      permission.then((outcome) => {
+        if (outcome === PUSH_RESULT.PERMISSION_GRANTED) savePushSubscription();
+      });
     } catch (e) {
       toast({ tone: "err", text: e.message || t("dashboard.failedToSave") });
     }

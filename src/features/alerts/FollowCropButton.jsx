@@ -5,7 +5,7 @@ import { Input } from "../../components/ui/Input";
 import { toast } from "../../components/ui/Toast";
 import { useAuth } from "../auth/useAuth";
 import { useMyCropFollows, useFollowCrop, useUnfollowCrop } from "./useCropFollows";
-import { usePushRegistration } from "./usePushRegistration";
+import { usePushRegistration, PUSH_RESULT } from "./usePushRegistration";
 
 // Price Watch button shown on crop cards and crop rows: a star icon plus a
 // "Price Watch" / "Watching" label. Tapping it opens an inline bottom sheet
@@ -26,7 +26,7 @@ export function FollowCropButton({ cropName, onFollowed }) {
   const followsQ = useMyCropFollows();
   const followCrop = useFollowCrop();
   const unfollowCrop = useUnfollowCrop();
-  const { promptForPush } = usePushRegistration();
+  const { requestPushPermission, savePushSubscription } = usePushRegistration();
   const [open, setOpen] = useState(false);
   const [alertType, setAlertType] = useState("any_change");
   const [threshold, setThreshold] = useState("");
@@ -51,6 +51,21 @@ export function FollowCropButton({ cropName, onFollowed }) {
       setError("alerts.thresholdRequired");
       return;
     }
+    // THE PERMISSION REQUEST RIDES THIS TAP, NOT THE WRITE THAT FOLLOWS IT.
+    //
+    // A browser only shows the notification prompt while a user gesture is
+    // still live, and a gesture expires. The await below is a network round
+    // trip, and on a phone on a slow connection it routinely outlasts the
+    // gesture, at which point the request is refused and no prompt is ever
+    // seen. Asking here, synchronously, is the whole fix; the half that needs
+    // the network waits for the follow to land, further down. Same shape as
+    // handleSave on the merchant dashboard, for the same reason.
+    //
+    // It sits after the threshold validation above, so a save rejected for a
+    // missing limit never prompts. It cannot wait for the write to succeed:
+    // the gesture is gone by then.
+    const permission = requestPushPermission();
+
     try {
       await followCrop.mutateAsync({
         cropName,
@@ -59,9 +74,13 @@ export function FollowCropButton({ cropName, onFollowed }) {
       });
       toast({ tone: "ok", text: t("alerts.followed", { crop: cropName }) });
       setOpen(false);
-      // Right after a follow saves, offer push (asks the browser once, ever).
-      // Fire and forget: it never throws, and a denial leaves in-app alerts on.
-      promptForPush();
+      // The follow is written, so now the subscription is worth storing. Fire
+      // and forget on this path only: a failed follow stores nothing, and
+      // stopAlerts below never reaches here at all. Neither half throws, and a
+      // denial leaves in-app alerts on.
+      permission.then((outcome) => {
+        if (outcome === PUSH_RESULT.PERMISSION_GRANTED) savePushSubscription();
+      });
       // Then tell the owning card the follow is real, so it can offer the home
       // screen in its own flow. Only on this path: an unfollow or a failed save
       // never reaches here.
