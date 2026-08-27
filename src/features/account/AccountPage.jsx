@@ -79,6 +79,17 @@ export default function AccountPage() {
             an offer here interrupts nothing. It renders nothing at all once
             the app is installed, and nothing on desktop. */}
         <InstallCard className="mt-6"/>
+
+        {/* TEMPORARY. The only way into the push diagnostics readout from
+            inside the installed app, which has no address bar to type
+            /debug/push into. Deliberately the quietest thing on the page: no
+            button, no card, no icon, no translation. REMOVE THIS LINK once
+            mobile push is confirmed working. The route itself can stay. */}
+        <div className="mt-8">
+          <Link to="/debug/push" className="text-xs text-ink-500 underline">
+            Push diagnostics
+          </Link>
+        </div>
       </main>
     </div>
   );
