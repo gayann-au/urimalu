@@ -26,7 +26,7 @@ export function FollowCropButton({ cropName, onFollowed }) {
   const followsQ = useMyCropFollows();
   const followCrop = useFollowCrop();
   const unfollowCrop = useUnfollowCrop();
-  const { promptAfterFollow } = usePushRegistration();
+  const { promptForPush } = usePushRegistration();
   const [open, setOpen] = useState(false);
   const [alertType, setAlertType] = useState("any_change");
   const [threshold, setThreshold] = useState("");
@@ -61,7 +61,7 @@ export function FollowCropButton({ cropName, onFollowed }) {
       setOpen(false);
       // Right after a follow saves, offer push (asks the browser once, ever).
       // Fire and forget: it never throws, and a denial leaves in-app alerts on.
-      promptAfterFollow();
+      promptForPush();
       // Then tell the owning card the follow is real, so it can offer the home
       // screen in its own flow. Only on this path: an unfollow or a failed save
       // never reaches here.

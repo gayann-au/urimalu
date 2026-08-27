@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const deleteOne     = useDeleteListing();
   const confirmPrices = useConfirmTodaysPrices();
   const leadsUnread   = useSellerLeadsUnreadCount(profile?.id);
-  const { promptAfterFollow } = usePushRegistration();
+  const { promptForPush } = usePushRegistration();
 
   // formMode: null when closed, "new" when adding, the listing object when editing.
   // Single state guarantees only one form open at a time, and closing fully unmounts
@@ -47,12 +47,12 @@ export default function DashboardPage() {
   // MerchantPendingGuard redirects here with state.welcome set the moment a
   // merchant is approved. The card below offers push at that point, from a
   // real tap: the browser only shows the permission prompt in response to a
-  // user gesture, and promptAfterFollow burns its one-shot flag whether or not
+  // user gesture, and promptForPush burns its one-shot flag whether or not
   // a prompt appeared.
   // Route state persists across a refresh (React Router keeps it in
   // window.history.state), so this card can reappear if the merchant refreshes
   // before dismissing it. Low harm: tapping the button just re-runs
-  // promptAfterFollow, which safely no-ops if permission was already decided.
+  // promptForPush, which safely no-ops if permission was already decided.
   const [welcomeDone, setWelcomeDone] = useState(false);
   // Transient "Confirmed" checkmark shown on the confirm button for ~2s after a
   // successful confirm. A ref holds the timer so it is cleared on unmount.
@@ -91,11 +91,11 @@ export default function DashboardPage() {
   function openEdit(listing) { setFormMode(listing); }
   function closeForm()       { setFormMode(null); }
 
-  // promptAfterFollow runs synchronously up to requestPermission on the path
+  // promptForPush runs synchronously up to requestPermission on the path
   // that matters, so calling it first keeps the browser's user gesture intact.
   // It never throws, so the card closes the same way whatever the answer is.
   function enableAlerts() {
-    promptAfterFollow();
+    promptForPush();
     setWelcomeDone(true);
   }
 
@@ -126,6 +126,13 @@ export default function DashboardPage() {
       await saveListing.mutateAsync(body);
       toast({ tone: "ok", text: t("dashboard.savedToast") });
       closeForm();
+      // The listing is written, so this is the moment to offer push. It is the
+      // only merchant path that recurs: the welcome card above fires once, on
+      // approval, and a merchant who dismissed it then had no second chance,
+      // which is why no merchant device was ever registered. Fire and forget
+      // on the success path only, never after a failed save. It never throws,
+      // asks the browser once ever, and a denial leaves in-app alerts on.
+      promptForPush();
     } catch (e) {
       toast({ tone: "err", text: e.message || t("dashboard.failedToSave") });
     }

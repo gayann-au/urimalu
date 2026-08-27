@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { useLeadTracking } from "../../hooks/useLeadTracking";
 import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
+import { isListingPriceTooOld } from "../../lib/freshness";
 import { FollowCropButton } from "../alerts/FollowCropButton";
 import { InstallMoment } from "../../components/InstallMoment";
 import { useUriMotion } from "../../lib/uiMotion";
@@ -20,7 +21,7 @@ function BeanIcon() {
 }
 
 export function RateCard({ item }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const m = useUriMotion();
   const { trackLead } = useLeadTracking();
   // Set only by this card's own Price Watch save. Kept local so a feed showing
@@ -47,8 +48,16 @@ export function RateCard({ item }) {
   }
 
   const price = listingPriceView(item);
-  const showBagTotals = price.mode === "perkg" && price.perKg != null;
-  const validTill = formatValidTill(item.valid_till);
+  // Past a week since the merchant last confirmed it, the figure comes off the
+  // card entirely and StalePriceNote takes its place. Presentation only: the
+  // row is still active in the database and the merchant is still reachable by
+  // the buttons below, which is the point of leaving the card up.
+  const priceTooOld = isListingPriceTooOld(item.confirmed_at);
+  const showBagTotals = !priceTooOld && price.mode === "perkg" && price.perKg != null;
+  // Withheld along with the figure. "Price valid till 10 Aug 2026" sitting
+  // above no price reads as a live offer, and the offer is the exact thing
+  // that has just been withdrawn for being too old to stand behind.
+  const validTill = priceTooOld ? null : formatValidTill(item.valid_till);
 
   return (
     <motion.article
@@ -87,8 +96,12 @@ export function RateCard({ item }) {
           never every card showing the same crop. */}
       <InstallMoment moment="follow" active={justFollowed} className="mt-3"/>
 
-      {/* Price */}
-      <PriceBlock price={price} t={t} />
+      {/* Price, or the reason there is no price on screen. */}
+      {priceTooOld ? (
+        <StalePriceNote confirmedAt={item.confirmed_at} lang={i18n.language} t={t} />
+      ) : (
+        <PriceBlock price={price} t={t} />
+      )}
 
       {/* Weight conversion: per-kg listings only */}
       {showBagTotals && <BagTotals perKg={price.perKg} t={t} />}
@@ -124,6 +137,24 @@ export function RateCard({ item }) {
         </button>
       </div>
     </motion.article>
+  );
+}
+
+// What stands where the price would have been once a listing is more than a
+// week past its last confirmation. It names the exact day the merchant last
+// confirmed, never a vague phrase: the whole reason the number is gone is that
+// the reader cannot tell how old it is, and answering that with "a while ago"
+// would repeat the problem. Date rendered in the active language's locale, the
+// same way the feed's merchant cards render confirmed_at.
+function StalePriceNote({ confirmedAt, lang, t }) {
+  const locale = lang === "kn" ? "kn-IN" : "en-IN";
+  const date = new Date(confirmedAt).toLocaleDateString(locale, {
+    day: "numeric", month: "short", year: "numeric",
+  });
+  return (
+    <p className="mt-4 text-sm leading-relaxed text-ink-700">
+      {t("card.priceTooOld", { date })}
+    </p>
   );
 }
 

@@ -17,6 +17,7 @@ import { useAddReview } from "../reviews/useReviews";
 import { ReviewForm } from "../reviews/ReviewForm";
 import { supabase } from "../../lib/supabase";
 import { FreshnessBadge } from "../../components/ui/FreshnessBadge";
+import { isListingPriceTooOld } from "../../lib/freshness";
 import { FollowCropButton } from "../alerts/FollowCropButton";
 import { InstallMoment } from "../../components/InstallMoment";
 import { formatINR, dayKey, lastNDays, listingPriceView, BAG_WEIGHTS, formatValidTill } from "../../lib/constants";
@@ -531,13 +532,18 @@ export default function ProfilePage() {
 }
 
 function ListingRow({ listing, t, fadeUp, cardHover }) {
+  const { i18n } = useTranslation();
   // Set only by this row's own Price Watch save, so a merchant listing several
   // crops offers the home screen on the one that was actually followed.
   const [justFollowed, setJustFollowed] = useState(false);
   const active = !!listing.is_active;
   const dim = active ? "" : "opacity-60";
   const price = listingPriceView(listing);
-  const validTill = formatValidTill(listing.valid_till);
+  // The same week-old cutoff the feed card applies, from the same helper. This
+  // page shows the same rows to the same farmers, so a price the feed refuses
+  // to print cannot still be printed one tap away.
+  const priceTooOld = isListingPriceTooOld(listing.confirmed_at);
+  const validTill = priceTooOld ? null : formatValidTill(listing.valid_till);
   return (
     <motion.li
       variants={fadeUp}
@@ -566,8 +572,12 @@ function ListingRow({ listing, t, fadeUp, cardHover }) {
       {/* The follow moment, in this row's own flow. Same reasoning as the feed
           card: the line above is a flex row and an ask does not belong in it. */}
       <InstallMoment moment="follow" active={justFollowed} className="mt-3"/>
-      <ListingPrice price={price} t={t} />
-      {price.mode === "perkg" && price.perKg != null && (
+      {priceTooOld ? (
+        <StaleListingPrice confirmedAt={listing.confirmed_at} lang={i18n.language} t={t} />
+      ) : (
+        <ListingPrice price={price} t={t} />
+      )}
+      {!priceTooOld && price.mode === "perkg" && price.perKg != null && (
         <BagTotals perKg={price.perKg} t={t} />
       )}
       {validTill && (
@@ -582,6 +592,25 @@ function ListingRow({ listing, t, fadeUp, cardHover }) {
         <div className="text-xs text-ink-500 italic mt-2">{t("card.notBuyingToday")}</div>
       )}
     </motion.li>
+  );
+}
+
+// What stands where the price would have been once a listing is more than a
+// week past its last confirmation. Mirrors StalePriceNote in the feed's
+// RateCard the same way ListingPrice below mirrors its PriceBlock: the cutoff
+// rule and the sentence are shared (isListingPriceTooOld and card.priceTooOld),
+// only the type scale is local to this row. The exact day is always named,
+// never a vague phrase, because not knowing the age is the whole reason the
+// number came off.
+function StaleListingPrice({ confirmedAt, lang, t }) {
+  const locale = lang === "kn" ? "kn-IN" : "en-IN";
+  const date = new Date(confirmedAt).toLocaleDateString(locale, {
+    day: "numeric", month: "short", year: "numeric",
+  });
+  return (
+    <p className="mt-3 text-sm leading-relaxed text-ink-700">
+      {t("card.priceTooOld", { date })}
+    </p>
   );
 }
 

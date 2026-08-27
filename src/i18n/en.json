@@ -230,7 +230,8 @@
     "thatIsPerKg": "That is {{price}} per kg",
     "seeTotalForBag": "See total for a bag",
     "weightChip": "{{weight}} kg",
-    "weightTotal": "{{weight}} kg = {{total}}"
+    "weightTotal": "{{weight}} kg = {{total}}",
+    "priceTooOld": "The price is not shown because it is more than a week old. It was last confirmed on {{date}}."
   },
   "freshness": {
     "notConfirmed": "Not confirmed yet",
