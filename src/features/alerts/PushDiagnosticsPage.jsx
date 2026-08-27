@@ -83,6 +83,30 @@ export default function PushDiagnosticsPage() {
     });
   }
 
+  // A notification drawn straight by the service worker, with the push service
+  // taken out of the loop entirely. That is the whole value of it: if this
+  // shows something on the phone but a real push never lands, the problem is
+  // delivery; if this shows nothing either, the problem is on the device and
+  // no amount of server work will fix it.
+  async function onShowTestNotification() {
+    setLastResult("showing...");
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if (!reg) {
+        setLastResult("no-service-worker-registration");
+        return;
+      }
+      await reg.showNotification("Test", {
+        body: "Local test notification",
+        icon: "/icons/icon-192.png",
+        data: { url: "/notifications" },
+      });
+      setLastResult("shown");
+    } catch (err) {
+      setLastResult(err?.message || String(err));
+    }
+  }
+
   function onResetFlag() {
     const cleared = clearPromptedFlag();
     setFlagNote(cleared ? "Prompted flag removed." : "Could not remove the prompted flag.");
@@ -105,6 +129,13 @@ export default function PushDiagnosticsPage() {
           className="w-full min-h-[48px] rounded-[14px] bg-coorg-600 text-white font-bold text-sm hover:bg-coorg-700 transition-colors"
         >
           Enable notifications
+        </button>
+        <button
+          type="button"
+          onClick={onShowTestNotification}
+          className="w-full min-h-[48px] mt-2 rounded-[14px] border-2 border-ink-200 bg-white text-ink-700 font-bold text-sm hover:border-coorg-300 transition-colors"
+        >
+          Show test notification
         </button>
         <button
           type="button"

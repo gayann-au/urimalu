@@ -91,26 +91,74 @@ Deno.serve(async (req) => {
 
   const message = JSON.stringify(buildText(record!));
 
+  // WHY THIS FUNCTION TALKS TO THE LOG AT ALL.
+  //
+  // The catch below used to read the status code, prune on 404 and 410, and
+  // throw everything else away. That made the logs clean in the worst possible
+  // way: a push service rejecting a message for any other reason left no trace
+  // anywhere, so "the logs are quiet" and "delivery is broken" looked
+  // identical. Every send now says what happened, once, on one line.
+  //
+  // WHAT IS NEVER LOGGED: the full endpoint (it is a capability, anyone
+  // holding it can push to that device), the subscription keys, and the VAPID
+  // keys. The hostname is logged instead, which says which push service
+  // rejected us and carries no secret.
+  console.log(
+    `[send-push] type=${String(record?.type ?? "unknown")} subscriptions=${subs?.length ?? 0}`
+  );
+
+  const hostOf = (endpoint: string) => {
+    try {
+      return new URL(endpoint).hostname;
+    } catch {
+      return "unparseable-endpoint";
+    }
+  };
+
+  let succeeded = 0;
+  let failed = 0;
+
   // Send to every subscription. A gone subscription (404/410) is pruned so the
   // table does not accumulate dead endpoints.
   await Promise.all(
     (subs ?? []).map(async (s) => {
+      const host = hostOf(s.endpoint);
       try {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: s.keys },
           message
         );
+        succeeded++;
+        console.log(`[send-push] ok host=${host}`);
       } catch (err) {
-        const status = (err as { statusCode?: number }).statusCode;
+        failed++;
+        const e = err as { statusCode?: number; body?: unknown; message?: string };
+        const status = e.statusCode;
+        const raw = e.body ?? e.message ?? "no detail provided by the push library";
+        // The library puts the endpoint on the error object and can repeat it
+        // inside the message, so the detail is scrubbed before it is printed
+        // rather than trusted to be clean.
+        const detail = (typeof raw === "string" ? raw : JSON.stringify(raw))
+          .split(s.endpoint)
+          .join("[endpoint removed]");
+        console.error(
+          `[send-push] FAILED host=${host} status=${status ?? "none"} detail=${detail}`
+        );
         if (status === 404 || status === 410) {
           await admin.from("push_subscriptions").delete().eq("endpoint", s.endpoint);
+          console.log(`[send-push] pruned gone subscription host=${host} status=${status}`);
         }
       }
     })
   );
 
-  return new Response(JSON.stringify({ sent: subs?.length ?? 0 }), {
-    status: 200,
-    headers: { "content-type": "application/json" },
-  });
+  console.log(`[send-push] done succeeded=${succeeded} failed=${failed}`);
+
+  return new Response(
+    JSON.stringify({ sent: subs?.length ?? 0, succeeded, failed }),
+    {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }
+  );
 });

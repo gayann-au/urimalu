@@ -1,2 +1,9 @@
 [functions.refresh-market]
 verify_jwt = false
+
+# Called by a Database Webhook on INSERT into public.notifications. A webhook
+# sends no Authorization header, so JWT verification has to be off or every
+# call is rejected before the function runs. Deploys must also pass
+# --no-verify-jwt; this block is what keeps the setting from being lost.
+[functions.send-push]
+verify_jwt = false
