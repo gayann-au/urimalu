@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useAuth } from "../features/auth/useAuth";
 import { usePushRegistration, clearPromptedFlag } from "../features/alerts/usePushRegistration";
 import { supportFailure } from "../features/alerts/pushSubscription";
 import { getPlatform, isStandalone } from "../lib/installEnvironment";
@@ -15,8 +16,18 @@ import { useUriMotion } from "../lib/uiMotion";
 // their mind afterwards. This card is that place.
 //
 // It is inline: a normal block in the document flow, like InstallCard, whose
-// shape and classes it borrows so the two cards on this page read as one
-// family. No fixed positioning, no backdrop, no portal, nothing to dismiss.
+// shape and classes it borrows so the two cards read as one family. No fixed
+// positioning, no backdrop, no portal, nothing to dismiss.
+//
+// AND IT MUST STAY INLINE, ON EVERY PAGE IT IS ADDED TO. It stands on the feed,
+// the merchant dashboard and the notifications page, which is reach enough.
+// Turning it into a popup, a modal or an overlay to lift that reach further
+// would spend the one thing that cannot be spent twice: the browser allows a
+// single permission prompt per device, a dismissal is remembered, and on an
+// iPhone that dismissal is effectively permanent. Interrupting somebody three
+// times does not raise the odds of a yes, it just picks the worst of the three
+// moments to ask in. Meeting the same quiet card in several places is how this
+// gets its reach without spending that one prompt.
 //
 // IT IS HONEST ABOUT THE DENIED CASE. Once a browser has recorded a denial no
 // web API can reopen the prompt, and no web API can open device settings from
@@ -31,7 +42,41 @@ import { useUriMotion } from "../lib/uiMotion";
 // translated while still rendering as English for a Kannada reader. The
 // literals stay here until both languages exist, and then both land together.
 
+// The same switch, with the reason each side of the market actually has for
+// flipping it.
+//
+// A farmer is waiting to hear what a merchant will pay. A merchant is waiting
+// to hear that a farmer has crop ready to sell. Telling a merchant that
+// merchants post rates describes their own working day back at them and offers
+// them nothing, which is how one card ends up earning its place on one side of
+// a marketplace and being scrolled past on the other.
+//
+// Roles are the uppercase strings the users table stores, compared here the
+// same way the header, the account page and the route guards compare them.
+const ROLE_COPY = {
+  FARMER: {
+    heading: "Know the price before you sell",
+    body: "Turn on alerts and your phone tells you the moment a merchant posts a new rate. No opening the app to check.",
+  },
+  MERCHANT: {
+    heading: "Reach the farmer first",
+    body: "Turn on alerts and your phone tells you the moment a farmer posts crop ready to sell. The first merchant to call usually gets the deal.",
+  },
+};
+
+// The farmer wording is the fallback: for an admin, for a profile that has not
+// arrived yet, and for any role added to the database ahead of this file. It is
+// the safe default because it assumes nothing about running a business, and
+// because a farmer is who most readers of this card are.
+function copyForRole(role) {
+  return ROLE_COPY[role] || ROLE_COPY.FARMER;
+}
+
 // The one true line for this device.
+//
+// No role anywhere in here, and there should never be one: this is about where
+// a switch lives in the phone's own settings, and the phone has never heard of
+// farmers or merchants. Both roles read the identical steps.
 //
 // The two paths are genuinely different places. An app opened from the home
 // screen keeps its notification switch with the phone's other apps; a page open
@@ -61,6 +106,7 @@ function readPermission() {
 
 export function NotificationCard({ className = "" }) {
   const m = useUriMotion();
+  const { profile } = useAuth();
   const { promptForPush } = usePushRegistration();
 
   // Held in state rather than read at render, so the card can answer the tap it
@@ -76,6 +122,7 @@ export function NotificationCard({ className = "" }) {
   if (permission === "granted") return null;
 
   const denied = permission === "denied";
+  const copy = copyForRole(profile?.role);
 
   // THE GESTURE, AND WHAT MUST NOT GO IN FRONT OF IT.
   //
@@ -108,7 +155,7 @@ export function NotificationCard({ className = "" }) {
       className={`rounded-2xl border border-ink-200 bg-white shadow-sm px-5 py-4 text-left ${className}`}
     >
       <p className="font-display font-extrabold text-sm text-ink-900">
-        Know the price before you sell
+        {copy.heading}
       </p>
 
       {denied ? (
@@ -123,7 +170,7 @@ export function NotificationCard({ className = "" }) {
       ) : (
         <>
           <p className="mt-1 text-[13px] leading-snug text-ink-600">
-            Turn on alerts and your phone tells you the moment a merchant posts a new rate. No opening the app to check.
+            {copy.body}
           </p>
           <motion.button
             type="button"

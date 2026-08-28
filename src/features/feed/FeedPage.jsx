@@ -15,6 +15,7 @@ import { useUriMotion } from "../../lib/uiMotion";
 import { WELCOME_FLAG_KEY } from "../../lib/constants";
 import { ReadyToSellCard } from "../sellerLeads/ReadyToSellCard";
 import { MarketStrip } from "../market/MarketStrip";
+import { NotificationCard } from "../../components/NotificationCard";
 
 // Storefront glyph, the soft icon that anchors each merchant card the way the
 // landing step cards are anchored by their icon boxes.
@@ -120,6 +121,15 @@ export default function FeedPage() {
           time in either tab. Takes no props: every section runs its own query
           and none of them reads the reader's role. */}
       {loggedIn && <MarketStrip/>}
+
+      {/* The alert offer, above the tabs for the same reason the strip is:
+          neither tab owns it, and inside one it would be missing half the
+          time. Signed in only, gated the same way as the strip directly above,
+          because the permission request needs a profile to attach the
+          subscription to and a visitor tapping it would get a button that did
+          nothing. It renders nothing at all once alerts are on, so a farmer who
+          has already said yes sees the feed exactly as it was. */}
+      {loggedIn && <NotificationCard className="mt-3 mb-3"/>}
 
       {/* Tabs */}
       <div className="bg-white border-b border-ink-100 sticky top-[64px] z-20">

@@ -19,6 +19,7 @@ import {
 import { useSellerLeadsUnreadCount } from "../sellerLeads/useSellerLeads";
 import { usePushRegistration, PUSH_RESULT } from "../alerts/usePushRegistration";
 import { InstallMoment } from "../../components/InstallMoment";
+import { NotificationCard } from "../../components/NotificationCard";
 import { toast } from "../../components/ui/Toast";
 import { LoadError } from "../../components/ui/LoadError";
 import { useUriMotion } from "../../lib/uiMotion";
@@ -259,6 +260,14 @@ export default function DashboardPage() {
           {t("dashboard.priceHistory")}
         </motion.button>
       </motion.section>
+
+      {/* The alert offer, directly under the identity block and above the
+          day's work, on the same pt-6 rhythm as the sections around it. It is
+          not the welcome card above: that one fires once, off the route state
+          that brought a freshly approved merchant here, and is gone forever
+          afterwards. This one stays for as long as alerts are off, and renders
+          nothing at all the moment they are on. */}
+      <NotificationCard className="mt-6"/>
 
       {/* Confirm today's prices. Most prominent action on the screen.
           Only shown when the merchant has at least one active listing. */}
