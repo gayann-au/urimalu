@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -48,6 +49,30 @@ export default function AdminPage() {
     <div className="flex flex-col flex-1 pb-10 w-full mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8 isolate">
       <GlowBackdrop/>
       <Header title={t("admin.title")}/>
+      {/* The metrics readout, deliberately a separate route rather than a sixth
+          tab. The five tabs below are moderation queues, each a list of rows to
+          act on; that page is a server computed readout with its own single
+          Edge Function call, and it is English only where these tabs are
+          translated. Untranslated on purpose here too, for the same reason: it
+          is an operator's link to an operator's page. */}
+      <Link
+        to="/admin/metrics"
+        className="my-4 flex items-center justify-between gap-3 bg-white rounded-2xl border border-ink-200 shadow-sm hover:shadow-md transition-shadow p-4"
+      >
+        <span className="min-w-0">
+          <span className="block font-display text-base font-extrabold tracking-tight text-ink-900">Metrics</span>
+          <span className="block text-xs text-ink-500 mt-0.5">
+            Who is using the app, and which merchants have gone quiet
+          </span>
+        </span>
+        <svg
+          width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          aria-hidden="true" className="shrink-0 text-coorg-700"
+        >
+          <path d="m9 18 6-6-6-6"/>
+        </svg>
+      </Link>
       <nav className="bg-white border-b border-ink-100 sticky top-[64px] z-20">
         <div className="flex overflow-x-auto no-scrollbar scroll-fade-right">
           {TABS.map(k => {

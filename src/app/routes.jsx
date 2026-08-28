@@ -7,6 +7,8 @@ import FarmerNameGate from "../features/auth/FarmerNameGate";
 
 import { useRealtimeNotifications } from "../features/alerts/useNotifications";
 import { reconcilePushSubscription } from "../features/alerts/pushSubscription";
+import { recordUserActivity } from "../lib/userActivity";
+import { useInstallPrompt } from "../components/InstallPromptProvider";
 import ChunkReloadGuardReset from "./ChunkReloadGuardReset";
 
 const AssistantWidget = lazy(() => import("../features/assistant/AssistantWidget"));
@@ -22,6 +24,7 @@ const DashboardPage   = lazy(() => import("../features/merchant/DashboardPage"))
 const HistoryPage     = lazy(() => import("../features/merchant/HistoryPage"));
 const ProfilePage     = lazy(() => import("../features/merchant/ProfilePage"));
 const AdminPage       = lazy(() => import("../features/admin/AdminPage"));
+const MetricsPage     = lazy(() => import("../features/admin/MetricsPage"));
 const LandingPage     = lazy(() => import("../features/landing/LandingPage"));
 const AccountPage     = lazy(() => import("../features/account/AccountPage"));
 const FeatureRequestPage = lazy(() => import("../features/feedback/FeatureRequestPage"));
@@ -290,6 +293,49 @@ function PushReconcileMount() {
   return null;
 }
 
+// Records that this account showed up, in the background when the app opens.
+//
+// Renders nothing and is never awaited, for the same reasons PushReconcileMount
+// above is not: this is housekeeping, and a farmer opening the app to check a
+// price must not spend a millisecond of first paint on it. The promise is
+// deliberately neither awaited nor returned, and the catch is a second net
+// under recordUserActivity's own try/catch so a rejection can never surface as
+// an unhandled rejection.
+//
+// profile.id, not session.user.id, exactly as PushReconcileMount uses. They are
+// the same uuid, but the write targets the users row itself, and a Google
+// account that has signed in without finishing onboarding does not have one
+// yet. Waiting for the profile means the update always has a row to land on.
+//
+// isInstalled COMES FROM THE PROVIDER, AND NO LISTENER IS ADDED HERE.
+// InstallPromptProvider already holds the single appinstalled listener in the
+// app, watches the standalone display mode, and persists a confirmed install
+// across reloads. A second listener would be a second answer to a question that
+// already has one. The provider sits above BrowserRouter in App.jsx, so it is
+// mounted and settled before anything in this file renders.
+//
+// ONCE PER DAY PER DEVICE, AND THE GUARD FOR THAT IS NOT HERE. It is in
+// localStorage inside userActivity.js, because nothing about this component's
+// position can be relied on to run once: the Suspense boundary above destroys
+// and re-creates child effects whenever a lazy route chunk loads, StrictMode
+// double-invokes effects in development, and the ErrorBoundary would remount
+// the lot after a catch. So this fires freely whenever the id or the install
+// flag changes and the guard downstream decides whether anything happens.
+function UserActivityMount() {
+  const { profile } = useAuth();
+  const { isInstalled } = useInstallPrompt();
+  const userId = profile?.id || null;
+
+  useEffect(() => {
+    if (!userId) return;
+    recordUserActivity(userId, { isInstalled }).catch((err) => {
+      console.warn("[activity] the background activity write failed unexpectedly:", err);
+    });
+  }, [userId, isInstalled]);
+
+  return null;
+}
+
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader/>}>
@@ -313,6 +359,14 @@ export function AppRoutes() {
           out visitor costs nothing here. */}
       <PushReconcileMount/>
 
+      {/* Outside the gates for the same reason PushReconcileMount is. A farmer
+          sitting on the name, phone or district gate is a real, signed-in user
+          who is using the app right now, and mounted deeper this would not run
+          for them at all, so their visit would never be recorded. It renders
+          nothing and reads only the profile and the shared install flag, so a
+          logged out visitor costs nothing here. */}
+      <UserActivityMount/>
+
       <RequireOnboarding>
       <RequireFarmerName>
       <RequireFarmerPhone>
@@ -334,6 +388,7 @@ export function AppRoutes() {
         <Route path="/merchant/history"   element={<MerchantHistoryGuard/>}/>
         <Route path="/merchant/:id"       element={<ProfileGuard/>}/>
         <Route path="/admin"              element={<AdminOnly><AdminPage/></AdminOnly>}/>
+        <Route path="/admin/metrics"      element={<AdminOnly><MetricsPage/></AdminOnly>}/>
         <Route path="/debug/push"         element={<PushDiagnosticsPage/>}/>
         <Route path="/privacy"            element={<PrivacyPage/>}/>
         <Route path="/terms"              element={<TermsPage/>}/>
