@@ -11,6 +11,7 @@ import {
 } from "../../lib/constants";
 import { normalizePhone } from "../../lib/phone";
 import { toast } from "../../components/ui/Toast";
+import { releasePushSubscription } from "../alerts/pushSubscription";
 import i18n from "../../i18n";
 
 // Module level so every mounted useAuth listener shares the same state:
@@ -324,6 +325,23 @@ export function useLogout() {
     mutationFn: async () => {
       // Intentional sign-out: keep the expiry handler quiet.
       manualSignOut = true;
+
+      // Hand this device's push subscription back BEFORE the session ends.
+      //
+      // One phone has one push endpoint, push_subscriptions is unique on that
+      // endpoint, and its policies are scoped by user_id. Leave the row behind
+      // and the next account to sign in on this handset cannot register at all:
+      // its upsert becomes an UPDATE of somebody else's row and RLS refuses it,
+      // silently. A merchant who also farms, or a shared family phone, hits
+      // that on the first switch.
+      //
+      // The ordering is the whole point. The DELETE policy is
+      // user_id = auth.uid(), so this has to happen while the session is still
+      // live; a line below signOut would be refused every time. It never
+      // throws and its result is deliberately ignored, so a failed release
+      // slows sign-out by one request and changes nothing else.
+      await releasePushSubscription(qc.getQueryData(qk.session)?.user?.id);
+
       await supabase.auth.signOut();
     },
     onSuccess: () => {
