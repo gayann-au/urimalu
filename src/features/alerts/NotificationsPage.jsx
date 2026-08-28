@@ -5,6 +5,7 @@ import { Header } from "../../components/layout/Header";
 import { LoadError } from "../../components/ui/LoadError";
 import { useMyNotifications, useMarkAllNotificationsRead } from "./useNotifications";
 import { InstallCard } from "../../components/InstallCard";
+import { NotificationCard } from "../../components/NotificationCard";
 import { useUriMotion } from "../../lib/uiMotion";
 import { formatINR } from "../../lib/constants";
 
@@ -95,6 +96,13 @@ export default function NotificationsPage() {
           {t("notif.title")}
         </motion.h1>
       </motion.section>
+
+      {/* Above the list, because the list is the answer to the question this
+          card is about: how these reach you when the app is closed. Below the
+          title rather than above it, so the page still opens with its own name.
+          It renders nothing at all once permission is granted, so a user who
+          already has alerts on sees the page exactly as it was. */}
+      <NotificationCard className="mb-6"/>
 
       {notificationsQ.isError ? (
         <LoadError onRetry={() => notificationsQ.refetch()}/>
