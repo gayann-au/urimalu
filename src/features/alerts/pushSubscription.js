@@ -32,6 +32,28 @@ const PROMPTED_FLAG = "urimalu.pushPrompted";
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 export const LOG = "[push]";
 
+// Which user the repair below has already run for during this app start, or
+// null when it has not run at all.
+//
+// MODULE LEVEL, AND NOT REACT STATE, DELIBERATELY. The guard has to outlive
+// every mount, unmount and remount in the app: the component that fires the
+// repair sits under a Suspense boundary that destroys and re-creates child
+// effects whenever a lazy route chunk loads, and StrictMode double-invokes
+// every effect in development. React state resets with the component and would
+// guard nothing. This does not.
+//
+// A USER ID, NOT A BOOLEAN, AND THAT DISTINCTION IS THE WHOLE POINT. Two people
+// sharing one phone is normal for this app. The first signs out, which deletes
+// the row this device held, and the second signs in moments later without the
+// page ever reloading. A boolean here would be spent by the first account and
+// the second would silently get no push at all until the app was restarted.
+// Keyed on the id, the second account is a different value and runs.
+//
+// releasePushSubscription clears this on its way out, so signing out and back
+// in as the SAME person also repairs, rather than being blocked by a guard that
+// still holds their own id from before the sign-out.
+let reconciledForUserId = null;
+
 // Every reason this code can stop, as a string a screen can show. Kept as one
 // frozen map so the hook, the console warnings and the diagnostics panel cannot
 // drift into three different vocabularies for the same event. No product or
@@ -53,6 +75,9 @@ export const PUSH_RESULT = Object.freeze({
   NO_SERVICE_WORKER_REGISTRATION: "no-service-worker-registration",
   DATABASE_SAVE_FAILED: "database-save-failed",
   SUBSCRIPTION_SAVED: "subscription-saved",
+  SUBSCRIPTION_ALREADY_STORED: "subscription-already-stored",
+  ALREADY_RECONCILED: "already-reconciled",
+  RECONCILE_READ_FAILED: "reconcile-read-failed",
   SUBSCRIPTION_RELEASED: "subscription-released",
   NOTHING_TO_RELEASE: "nothing-to-release",
   RELEASE_DELETE_FAILED: "release-delete-failed",
@@ -227,6 +252,16 @@ export async function readPushDiagnostics() {
 // phone still has to be able to say so on that phone's own screen.
 export async function releasePushSubscription(userId) {
   try {
+    // Re-arm the repair, first thing, on every path through this function.
+    //
+    // This is the teardown. Whatever happens below, the subscription this
+    // device had is not something the app may go on assuming, so the next
+    // signed-in user on this browser has to be allowed to reconcile, including
+    // when that user is the same person signing straight back in. Clearing at
+    // the top rather than at the end means every early return and every throw
+    // still re-arms it.
+    reconciledForUserId = null;
+
     let endpoint = null;
     let subscription = null;
 
@@ -241,15 +276,35 @@ export async function releasePushSubscription(userId) {
       }
     }
 
-    if (!endpoint && !userId) {
-      console.warn(`${LOG} nothing to release: no subscription on this device and no user id.`);
+    // No endpoint means this device holds nothing of its own to hand back, so
+    // there is nothing here to delete. It used to fall through to a delete by
+    // user_id at this point, which is the bug this guard exists to end. See the
+    // block below the query for what that cost.
+    if (!endpoint) {
+      console.warn(
+        `${LOG} nothing to release: this device holds no push subscription of its own.` +
+          (userId
+            ? " Any rows this user still has belong to their other devices and are deliberately left alone."
+            : "")
+      );
       return PUSH_RESULT.NOTHING_TO_RELEASE;
     }
 
-    // Match on the endpoint when this device has one, because that is what the
-    // next account collides with. Fall back to user_id when it does not.
-    // Either way RLS confines the delete to rows this user owns, so an endpoint
-    // belonging to somebody else is left untouched rather than stolen back.
+    // ONE ENDPOINT, ONE ROW, AND NEVER A ROW THAT IS NOT THIS DEVICE'S.
+    //
+    // This delete used to fall back to .eq("user_id", userId) whenever the
+    // device had no endpoint of its own, which removed every row that user
+    // owned. One user with a phone and a tablet, signing out on the phone,
+    // silently killed push on the tablet, and nothing on either device said a
+    // word about it. Confirmed on real hardware.
+    //
+    // The fallback is gone. The guard above returns for the no-endpoint case,
+    // and the only delete left in this file matches exactly one endpoint: this
+    // device's own. RLS still confines it to rows this user owns, so an
+    // endpoint belonging to somebody else is left untouched rather than stolen
+    // back. Dead rows on other devices are not this function's job; send-push
+    // prunes an endpoint when the push service answers 404 or 410, and that is
+    // the only other path in the product that may delete one.
     //
     // THE SELECT IS WHAT MAKES A NO-OP VISIBLE. A delete that matches no row
     // comes back with no error at all, so without the deleted rows in hand a
@@ -260,17 +315,11 @@ export async function releasePushSubscription(userId) {
     // endpoint and the keys are never selected. This relies on the select
     // policy on push_subscriptions being user_id = auth.uid(), which is the
     // same policy the diagnostics screen reads its own rows through.
-    const { data, error } = endpoint
-      ? await supabase
-          .from("push_subscriptions")
-          .delete()
-          .eq("endpoint", endpoint)
-          .select("created_at")
-      : await supabase
-          .from("push_subscriptions")
-          .delete()
-          .eq("user_id", userId)
-          .select("created_at");
+    const { data, error } = await supabase
+      .from("push_subscriptions")
+      .delete()
+      .eq("endpoint", endpoint)
+      .select("created_at");
 
     if (error) {
       console.warn(
@@ -353,4 +402,108 @@ export async function subscribeAndSave(userId) {
     return PUSH_RESULT.DATABASE_SAVE_FAILED;
   }
   return PUSH_RESULT.SUBSCRIPTION_SAVED;
+}
+
+// Put this device's push subscription back when it has gone missing, silently
+// and in the background.
+//
+// WHY THIS HAS TO EXIST. Turning notifications on is something a user does
+// once, and from their side it should stay done forever. It did not. Four
+// separate things take a subscription away and none of them put it back:
+// signing out unsubscribes this browser and deletes the row, reinstalling from
+// the home screen mints a brand new endpoint and orphans the stored one, a
+// browser may rotate an endpoint on its own, and send-push prunes a row the
+// moment the push service answers 404 or 410. After any of those the only route
+// back was a diagnostics screen reachable by typing /debug/push, which no
+// farmer or trader is ever going to find. What actually happened was that
+// alerts stopped and nobody could tell why.
+//
+// IT MAY CREATE A SUBSCRIPTION, AND THAT IS DELIBERATE. Sign out unsubscribes
+// the browser, so after signing back in there is no subscription object here to
+// store, and a store-only repair would look, find nothing, and leave the user
+// with no push. So this hands off to subscribeAndSave, which reuses a live
+// subscription when there is one and mints a fresh one when there is not. No
+// prompt and no tap is involved anywhere in it: permission is checked first and
+// this returns early unless the user has ALREADY granted it, and subscribe()
+// needs no user gesture once that is true. The user said yes once; this is
+// honouring that answer, not asking it again.
+//
+// AT MOST ONE READ, AND A WRITE ONLY WHEN SOMETHING IS GENUINELY MISSING. With
+// a subscription in hand it costs one scoped select per user per app start and
+// nothing else. With no subscription there is no endpoint to look up, so it
+// skips the read entirely and goes straight to the save.
+//
+// IT DELETES NOTHING, in any branch. A row it cannot see belongs to another
+// device or another account, and neither is this function's business.
+//
+// Never throws. Every exit returns one of PUSH_RESULT.
+export async function reconcilePushSubscription(userId) {
+  try {
+    if (!userId) return PUSH_RESULT.NO_PROFILE;
+
+    // THE GUARD IS SET BEFORE THE FIRST await, ALWAYS. Every line above this
+    // one is synchronous, so two effects firing in the same tick, which is
+    // precisely what StrictMode does in development, cannot both get past it.
+    // Move this below an await and the repair runs twice.
+    if (reconciledForUserId === userId) return PUSH_RESULT.ALREADY_RECONCILED;
+    reconciledForUserId = userId;
+
+    const failure = supportFailure();
+    if (failure) return failure;
+
+    // Not granted means there is nothing to repair and nothing to ask here: the
+    // enable card does the asking, inside a real user gesture. It returns
+    // quietly rather than through stop(), because this runs on every app start
+    // and would otherwise warn once per launch for every user who has never
+    // turned alerts on.
+    if (Notification.permission !== "granted") return PUSH_RESULT.PERMISSION_NOT_GRANTED;
+
+    const reg = await navigator.serviceWorker.getRegistration();
+    // No service worker, so nothing here could receive a push anyway. This is
+    // also the normal state under the dev server, where the worker is
+    // registered in production builds only.
+    if (!reg) return PUSH_RESULT.NO_SERVICE_WORKER_REGISTRATION;
+
+    const existing = reg.pushManager ? await reg.pushManager.getSubscription() : null;
+
+    // No subscription on this browser at all, which is exactly what a sign-out
+    // leaves behind. There is no endpoint to look anything up by, so the read
+    // is skipped and subscribeAndSave creates one and stores it in one step.
+    if (!existing) return await subscribeAndSave(userId);
+
+    // THE ONE READ. Scoped to this user and this exact endpoint, so the answer
+    // is a straight yes or no to "is this device already stored against me".
+    // created_at is asked for because it is the one harmless column: the
+    // endpoint and the keys are never selected back out.
+    const { data, error } = await supabase
+      .from("push_subscriptions")
+      .select("created_at")
+      .eq("user_id", userId)
+      .eq("endpoint", existing.endpoint)
+      .maybeSingle();
+
+    if (error) {
+      console.warn(
+        `${LOG} could not check whether this device is still stored, so it is left alone rather than guessed at:`,
+        error.message || error
+      );
+      return PUSH_RESULT.RECONCILE_READ_FAILED;
+    }
+
+    // Already stored. The overwhelmingly common case, and it costs one read.
+    if (data) return PUSH_RESULT.SUBSCRIPTION_ALREADY_STORED;
+
+    // The row is gone but the browser still holds the subscription, which is
+    // what a prune or a manual delete leaves behind. Store it again.
+    //
+    // This is the one write, and it can still fail honestly: if this endpoint
+    // is stored under a DIFFERENT account, the select policy hid that row from
+    // the read above, so the upsert resolves to an update of somebody else's
+    // row and RLS refuses it. subscribeAndSave names that as
+    // database-save-failed rather than reporting a success.
+    return await subscribeAndSave(userId);
+  } catch (err) {
+    console.warn(`${LOG} the subscription check failed and this device may not receive push:`, err);
+    return PUSH_RESULT.UNEXPECTED_ERROR;
+  }
 }

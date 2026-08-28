@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../features/auth/useAuth";
@@ -6,6 +6,7 @@ import FarmerDistrictGate from "../features/auth/FarmerDistrictGate";
 import FarmerNameGate from "../features/auth/FarmerNameGate";
 
 import { useRealtimeNotifications } from "../features/alerts/useNotifications";
+import { reconcilePushSubscription } from "../features/alerts/pushSubscription";
 import ChunkReloadGuardReset from "./ChunkReloadGuardReset";
 
 const AssistantWidget = lazy(() => import("../features/assistant/AssistantWidget"));
@@ -253,6 +254,42 @@ function NotificationsRealtimeMount() {
   return null;
 }
 
+// Repairs this device's push subscription in the background when the app opens.
+//
+// Renders nothing and is never awaited. The call goes out inside an effect, so
+// it is already off the render path, and its promise is deliberately neither
+// awaited nor returned: a first paint must never wait on housekeeping, and a
+// user who opens the app to check a price should not spend a millisecond on
+// this. The catch is a second net under reconcilePushSubscription's own
+// try/catch, so a rejection can never surface as an unhandled rejection.
+//
+// profile.id, not session.user.id. They are the same uuid, but a profile only
+// exists once the users row does, and push_subscriptions.user_id is a foreign
+// key to that row. A Google account that has signed in but not finished
+// onboarding has a session and no users row, and writing for it would fail on
+// the foreign key.
+//
+// ONCE PER USER PER APP START, AND THE GUARD FOR THAT IS NOT HERE. It lives at
+// module level in pushSubscription.js, because nothing about this component's
+// position can be relied on to run once: the Suspense boundary above destroys
+// and re-creates child effects every time a lazy route chunk loads, StrictMode
+// double-invokes effects in development, and the ErrorBoundary above that would
+// remount the lot after a catch. So this fires freely on every user id change
+// and the guard downstream decides whether anything actually happens.
+function PushReconcileMount() {
+  const { profile } = useAuth();
+  const userId = profile?.id || null;
+
+  useEffect(() => {
+    if (!userId) return;
+    reconcilePushSubscription(userId).catch((err) => {
+      console.warn("[push] the background subscription repair failed unexpectedly:", err);
+    });
+  }, [userId]);
+
+  return null;
+}
+
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader/>}>
@@ -267,6 +304,15 @@ export function AppRoutes() {
           returns null unless a profile row exists, so logged out visitors and
           profile-less Google accounts still render nothing. */}
       <AssistantWidget/>
+
+      {/* Outside the gates for the same reason the widget above is. The gates
+          return their gate screen INSTEAD of their children, so mounted deeper
+          this would not run at all for a farmer sitting on the name, phone or
+          district gate, and those are exactly the users whose push most needs
+          repairing. It renders nothing and reads only the profile, so a logged
+          out visitor costs nothing here. */}
+      <PushReconcileMount/>
+
       <RequireOnboarding>
       <RequireFarmerName>
       <RequireFarmerPhone>
