@@ -7,3 +7,20 @@ verify_jwt = false
 # --no-verify-jwt; this block is what keeps the setting from being lost.
 [functions.send-push]
 verify_jwt = false
+
+# Called from the browser by a signed-in admin via
+# supabase.functions.invoke("metrics"), so unlike the two above it always
+# carries an Authorization header and verification stays ON. This is the
+# opposite setting to send-push and refresh-market, and the reason is worth
+# stating: those two are called by machines with no user behind them, this one
+# is called by a person.
+#
+# verify_jwt = true is a gate, not the gate. A logged-out browser still sends
+# the anon key, which is a perfectly valid project JWT and passes this check
+# happily. The function's own requireAdmin is what actually decides: it calls
+# auth.getUser to verify there is a real user behind the token, then reads that
+# user's role through the service role, which bypasses RLS so the answer comes
+# from the users table rather than from anything the caller claimed. Never
+# deploy this one with --no-verify-jwt.
+[functions.metrics]
+verify_jwt = true
