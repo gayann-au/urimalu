@@ -6,6 +6,7 @@ import {
   readPushDiagnostics,
   clearPromptedFlag,
 } from "./usePushRegistration";
+import { releasePushSubscription, PUSH_RESULT } from "./pushSubscription";
 
 // PUSH DIAGNOSTICS. Reachable only by typing /debug/push. Linked from nothing.
 //
@@ -107,6 +108,30 @@ export default function PushDiagnosticsPage() {
     }
   }
 
+  // The release, run on its own, with its answer on the screen.
+  //
+  // Sign out calls this too, but it calls it on the way past and discards what
+  // it returns, so a release that did nothing left no trace on the one device
+  // that could report it. Confirmed on a phone: sign out as one account, sign
+  // in as another, and the stored row still carried the first account's user id
+  // while this panel still showed a subscription on the same endpoint host.
+  // Here the release is the whole action and its PUSH_RESULT lands on the
+  // Result line above, so "it never ran" and "it ran and failed" stop looking
+  // the same from the outside.
+  //
+  // releasePushSubscription never throws, so there is nothing to catch.
+  async function onReleaseSubscription() {
+    if (!profile) {
+      setLastResult(PUSH_RESULT.NO_PROFILE);
+      return;
+    }
+    setLastResult("releasing...");
+    const result = await releasePushSubscription(profile.id);
+    setLastResult(result);
+    loadDiagnostics();
+    loadSubscriptionRows();
+  }
+
   function onResetFlag() {
     const cleared = clearPromptedFlag();
     setFlagNote(cleared ? "Prompted flag removed." : "Could not remove the prompted flag.");
@@ -136,6 +161,13 @@ export default function PushDiagnosticsPage() {
           className="w-full min-h-[48px] mt-2 rounded-[14px] border-2 border-ink-200 bg-white text-ink-700 font-bold text-sm hover:border-coorg-300 transition-colors"
         >
           Show test notification
+        </button>
+        <button
+          type="button"
+          onClick={onReleaseSubscription}
+          className="w-full min-h-[48px] mt-2 rounded-[14px] border-2 border-ink-200 bg-white text-ink-700 font-bold text-sm hover:border-coorg-300 transition-colors"
+        >
+          Release subscription
         </button>
         <button
           type="button"

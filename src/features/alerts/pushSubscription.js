@@ -55,6 +55,9 @@ export const PUSH_RESULT = Object.freeze({
   SUBSCRIPTION_SAVED: "subscription-saved",
   SUBSCRIPTION_RELEASED: "subscription-released",
   NOTHING_TO_RELEASE: "nothing-to-release",
+  RELEASE_DELETE_FAILED: "release-delete-failed",
+  NOTHING_DELETED: "nothing-deleted",
+  UNSUBSCRIBE_FAILED: "unsubscribe-failed",
   UNEXPECTED_ERROR: "unexpected-error",
 });
 
@@ -219,7 +222,9 @@ export async function readPushDiagnostics() {
 // user_id = auth.uid(), so after signOut there is no auth.uid() and the row
 // cannot be removed by its owner any more.
 //
-// Never throws. Sign out is not allowed to fail because push housekeeping did.
+// Never throws, and every exit returns one of PUSH_RESULT. Sign out is not
+// allowed to fail because push housekeeping did, but a release that failed on a
+// phone still has to be able to say so on that phone's own screen.
 export async function releasePushSubscription(userId) {
   try {
     let endpoint = null;
@@ -245,9 +250,27 @@ export async function releasePushSubscription(userId) {
     // next account collides with. Fall back to user_id when it does not.
     // Either way RLS confines the delete to rows this user owns, so an endpoint
     // belonging to somebody else is left untouched rather than stolen back.
-    const { error } = endpoint
-      ? await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint)
-      : await supabase.from("push_subscriptions").delete().eq("user_id", userId);
+    //
+    // THE SELECT IS WHAT MAKES A NO-OP VISIBLE. A delete that matches no row
+    // comes back with no error at all, so without the deleted rows in hand a
+    // release that freed the endpoint and a release that touched nothing look
+    // exactly alike, and the second one is the failure worth knowing about: it
+    // is what a row still owned by the previous account looks like from here.
+    // created_at is asked for because it is the one harmless column; the
+    // endpoint and the keys are never selected. This relies on the select
+    // policy on push_subscriptions being user_id = auth.uid(), which is the
+    // same policy the diagnostics screen reads its own rows through.
+    const { data, error } = endpoint
+      ? await supabase
+          .from("push_subscriptions")
+          .delete()
+          .eq("endpoint", endpoint)
+          .select("created_at")
+      : await supabase
+          .from("push_subscriptions")
+          .delete()
+          .eq("user_id", userId)
+          .select("created_at");
 
     if (error) {
       console.warn(
@@ -256,10 +279,25 @@ export async function releasePushSubscription(userId) {
       );
     }
 
+    const deletedCount = data?.length || 0;
+    if (!error && deletedCount === 0) {
+      console.warn(
+        `${LOG} the release removed no row, so a stored subscription for this device may still belong to another account and the next account to register may be refused.`
+      );
+    }
+
+    // The unsubscribe failure used to be warned about and then thrown away, and
+    // the caller was told the release had succeeded. That is the one failure
+    // this device can see for itself afterwards: the browser keeps the endpoint
+    // it already has, the diagnostics panel keeps reporting a subscription, and
+    // the next account inherits the collision. It is carried out of the block
+    // now so the returned string can name it.
+    let unsubscribeError = null;
     if (subscription) {
       try {
         await subscription.unsubscribe();
       } catch (err) {
+        unsubscribeError = err;
         console.warn(
           `${LOG} could not unsubscribe this browser, the next account on this device may inherit this endpoint:`,
           err
@@ -267,7 +305,14 @@ export async function releasePushSubscription(userId) {
       }
     }
 
-    return error ? PUSH_RESULT.DATABASE_SAVE_FAILED : PUSH_RESULT.SUBSCRIPTION_RELEASED;
+    // Worst news first, so one string always names the most damaging thing that
+    // happened: the row is still there and the write failed, the row is still
+    // there and nothing said so, or the row went but this browser kept its
+    // endpoint.
+    if (error) return PUSH_RESULT.RELEASE_DELETE_FAILED;
+    if (deletedCount === 0) return PUSH_RESULT.NOTHING_DELETED;
+    if (unsubscribeError) return PUSH_RESULT.UNSUBSCRIBE_FAILED;
+    return PUSH_RESULT.SUBSCRIPTION_RELEASED;
   } catch (err) {
     console.warn(`${LOG} releasing the subscription failed, sign out continues regardless:`, err);
     return PUSH_RESULT.UNEXPECTED_ERROR;
