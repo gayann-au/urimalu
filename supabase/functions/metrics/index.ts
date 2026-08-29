@@ -58,17 +58,24 @@ const admin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
 );
 
-// Every value notifications_type_chk allows. Listed explicitly rather than
-// discovered, so a type added to the database shows up here as a missing line
-// to add rather than as a number that quietly is not counted anywhere.
-const NOTIFICATION_TYPES = [
-  "price_alert",
-  "seller_lead",
-  "seller_lead_response",
-  "merchant_approved",
-  "merchant_rejected",
-  "price_reminder",
-] as const;
+// THERE IS NO LIST OF NOTIFICATION TYPES HERE ANY MORE, AND THAT IS THE FIX.
+//
+// This file used to hold one. The comment above it claimed that a type added to
+// the database would "show up here as a missing line to add rather than as a
+// number that quietly is not counted anywhere". That claim was wrong, and the
+// database proved it wrong: price_confirmed was added to notifications_type_chk
+// after this function was written, and because it was not on the list it was
+// counted by nothing. The headline read 1,037 and the breakdown under it added
+// up to 165, and the page showed both without a word of complaint.
+//
+// So the breakdown is now discovered from the rows themselves. Whatever types
+// are actually present in the window get counted, under their own names, and a
+// type added tomorrow appears tomorrow with no code change. The cost is reading
+// one short column instead of issuing a fan of head counts, which is why the
+// cap below exists.
+//
+// Only the type column is selected. No recipient, no body, no crop, no price.
+const NOTIFICATION_ROW_CAP = 20000;
 
 // Every value assistant_logs_source_chk allows, including the two the function
 // reserves for paths not yet written.
@@ -191,17 +198,80 @@ async function usersSection() {
   return { total, farmers, merchants, admins, joinedThisWeek, approved, pending };
 }
 
-// Reach: registered devices, and what actually went out this week.
+// Count every notification type present in the window, discovered from the
+// rows rather than from a list. See the long note above NOTIFICATION_ROW_CAP.
+//
+// A capped read returns null, not a partial tally. A partial tally is a lie in
+// exactly the shape this function exists to prevent: it would look like a
+// complete breakdown and quietly under-report whichever types happened to fall
+// past the cap. Null says "could not be counted", which is the truth.
+async function notificationTypeTally(sinceIso: string) {
+  try {
+    const { data, error } = await admin
+      .from("notifications")
+      .select("type")
+      .gte("created_at", sinceIso)
+      .limit(NOTIFICATION_ROW_CAP);
+
+    if (error) {
+      console.error("[metrics] notification type read failed:", error.message || error);
+      return { byType: null, capped: false };
+    }
+
+    const rows = data ?? [];
+    if (rows.length >= NOTIFICATION_ROW_CAP) {
+      console.error("[metrics] notification type read hit the row cap, refusing a partial tally");
+      return { byType: null, capped: true };
+    }
+
+    const tally: Record<string, number> = {};
+    for (const row of rows) {
+      // A null or empty type cannot pass the check constraint, so this branch
+      // should be unreachable. It is here so that if it ever does happen the
+      // row is counted under a visible name instead of disappearing, which is
+      // the whole lesson of price_confirmed.
+      const type = (row.type as string) || "unknown";
+      tally[type] = (tally[type] ?? 0) + 1;
+    }
+    return { byType: tally, capped: false };
+  } catch (err) {
+    console.error("[metrics] notification type tally threw:", err);
+    return { byType: null, capped: false };
+  }
+}
+
+// Reach: registered devices, and how many notification rows were created.
+//
+// CREATED, NOT SENT, AND THE DISTINCTION IS NOT PEDANTRY. These are rows in the
+// notifications table. One Ready to Sell post creates one row per merchant; one
+// price confirmation creates one row per following farmer. Nothing here counts
+// a delivery, an open, or a tap. Whether a push actually reached a phone is not
+// measured anywhere in this system, so the field is named for what it is and
+// the page must not dress it up as reach.
+//
+// devices is a plain row count of push_subscriptions with no filter of any
+// kind, so it counts every row in that table and nothing else. That table holds
+// one row per browser push subscription, unique on endpoint, so a device that
+// re-subscribes upserts rather than adding a second row, and a deleted user's
+// rows go with them on cascade. send-push prunes an endpoint when the push
+// service answers 404 or 410, so dead endpoints leave on the next send attempt
+// rather than the moment they die.
 async function reachSection() {
   const weekAgo = daysAgoIso(7);
-  const [devices, sentLast7Days, byType] = await Promise.all([
+  const [devices, createdLast7Days, tally] = await Promise.all([
     countRows("push_subscriptions"),
     countRows("notifications", (q) => q.gte("created_at", weekAgo)),
-    countByValue("notifications", "type", NOTIFICATION_TYPES, (q) =>
-      q.gte("created_at", weekAgo),
-    ),
+    notificationTypeTally(weekAgo),
   ]);
-  return { devices, sentLast7Days, byType };
+  return {
+    devices,
+    createdLast7Days,
+    byType: tally.byType,
+    // True only when the breakdown was abandoned because the window held more
+    // rows than the cap. Lets the page say why the breakdown is missing rather
+    // than leaving the reader to guess.
+    byTypeCapped: tally.capped,
+  };
 }
 
 // Merchant activity: the section this page exists for.
@@ -350,6 +420,124 @@ async function assistantSection() {
   return { total, totalInWindow, windowDays: ASSISTANT_WINDOW_DAYS, bySource, topQuestions };
 }
 
+// WHEN DID THIS COLUMN START HOLDING ANYTHING.
+//
+// installed_at and last_seen_at are written by the browser, and the browser
+// only began writing them on the day that code shipped. Every install and every
+// visit before that moment is not merely missing, it is unrecoverable: there is
+// no source to backfill from. So a count over either column is not a total of
+// anything, it is a total since a date.
+//
+// The earliest non-null value in the column IS that date, near enough, and it
+// is the only honest way to state the caveat without hard-coding a deploy date
+// that would rot. The page shows it next to the number so nobody reads an
+// install count as "how many people ever installed the app".
+//
+// Returns null both when nothing has been written yet and when the read failed.
+// Those are different, and the difference is logged, but neither one lets the
+// page claim a start date, so both produce the same fallback sentence.
+async function earliestValue(column: string): Promise<string | null> {
+  try {
+    const { data, error } = await admin
+      .from("users")
+      .select(column)
+      .not(column, "is", null)
+      .order(column, { ascending: true })
+      .limit(1);
+
+    if (error) {
+      console.error(`[metrics] earliest ${column} read failed:`, error.message || error);
+      return null;
+    }
+
+    // Through unknown, because select() takes a variable column name here and
+    // so cannot infer a row shape. supabase-js falls back to its error shape,
+    // which does not overlap with a plain record.
+    const row = (data ?? [])[0] as unknown as Record<string, unknown> | undefined;
+    if (!row) {
+      console.error(`[metrics] no row has a ${column} yet`);
+      return null;
+    }
+    const value = row[column];
+    return typeof value === "string" ? value : null;
+  } catch (err) {
+    console.error(`[metrics] earliest ${column} threw:`, err);
+    return null;
+  }
+}
+
+async function trackingSection() {
+  const [installedSince, seenSince] = await Promise.all([
+    earliestValue("installed_at"),
+    earliestValue("last_seen_at"),
+  ]);
+  return { installedSince, seenSince };
+}
+
+// Signups over time, as twelve rolling seven day buckets, oldest first.
+//
+// ONE READ, NOT TWENTY FOUR HEAD COUNTS. Two series across twelve buckets would
+// be twenty four exact counts. Reading two short columns for the accounts
+// created in the window and folding them here is one round trip, and the window
+// bounds the work: rows older than twelve weeks are never fetched.
+//
+// Buckets are rolling seven day windows counted back from now, not calendar
+// weeks. A calendar week would make the newest bar a partial week that looks
+// like a collapse in signups every Monday morning, which is a chart that lies
+// about a trend once a week.
+const SIGNUP_WEEKS = 12;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const SIGNUP_ROW_CAP = 50000;
+
+async function signupsSection() {
+  try {
+    const now = Date.now();
+    const windowStart = new Date(now - SIGNUP_WEEKS * WEEK_MS).toISOString();
+
+    const { data, error } = await admin
+      .from("users")
+      .select("created_at, role")
+      .gte("created_at", windowStart)
+      .limit(SIGNUP_ROW_CAP);
+
+    if (error) {
+      console.error("[metrics] signup read failed:", error.message || error);
+      return null;
+    }
+
+    const rows = data ?? [];
+    // Same rule as the notification tally: a capped read is not a short chart,
+    // it is a wrong one, so it reports itself as uncountable instead.
+    if (rows.length >= SIGNUP_ROW_CAP) {
+      console.error("[metrics] signup read hit the row cap, refusing a partial series");
+      return null;
+    }
+
+    const weeks = Array.from({ length: SIGNUP_WEEKS }, (_, i) => ({
+      startsAt: new Date(now - (SIGNUP_WEEKS - i) * WEEK_MS).toISOString(),
+      farmers: 0,
+      merchants: 0,
+      total: 0,
+    }));
+
+    for (const row of rows) {
+      const at = Date.parse(row.created_at as string);
+      if (Number.isNaN(at)) continue;
+      const weeksBack = Math.floor((now - at) / WEEK_MS);
+      if (weeksBack < 0 || weeksBack >= SIGNUP_WEEKS) continue;
+      const bucket = weeks[SIGNUP_WEEKS - 1 - weeksBack];
+      bucket.total += 1;
+      if (row.role === "FARMER") bucket.farmers += 1;
+      else if (row.role === "MERCHANT") bucket.merchants += 1;
+    }
+
+    return { weeks, weekCount: SIGNUP_WEEKS };
+  } catch (err) {
+    console.error("[metrics] signup series threw:", err);
+    return null;
+  }
+}
+
 // Installs and last seen.
 //
 // installedAndroidDesktop counts what the appinstalled event can actually see.
@@ -357,6 +545,9 @@ async function assistantSection() {
 // by definition. The field is named for what it really counts so that nobody
 // downstream has to rediscover the caveat from browser documentation, and the
 // page must never present it as total installs.
+//
+// Both counts here are also bounded below by the tracking start date that
+// trackingSection reports. See the note on earliestValue.
 async function devicesSection() {
   const dayAgo = daysAgoIso(1);
   const weekAgo = daysAgoIso(7);
@@ -375,14 +566,17 @@ Deno.serve(async (req: Request) => {
     const refusal = await requireAdmin(req);
     if (refusal) return refusal;
 
-    const [users, reach, merchants, farmers, assistant, devices] = await Promise.all([
-      usersSection(),
-      reachSection(),
-      merchantsSection(),
-      farmersSection(),
-      assistantSection(),
-      devicesSection(),
-    ]);
+    const [users, reach, merchants, farmers, assistant, devices, tracking, signups] =
+      await Promise.all([
+        usersSection(),
+        reachSection(),
+        merchantsSection(),
+        farmersSection(),
+        assistantSection(),
+        devicesSection(),
+        trackingSection(),
+        signupsSection(),
+      ]);
 
     return jsonResponse({
       generatedAt: new Date().toISOString(),
@@ -392,6 +586,10 @@ Deno.serve(async (req: Request) => {
       farmers,
       assistant,
       devices,
+      // When the browser started writing installed_at and last_seen_at. Every
+      // count over either column is a total since these dates and not a total.
+      tracking,
+      signups,
     });
   } catch (err) {
     console.error("[metrics] unexpected failure:", err);
